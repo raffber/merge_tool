@@ -6,9 +6,8 @@ mod default {
     pub fn include_in_script() -> bool { false }
 }
 
-
 #[derive(Clone, Serialize, Deserialize)]
-struct Timings {
+pub struct Timings {
     pub data_send: u32,
     pub data_send_done: u32,
     pub leave_btl: u32,
@@ -16,30 +15,37 @@ struct Timings {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-struct AddressRange {
+pub struct AddressRange {
     pub begin: u64,
     pub end: u64,
 }
 
+impl AddressRange {
+    pub fn len(&self) -> u64 {
+        self.end - self.begin + 1
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
-enum HexFileFormat {
+pub enum HexFileFormat {
     IntelHex,
     SRecord
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-enum Endianness {
+pub enum Endianness {
     Big, Little
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-struct DeviceConfig {
-    word_addressing: bool,
-    endianness: Endianness
+pub struct DeviceConfig {
+    pub word_addressing: bool,
+    pub endianness: Endianness,
+    pub page_size: u64,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-struct FwConfig {
+pub struct FwConfig {
     #[serde(default = "default::fw_id")]
     pub fw_id: u8,
     pub app_address: AddressRange,
@@ -60,7 +66,7 @@ impl FwConfig {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-struct Config {
+pub struct Config {
     pub product_id: u32,
     pub btl_version: u32,
     pub use_backdoor: bool,
