@@ -1,0 +1,13 @@
+dist
+node_modules
+native/target
+yarn-error.log
+
+native/artifacts.json
+
+native/index.node
+
+
+#Added by cargo
+
+/target
