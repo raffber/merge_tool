@@ -89,20 +89,21 @@ impl Script {
         }
     }
 
-    pub fn postprocess(&mut self) {
+    pub fn compute_progres(&mut self) {
         let mut new_cmds = Vec::new();
         let time = self.time_model.compute(&self.commands);
-        let total: f64 = time.iter().sum();
+        let total: f64 = time[time.len() - 1];
         let mut last_progress = 0.0;
         for (cmd, now) in self.commands.iter().zip(time) {
             let cur_progress = now / total;
             new_cmds.push(cmd.clone());
             if cur_progress - last_progress > 4.0 / 256.0 {
                 last_progress = cur_progress;
-                let progress = (cur_progress * 100.0).round() as u8;
+                let progress = (cur_progress * 256.0).round() as u8;
                 new_cmds.push(Command::Progress(progress));
             }
         }
+        new_cmds.push(Command::Progress(255));
         self.commands = new_cmds;
     }
 
@@ -121,9 +122,81 @@ impl Script {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
+    use git2::FileMode::Commit;
+    use crate::command::Readback;
+
+    fn to_progress(ms_count: u32) -> u8 {
+        ((ms_count as f64) / 101.0 * 256.0).round() as u8
+    }
 
     #[test]
     fn check_progress() {
-        todo!()
+        let cmds = vec![
+            Command::SetTimeOut(1),
+            Command::Write(vec![]),
+            Command::SetTimeOut(10), // no P should be inserted up to here
+            Command::Write(vec![]),
+            Command::Write(vec![]),
+            Command::Write(vec![]),
+            Command::Write(vec![]),
+            Command::Write(vec![]),
+            Command::Write(vec![]),
+            Command::SetTimeOut(20),
+            Command::Write(vec![]),
+            Command::Write(vec![]),
+        ];
+        let mut script = Script::new(cmds);
+        script.compute_progres();
+        let mut iter = script.commands.iter();
+        assert_matches!(iter.next(), Some(Command::SetTimeOut(_)));
+        assert_matches!(iter.next(), Some(Command::Write(_)));
+        assert_matches!(iter.next(), Some(Command::SetTimeOut(_)));
+        assert_matches!(iter.next(), Some(Command::Write(_)));
+        assert_matches!(iter.next(), Some(Command::Progress(x)) if *x == to_progress(11));
+        assert_matches!(iter.next(), Some(Command::Write(_)));
+        assert_matches!(iter.next(), Some(Command::Progress(x)) if *x == to_progress(21));
+        assert_matches!(iter.next(), Some(Command::Write(_)));
+        assert_matches!(iter.next(), Some(Command::Progress(x)) if *x == to_progress(31));
+        assert_matches!(iter.next(), Some(Command::Write(_)));
+        assert_matches!(iter.next(), Some(Command::Progress(x)) if *x == to_progress(41));
+        assert_matches!(iter.next(), Some(Command::Write(_)));
+        assert_matches!(iter.next(), Some(Command::Progress(x)) if *x == to_progress(51));
+        assert_matches!(iter.next(), Some(Command::Write(_)));
+        assert_matches!(iter.next(), Some(Command::Progress(x)) if *x == to_progress(61));
+        assert_matches!(iter.next(), Some(Command::SetTimeOut(_)));
+        assert_matches!(iter.next(), Some(Command::Write(_)));
+        assert_matches!(iter.next(), Some(Command::Progress(x)) if *x == to_progress(81));
+        assert_matches!(iter.next(), Some(Command::Write(_)));
+        assert_matches!(iter.next(), Some(Command::Progress(x)) if *x == to_progress(101));
+        assert_matches!(iter.next(), Some(Command::Progress(x)) if *x == 255);
+        assert_matches!(iter.next(), None);
+    }
+
+    #[test]
+    fn check_serialize() {
+        let cmds = vec![
+            Command::Header(vec![("foo".to_string(), "bar".to_string())]),
+            Command::Write(vec![0xab, 0xcd, 0xef]),
+            Command::Query(vec![0xab, 0xcd, 0xef], Readback {
+                data: vec![0x12, 0x34],
+                timeout: 0x4567
+            }),
+        ];
+        let script = Script::new(cmds);
+        let result = script.serialize();
+        let mut splits = result.split("\n");
+        assert_eq!(splits.next(), Some(":01666F6F3D626172"));
+        assert_eq!(splits.next(), Some(":02ABCDEF"));
+        assert_eq!(splits.next(), Some(":0303026745ABCDEF1234"));
+        // now comes the SHA-256
+        if let Some(x) = splits.next() {
+            let x = x.as_bytes();
+            assert_eq!(x[0], b':');
+            assert_eq!(x[1], b'3');
+            assert_eq!(x[2], b'0');
+        } else {
+            panic!()
+        }
     }
 }

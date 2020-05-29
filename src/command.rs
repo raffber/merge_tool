@@ -1,13 +1,13 @@
 use byteorder::{LittleEndian, ByteOrder};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Readback {
     pub data: Vec<u8>,
     pub timeout: u16
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Command {
     Write(Vec<u8>),
     Query(Vec<u8>, Readback),
@@ -26,14 +26,13 @@ impl Command {
             Command::Query(write, read) => {
                 ret.push(write.len() as u8);
                 ret.push(read.data.len() as u8);
-                ret.extend(write);
                 let mut buf = [0_u8; 2];
                 LittleEndian::write_u16(&mut buf, read.timeout);
                 ret.extend(&buf);
+                ret.extend(write);
                 ret.extend(&read.data);
             },
             Command::Write(write) => {
-                ret.push(write.len() as u8);
                 ret.extend(write);
             },
             Command::Log(x) => {
@@ -43,14 +42,19 @@ impl Command {
                 ret.extend(x.as_bytes());
             },
             Command::Header(kv) => {
+                let mut first = true;
                 for (k, v) in kv {
+                    if !first {
+                        ret.push(b'|');
+                    }
+                    first = false;
                     ret.extend(k.as_bytes());
-                    ret.push(b'|');
+                    ret.push(b'=');
                     ret.extend(v.as_bytes());
                 }
             },
             Command::SetTimeOut(timeout) => {
-                let mut buf = [0_u8; 2];
+                let mut buf = [0_u8; 4];
                 LittleEndian::write_u32(&mut buf, *timeout);
                 ret.extend(&buf);
             },
@@ -95,8 +99,19 @@ mod tests {
             timeout: 0x123
         };
         let cmd = Command::Write(vec![0xA, 0xB, 0xC]);
-        assert_eq!(cmd.script_line(), ":02030A0B0C");
+        assert_eq!(cmd.script_line(), ":020A0B0C");
         let cmd = Command::Query(vec![0xA, 0xB, 0xC], read);
-        assert_eq!(cmd.script_line(), ":0303020A0B0C23010D0E");
+        assert_eq!(cmd.script_line(), ":03030223010A0B0C0D0E");
+        let cmd = Command::SetTimeOut(0xDEADBEEF);
+        assert_eq!(cmd.script_line(), ":10EFBEADDE");
+        let cmd = Command::Log("foobar".to_string());
+        assert_eq!(cmd.script_line(), ":20666F6F626172");
+        let cmd = Command::Header(vec![("foo".to_string(), "bar".to_string()),
+                                       ("more".to_string(),"stuff".to_string())]);
+        assert_eq!(cmd.script_line(), ":01666F6F3D6261727C6D6F72653D7374756666");
+        let cmd = Command::SetError("foobar".to_string());
+        assert_eq!(cmd.script_line(), ":21666F6F626172");
+        let cmd = Command::Progress(0xAB);
+        assert_eq!(cmd.script_line(), ":22AB");
     }
 }

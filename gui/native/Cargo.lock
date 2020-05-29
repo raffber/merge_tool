@@ -25,6 +25,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "assert_matches"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7deb0a829ca7bcfaf5da70b073a8d128619259a7be8216a355e23f00763059e5"
+
+[[package]]
 name = "async-std"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -760,6 +766,7 @@ dependencies = [
 name = "merge_tool"
 version = "0.1.0"
 dependencies = [
+ "assert_matches",
  "byteorder",
  "git2",
  "hex",
