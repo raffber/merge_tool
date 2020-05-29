@@ -13,12 +13,12 @@ trait TimeModel {
         let mut current_timeout = 0.0;
         for cmd in cmds {
             match cmd {
-                Command::Write { write: write, read: Some(read) } => {
+                Command::Query(write, read) => {
                     now += self.compute_read_time(write.len(), read.data.len());
                     now += current_timeout;
                     ret.push(now);
                 },
-                Command::Write { write: write, read: None } => {
+                Command::Write(write) => {
                     now += self.compute_write_time(write.len());
                     now += current_timeout;
                     ret.push(now);
@@ -115,5 +115,15 @@ impl Script {
         let cmd = Command::Checksum(sha.result().to_vec());
         let checksum = cmd.script_line();
         lines.iter().chain(once(&checksum)).join("\n")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn check_progress() {
+        todo!()
     }
 }

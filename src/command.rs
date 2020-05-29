@@ -9,7 +9,8 @@ pub struct Readback {
 
 #[derive(Clone)]
 pub enum Command {
-    Write { write: Vec<u8>, read: Option<Readback> },
+    Write(Vec<u8>),
+    Query(Vec<u8>, Readback),
     Log(String),
     SetError(String),
     Header(Vec<(String, String)>),
@@ -22,7 +23,7 @@ impl Command {
     fn data(&self) -> Vec<u8> {
         let mut ret = Vec::new();
         match self {
-            Command::Write { write: write, read: Some(read) } => {
+            Command::Query(write, read) => {
                 ret.push(write.len() as u8);
                 ret.push(read.data.len() as u8);
                 ret.extend(write);
@@ -31,9 +32,8 @@ impl Command {
                 ret.extend(&buf);
                 ret.extend(&read.data);
             },
-            Command::Write { write: write, read: None } => {
+            Command::Write(write) => {
                 ret.push(write.len() as u8);
-                ret.push(0);
                 ret.extend(write);
             },
             Command::Log(x) => {
@@ -66,13 +66,14 @@ impl Command {
 
     fn identifier(&self) -> u8 {
         match self {
-            Command::Header(_) => 01,
-            Command::Write { .. } => 02,
-            Command::Log(_) => 03,
-            Command::SetError(_) => 04,
-            Command::SetTimeOut(_) => 05,
-            Command::Progress(_) => 06,
-            Command::Checksum(_) => 07,
+            Command::Header(_) => 0x01,
+            Command::Write(_) => 0x02,
+            Command::Query(_, _) => 0x03,
+            Command::SetTimeOut(_) => 0x10,
+            Command::Log(_) => 0x20,
+            Command::SetError(_) => 0x21,
+            Command::Progress(_) => 0x22,
+            Command::Checksum(_) => 0x30,
         }
     }
 
@@ -80,5 +81,22 @@ impl Command {
         let data = hex::encode_upper(self.data());
         let identifier = hex::encode_upper(&[self.identifier()]);
         format!(":{}{}", identifier, data)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn serialize() {
+        let read = Readback {
+            data: vec![0xD, 0xE],
+            timeout: 0x123
+        };
+        let cmd = Command::Write(vec![0xA, 0xB, 0xC]);
+        assert_eq!(cmd.script_line(), ":02030A0B0C");
+        let cmd = Command::Query(vec![0xA, 0xB, 0xC], read);
+        assert_eq!(cmd.script_line(), ":0303020A0B0C23010D0E");
     }
 }
