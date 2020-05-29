@@ -19,7 +19,7 @@ pub fn load(path: &Path, word_addressing: bool, range: &AddressRange) -> Result<
     let lines = BufReader::new(file)
         .lines()
         .map(|x| x.unwrap().trim().to_string())
-        .take_while(|x| !x.is_empty());
+        .filter(|x| !x.is_empty());
     parse(word_addressing, range, lines)
 }
 
@@ -30,7 +30,7 @@ pub fn parse<T: Iterator<Item=String>>(word_addressing: bool, range: &AddressRan
     let lines = lines?;
     let address_multiplier = if word_addressing { 2 } else { 1 };
     let mut extend_line_address = 0_u64;
-    let mut ret: Vec<_>= repeat(0xFF_u8).take(range.len() as usize).collect();
+    let mut ret: Vec<_> = repeat(0xFF_u8).take(range.len() as usize).collect();
     for line in &lines {
         match line.kind {
             0x04 => {
@@ -130,7 +130,6 @@ pub fn save(path: &Path, word_addressing: bool, range: &AddressRange, data: &Vec
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::Endianness;
 
     #[test]
     fn test_checksum() {
@@ -151,17 +150,19 @@ mod tests {
 
     #[test]
     fn test_parse() {
-        let range = AddressRange::new(0xAB00, 0xABFF);
+        let range = AddressRange::new(0xAB00, 0xAB13);
         let file = r#"
         :10ab00000102030405060708090a0b0c0d0e0f10bd
         :04ab100011121314f7
         :00000001ff
         "#;
-        let lines = file.split("\n")
+        let lines = file
+            .split("\n")
             .map(|x| x.trim())
-            .take_while(|x| !x.is_empty())
+            .filter(|x| !x.is_empty())
             .map(|x| x.to_string());
         let parsed = parse(false, &range, lines).unwrap();
         let data: Vec<_> = (1u8..21).collect();
+        assert_eq!(&parsed, &data);
    }
 }
