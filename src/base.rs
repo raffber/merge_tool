@@ -38,10 +38,10 @@ impl Firmware {
         };
         let ret = match file_format {
             HexFileFormat::IntelHex => {
-                intel_hex::load(path, config, &range)
+                intel_hex::load(path, config.word_addressing, &range)
             },
             HexFileFormat::SRecord => {
-                srecord::load(path, config, &range)
+                srecord::load(path, config.word_addressing, &range)
             },
         };
         ret.and_then(|data| Firmware::new(range, config.clone(), data))
@@ -49,8 +49,8 @@ impl Firmware {
 
     fn write_to_file(&self, path: &Path, file_format: &HexFileFormat) -> Result<(), Error> {
         match file_format {
-            HexFileFormat::IntelHex => intel_hex::save(path, &self.config, &self.range, &self.data),
-            HexFileFormat::SRecord => srecord::save(path, &self.config, &self.range, &self.data),
+            HexFileFormat::IntelHex => intel_hex::save(path, self.config.word_addressing, &self.range, &self.data),
+            HexFileFormat::SRecord => srecord::save(path, self.config.word_addressing, &self.range, &self.data),
         }
     }
 

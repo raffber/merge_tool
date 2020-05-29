@@ -21,6 +21,9 @@ pub struct AddressRange {
 }
 
 impl AddressRange {
+    pub fn new(begin: u64, end: u64) -> Self {
+        Self { begin, end }
+    }
     pub fn len(&self) -> u64 {
         self.end - self.begin + 1
     }

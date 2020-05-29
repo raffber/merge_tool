@@ -1,6 +1,6 @@
 use std::path::Path;
 use crate::{Error, swap_bytearray};
-use crate::config::{DeviceConfig, AddressRange};
+use crate::config::AddressRange;
 use std::iter::repeat;
 use std::fs::File;
 use std::io::{BufReader, BufRead, Write};
@@ -14,44 +14,57 @@ struct Line {
 }
 
 
-pub fn load(path: &Path, config: &DeviceConfig, range: &AddressRange) -> Result<Vec<u8>, Error> {
+pub fn load(path: &Path, word_addressing: bool, range: &AddressRange) -> Result<Vec<u8>, Error> {
     let file = File::open(path).map_err(Error::Io)?;
-    let lines: Result<Vec<_>, _> = BufReader::new(file)
+    let lines = BufReader::new(file)
         .lines()
-        .map(|x| x.map_err(Error::Io).and_then(parse_line))
+        .map(|x| x.unwrap().trim().to_string())
+        .take_while(|x| !x.is_empty());
+    parse(word_addressing, range, lines)
+}
+
+pub fn parse<T: Iterator<Item=String>>(word_addressing: bool, range: &AddressRange, lines: T) -> Result<Vec<u8>, Error> {
+    let lines: Result<Vec<_>, _> = lines
+        .map(parse_line)
         .collect();
     let lines = lines?;
-    let address_multiplier = if config.word_addressing { 2 } else { 1 };
+    let address_multiplier = if word_addressing { 2 } else { 1 };
     let mut extend_line_address = 0_u64;
     let mut ret: Vec<_>= repeat(0xFF_u8).take(range.len() as usize).collect();
     for line in &lines {
-        if line.kind == 0x04 {
-            if line.address == 0 {
-                extend_line_address = (line.data[0] as u64) << 8;
-                extend_line_address += line.data[1] as u64;
-            } else {
-                return Err(Error::InvalidHexFile);
-            }
-        } else if line.kind == 0x00 {
-            let addr = ((extend_line_address << 16) | line.address) * address_multiplier;
-            if addr < range.begin || addr > range.end {
-                continue;
-            }
-            for k in 0 .. line.data.len() {
-                let idx = k + (addr as usize) - (range.begin as usize);
-                ret[idx] = line.data[k];
-            }
-        } else if line.address == 0x01 {
-            break;
+        match line.kind {
+            0x04 => {
+                if line.address == 0 {
+                    extend_line_address = (line.data[0] as u64) << 8;
+                    extend_line_address += line.data[1] as u64;
+                } else {
+                    return Err(Error::InvalidHexFile);
+                }
+            },
+            0x00 => {
+                let addr = ((extend_line_address << 16) | line.address) * address_multiplier;
+                if addr < range.begin || addr > range.end {
+                    continue;
+                }
+                for k in 0 .. line.data.len() {
+                    let idx = k + (addr as usize) - (range.begin as usize);
+                    ret[idx] = line.data[k];
+                }
+            },
+            0x01 => break,
+            _ => {}
         }
     }
-    if config.word_addressing {
+    if word_addressing {
         swap_bytearray(&mut ret);
     }
     Ok(ret)
 }
 
 fn parse_line(line: String) -> Result<Line, Error> {
+    if line.len() == 0 {
+        return Err(Error::InvalidHexFile)
+    }
     if line.as_bytes()[0] != b':' {
         return Err(Error::InvalidHexFile)
     }
@@ -79,21 +92,21 @@ fn checksum(data: &[u8]) -> u8 {
 
 const WRITE_DATA_PER_LINE: usize = 16;
 
-pub fn serialize(config: &DeviceConfig, range: &AddressRange, data: &Vec<u8>) -> String {
+pub fn serialize(word_addressing: bool, range: &AddressRange, data: &Vec<u8>) -> String {
     let mut data = data.clone();
-    if config.word_addressing {
+    if word_addressing {
         swap_bytearray(&mut data);
     }
     let mut lines = Vec::new();
-    for k in 0 .. data.len() {
+    for k in (0 .. data.len()).step_by(WRITE_DATA_PER_LINE) {
         let endidx = min(k + WRITE_DATA_PER_LINE, data.len());
         let len = endidx - k;
         let mut address = (k as u64) + range.begin;
-        if config.word_addressing {
+        if word_addressing {
             address >>= 1;
         }
         let mut out = Vec::new();
-        out.extend(&[len as u8, (address >> 8) as u8, (address & 0xFF) as u8, 0xFF_u8]);
+        out.extend(&[len as u8, (address >> 8) as u8, (address & 0xFF) as u8, 0_u8]);
         let data_slice = &data[k..endidx];
         if data_slice.iter().all(|x| *x == 0xFF) {
             continue
@@ -108,20 +121,47 @@ pub fn serialize(config: &DeviceConfig, range: &AddressRange, data: &Vec<u8>) ->
     lines.join("\n")
 }
 
-pub fn save(path: &Path, config: &DeviceConfig, range: &AddressRange, data: &Vec<u8>) -> Result<(), Error> {
-    let data = serialize(config, range, data);
+pub fn save(path: &Path, word_addressing: bool, range: &AddressRange, data: &Vec<u8>) -> Result<(), Error> {
+    let data = serialize(word_addressing, range, data);
     let mut file = File::create(path).map_err(Error::Io)?;
-    file.write_all(data.as_bytes());
-    Ok(())
+    file.write_all(data.as_bytes()).map_err(Error::Io)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::Endianness;
 
     #[test]
     fn test_checksum() {
         assert_eq!(checksum(&[1,2,3]), 250);
         assert_eq!(checksum(&[254, 254]), 4);
     }
+
+    #[test]
+    fn test_serialize() {
+        let range = AddressRange::new(0xAB00, 0xABFF);
+        let data: Vec<_> = (1u8..21).collect();
+        let serialized = serialize(false, &range, &data);
+        let mut iter = serialized.split("\n");
+        assert_eq!(iter.next(), Some(":10ab00000102030405060708090a0b0c0d0e0f10bd"));
+        assert_eq!(iter.next(), Some(":04ab100011121314f7"));
+        assert_eq!(iter.next(), Some(":00000001ff"))
+    }
+
+    #[test]
+    fn test_parse() {
+        let range = AddressRange::new(0xAB00, 0xABFF);
+        let file = r#"
+        :10ab00000102030405060708090a0b0c0d0e0f10bd
+        :04ab100011121314f7
+        :00000001ff
+        "#;
+        let lines = file.split("\n")
+            .map(|x| x.trim())
+            .take_while(|x| !x.is_empty())
+            .map(|x| x.to_string());
+        let parsed = parse(false, &range, lines).unwrap();
+        let data: Vec<_> = (1u8..21).collect();
+   }
 }
