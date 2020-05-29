@@ -1,5 +1,5 @@
 
-fn crc32(data: &[u8]) -> u32 {
+pub fn crc32(data: &[u8]) -> u32 {
     let mut ret: u32 = 0xFFFFFFFF;
     for b in data {
         let idx = ((ret ^ (*b as u32)) & 0xFF) as usize;
@@ -9,7 +9,7 @@ fn crc32(data: &[u8]) -> u32 {
     return ret ^ 0xFFFFFFFF_u32;
 }
 
-fn crc8(data: &[u8]) -> u8 {
+pub fn crc8(data: &[u8]) -> u8 {
     let poly = 0x07_u8;
     let mut crc = 0xFF_u8;
     for b in data {

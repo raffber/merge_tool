@@ -84,7 +84,6 @@ pub fn generate_script<P: Protocol>(protocol: P, fws: Vec<Firmware>, config: Con
         }
         ret.push(Command::Log("done".to_string()));
 
-
         ret.push(Command::Log("Checking CRC...".to_string()));
         ret.extend(protocol.finalize(id, fw_config.timings.data_send_done));
         ret.push(Command::SetError("failed".to_string()));
