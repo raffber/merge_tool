@@ -3,9 +3,9 @@ use crate::{Error, swap_bytearray};
 use crate::config::{DeviceConfig, AddressRange};
 use std::iter::repeat;
 use std::fs::File;
-use std::io::{BufReader, BufRead};
+use std::io::{BufReader, BufRead, Write};
 use hex;
-use std::intrinsics::mul_with_overflow;
+use std::cmp::min;
 
 struct Line {
     address: u64,
@@ -15,10 +15,10 @@ struct Line {
 
 
 pub fn load(path: &Path, config: &DeviceConfig, range: &AddressRange) -> Result<Vec<u8>, Error> {
-    let file = File::open(filename).map_err(Error::Io)?;
+    let file = File::open(path).map_err(Error::Io)?;
     let lines: Result<Vec<_>, _> = BufReader::new(file)
         .lines()
-        .map(|x| x.and_then(parse_line))
+        .map(|x| x.map_err(Error::Io).and_then(parse_line))
         .collect();
     let lines = lines?;
     let address_multiplier = if config.word_addressing { 2 } else { 1 };
@@ -30,7 +30,7 @@ pub fn load(path: &Path, config: &DeviceConfig, range: &AddressRange) -> Result<
                 extend_line_address = (line.data[0] as u64) << 8;
                 extend_line_address += line.data[1] as u64;
             } else {
-                Err(Error::InvalidHexFile)
+                return Err(Error::InvalidHexFile);
             }
         } else if line.kind == 0x00 {
             let addr = ((extend_line_address << 16) | line.address) * address_multiplier;
@@ -52,7 +52,7 @@ pub fn load(path: &Path, config: &DeviceConfig, range: &AddressRange) -> Result<
 }
 
 fn parse_line(line: String) -> Result<Line, Error> {
-    if line[0] != ':' {
+    if line.as_bytes()[0] != b':' {
         return Err(Error::InvalidHexFile)
     }
     let data = hex::decode(&line[1..]).map_err(|x| Error::InvalidHexFile)?;
@@ -72,6 +72,56 @@ fn parse_line(line: String) -> Result<Line, Error> {
     })
 }
 
+fn checksum(data: &[u8]) -> u8 {
+    let result : i32 = data.iter().map(|x| *x as i32).sum();
+    ((-1*result) & 0xFF_i32) as u8
+}
+
+const WRITE_DATA_PER_LINE: usize = 16;
+
+pub fn serialize(config: &DeviceConfig, range: &AddressRange, data: &Vec<u8>) -> String {
+    let mut data = data.clone();
+    if config.word_addressing {
+        swap_bytearray(&mut data);
+    }
+    let mut lines = Vec::new();
+    for k in 0 .. data.len() {
+        let endidx = min(k + WRITE_DATA_PER_LINE, data.len());
+        let len = endidx - k;
+        let mut address = (k as u64) + range.begin;
+        if config.word_addressing {
+            address >>= 1;
+        }
+        let mut out = Vec::new();
+        out.extend(&[len as u8, (address >> 8) as u8, (address & 0xFF) as u8, 0xFF_u8]);
+        let data_slice = &data[k..endidx];
+        if data_slice.iter().all(|x| *x == 0xFF) {
+            continue
+        }
+        out.extend(data_slice);
+        out.push(checksum(&out));
+        lines.push(out);
+    }
+    lines.push(vec![0x00, 0x00, 0x00, 0x01, 0xFF]);
+
+    let lines: Vec<_> = lines.iter().map(|x| format!(":{}", hex::encode(x))).collect();
+    lines.join("\n")
+}
+
 pub fn save(path: &Path, config: &DeviceConfig, range: &AddressRange, data: &Vec<u8>) -> Result<(), Error> {
-    todo!()
+    let data = serialize(config, range, data);
+    let mut file = File::create(path).map_err(Error::Io)?;
+    file.write_all(data.as_bytes());
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_checksum() {
+        assert_eq!(checksum(&[1,2,3]), 250);
+        assert_eq!(checksum(&[254, 254]), 4);
+    }
 }

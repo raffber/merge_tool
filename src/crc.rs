@@ -3,7 +3,7 @@ fn crc32(data: &[u8]) -> u32 {
     let mut ret: u32 = 0xFFFFFFFF;
     for b in data {
         let idx = ((ret ^ (*b as u32)) & 0xFF) as usize;
-        let shifted = (ret >> 8);
+        let shifted = ret >> 8;
         ret = CRC32_LUT[idx] ^ shifted;
     }
     return ret ^ 0xFFFFFFFF_u32;
@@ -16,7 +16,7 @@ fn crc8(data: &[u8]) -> u8 {
         crc ^= *b;
         for j in 0..8 {
             if (crc & 0x80) != 0 {
-                crc = ((crc << 1) ^ poly);
+                crc = (crc << 1) ^ poly;
             } else {
                 crc <<= 1;
             }
