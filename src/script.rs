@@ -59,16 +59,33 @@ impl SimpleTimeModel {
     }
 }
 
+impl TimeModel for SimpleTimeModel {
+    fn compute_write_time(&self, num_write: usize) -> f64 {
+        (num_write as f64) * self.write_byte_time
+    }
+
+    fn compute_read_time(&self, num_write: usize, num_read: usize) -> f64 {
+        self.compute_write_time(num_write) + self.read_byte_time * (num_read as f64)
+    }
+}
+
 struct Script {
     commands: Vec<Command>,
     time_model: Box<dyn TimeModel>,
 }
 
 impl Script {
-    fn new<T: 'static + TimeModel>(cmds: Vec<Command>, model: T) -> Self {
+    fn new_with_model<T: 'static + TimeModel>(cmds: Vec<Command>, model: T) -> Self {
         Self {
             commands: cmds,
             time_model: Box::new(model)
+        }
+    }
+
+    fn new(cmds: Vec<Command>) -> Self {
+        Self {
+            commands: cmds,
+            time_model: Box::new(SimpleTimeModel::new(0.0, 0.0))
         }
     }
 
