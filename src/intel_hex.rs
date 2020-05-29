@@ -117,7 +117,7 @@ pub fn serialize(word_addressing: bool, range: &AddressRange, data: &Vec<u8>) ->
     }
     lines.push(vec![0x00, 0x00, 0x00, 0x01, 0xFF]);
 
-    let lines: Vec<_> = lines.iter().map(|x| format!(":{}", hex::encode(x))).collect();
+    let lines: Vec<_> = lines.iter().map(|x| format!(":{}", hex::encode_upper(x))).collect();
     lines.join("\n")
 }
 
@@ -143,18 +143,18 @@ mod tests {
         let data: Vec<_> = (1u8..21).collect();
         let serialized = serialize(false, &range, &data);
         let mut iter = serialized.split("\n");
-        assert_eq!(iter.next(), Some(":10ab00000102030405060708090a0b0c0d0e0f10bd"));
-        assert_eq!(iter.next(), Some(":04ab100011121314f7"));
-        assert_eq!(iter.next(), Some(":00000001ff"))
+        assert_eq!(iter.next(), Some(":10AB00000102030405060708090A0B0C0D0E0F10BD"));
+        assert_eq!(iter.next(), Some(":04AB100011121314F7"));
+        assert_eq!(iter.next(), Some(":00000001FF"))
     }
 
     #[test]
     fn test_parse() {
         let range = AddressRange::new(0xAB00, 0xAB13);
         let file = r#"
-        :10ab00000102030405060708090a0b0c0d0e0f10bd
-        :04ab100011121314f7
-        :00000001ff
+        :10AB00000102030405060708090A0B0C0D0E0F10BD
+        :04AB100011121314F7
+        :00000001FF
         "#;
         let lines = file
             .split("\n")

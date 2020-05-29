@@ -102,12 +102,12 @@ pub fn serialize(word_addressing: bool, range: &AddressRange, data: &Vec<u8>) ->
         let sum: u32 = out.iter().map(|x| *x as u32).sum();
         let sum = (sum & 0xFF) as u8;
         out.push(!sum);
-        let line = format!("S3{}", hex::encode(out));
+        let line = format!("S3{}", hex::encode_upper(out));
         lines.push(line);
     }
     // write S7
     let out = &[0x05, 0x00, 0x00, 0x00, 0x00, !5];
-    let line = format!("S7{}", hex::encode(out));
+    let line = format!("S7{}", hex::encode_upper(out));
     lines.push(line);
 
     lines.join("\n")
@@ -129,16 +129,17 @@ mod tests {
         let data: Vec<_> = (1u8..21).collect();
         let serialized = serialize(false, &range, &data);
         let mut iter = serialized.split("\n");
-        assert_eq!(iter.next(), Some("S3150000ab000102030405060708090a0b0c0d0e0f10b7"));
-        assert_eq!(iter.next(), Some("S3090000ab1011121314f1"));
-        assert_eq!(iter.next(), Some("S70500000000fa"))
+        assert_eq!(iter.next(), Some("S3150000AB000102030405060708090A0B0C0D0E0F10B7"));
+        assert_eq!(iter.next(), Some("S3090000AB1011121314F1"));
+        assert_eq!(iter.next(), Some("S70500000000FA"));
+        assert_eq!(iter.next(), None)
     }
 
     #[test]
     fn test_parse() {
         let range = AddressRange::new(0xAB00, 0xABFF);
         let file = r#"
-        S3150000ab000102030405060708090a0b0c0d0e0f10b7
+        S3150000ab000102030405060708090a0b0c0d0e0f10B7
         S3090000ab1011121314f1
         S70500000000fa
         "#;

@@ -7,6 +7,8 @@ mod base;
 mod intel_hex;
 mod srecord;
 mod crc;
+mod command;
+mod script;
 
 #[derive(Debug)]
 pub enum Error {
