@@ -3,12 +3,14 @@
 use std::fmt;
 
 mod config;
-mod base;
+mod firmware;
 mod intel_hex;
 mod srecord;
 mod crc;
 mod command;
 mod script;
+mod protocol;
+mod xcmd;
 
 #[derive(Debug)]
 pub enum Error {

@@ -3,7 +3,7 @@ use crate::{Error, srecord, intel_hex};
 use std::path::Path;
 use std::iter::repeat;
 
-struct Firmware {
+pub struct Firmware {
     pub range: AddressRange,
     pub config: DeviceConfig,
     pub data: Vec<u8>,

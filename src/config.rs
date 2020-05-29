@@ -48,9 +48,16 @@ pub struct DeviceConfig {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct ImageVersion {
+    pub minor: u8,
+    pub build: u8
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct FwConfig {
     #[serde(default = "default::fw_id")]
     pub fw_id: u8,
+    pub version: ImageVersion,
     pub app_address: AddressRange,
     pub btl_address: AddressRange,
     #[serde(default = "default::include_in_script")]
@@ -63,7 +70,7 @@ pub struct FwConfig {
 }
 
 impl FwConfig {
-    fn designator(&self) -> String {
+    pub fn designator(&self) -> String {
         format!("F{}", self.fw_id)
     }
 }
@@ -71,7 +78,9 @@ impl FwConfig {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Config {
     pub product_id: u32,
-    pub btl_version: u32,
+    pub product_name: String,
+    pub major_version: u8,
+    pub btl_version: u8,
     pub use_backdoor: bool,
     pub images: Vec<FwConfig>,
     pub time_state_transition: u32,
