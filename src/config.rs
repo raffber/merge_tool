@@ -35,6 +35,15 @@ pub enum HexFileFormat {
     SRecord
 }
 
+impl HexFileFormat {
+    pub fn file_extension(&self) -> &'static str {
+        match self {
+            HexFileFormat::IntelHex => "hex",
+            HexFileFormat::SRecord => "s37",
+        }
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub enum Endianness {
     Big, Little
@@ -57,6 +66,8 @@ pub struct ImageVersion {
 pub struct FwConfig {
     #[serde(default = "default::fw_id")]
     pub fw_id: u8,
+    pub btl_path: String,
+    pub app_path: String,
     pub version: ImageVersion,
     pub app_address: AddressRange,
     pub btl_address: AddressRange,

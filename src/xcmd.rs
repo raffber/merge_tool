@@ -39,8 +39,8 @@ impl ExtCmdProtocol {
     }
 
     fn query(&self, mut tx: Vec<u8>, mut rx: Vec<u8>) -> Command {
-        tx.push(crc8(&data));
-        rx.push(crc8(&data));
+        tx.push(crc8(&tx));
+        rx.push(crc8(&rx));
         Command::Query(tx, rx)
     }
 
@@ -108,7 +108,7 @@ impl Protocol for ExtCmdProtocol {
         let mut tx = vec![self.xcmd_code, fw_id, CMD_DATA];
         let mut buf = [0_u8; 4];
         LittleEndian::write_u32(&mut buf, address as u32);
-        tx.extend(buf);
+        tx.extend(buf.iter());
         tx.extend(data);
         Some(Command::Write(tx))
     }

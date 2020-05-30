@@ -11,6 +11,7 @@ mod command;
 mod script;
 mod protocol;
 mod xcmd;
+mod process;
 
 #[derive(Debug)]
 pub enum Error {
