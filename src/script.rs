@@ -14,7 +14,7 @@ trait TimeModel {
         for cmd in cmds {
             match cmd {
                 Command::Query(write, read) => {
-                    now += self.compute_read_time(write.len(), read.data.len());
+                    now += self.compute_read_time(write.len(), read.len());
                     now += current_timeout;
                     ret.push(now);
                 },
@@ -124,7 +124,6 @@ mod tests {
     use super::*;
     use assert_matches::assert_matches;
     use git2::FileMode::Commit;
-    use crate::command::Readback;
 
     fn to_progress(ms_count: u32) -> u8 {
         ((ms_count as f64) / 101.0 * 256.0).round() as u8
@@ -178,17 +177,14 @@ mod tests {
         let cmds = vec![
             Command::Header(vec![("foo".to_string(), "bar".to_string())]),
             Command::Write(vec![0xab, 0xcd, 0xef]),
-            Command::Query(vec![0xab, 0xcd, 0xef], Readback {
-                data: vec![0x12, 0x34],
-                timeout: 0x4567
-            }),
+            Command::Query(vec![0xab, 0xcd, 0xef], vec![0x12, 0x34]),
         ];
         let script = Script::new(cmds);
         let result = script.serialize();
         let mut splits = result.split("\n");
         assert_eq!(splits.next(), Some(":01666F6F3D626172"));
         assert_eq!(splits.next(), Some(":02ABCDEF"));
-        assert_eq!(splits.next(), Some(":0303026745ABCDEF1234"));
+        assert_eq!(splits.next(), Some(":030302ABCDEF1234"));
         // now comes the SHA-256
         if let Some(x) = splits.next() {
             let x = x.as_bytes();
@@ -198,5 +194,6 @@ mod tests {
         } else {
             panic!()
         }
+        assert_eq!(splits.next(), None);
     }
 }

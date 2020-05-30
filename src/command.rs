@@ -1,16 +1,10 @@
 use byteorder::{LittleEndian, ByteOrder};
 
-#[derive(Clone, Debug)]
-pub struct Readback {
-    pub data: Vec<u8>,
-    pub timeout: u16
-}
-
 
 #[derive(Clone, Debug)]
 pub enum Command {
     Write(Vec<u8>),
-    Query(Vec<u8>, Readback),
+    Query(Vec<u8>, Vec<u8>),
     Log(String),
     SetError(String),
     Header(Vec<(String, String)>),
@@ -25,12 +19,9 @@ impl Command {
         match self {
             Command::Query(write, read) => {
                 ret.push(write.len() as u8);
-                ret.push(read.data.len() as u8);
-                let mut buf = [0_u8; 2];
-                LittleEndian::write_u16(&mut buf, read.timeout);
-                ret.extend(&buf);
+                ret.push(read.len() as u8);
                 ret.extend(write);
-                ret.extend(&read.data);
+                ret.extend(read);
             },
             Command::Write(write) => {
                 ret.extend(write);
@@ -94,14 +85,10 @@ mod tests {
 
     #[test]
     fn serialize() {
-        let read = Readback {
-            data: vec![0xD, 0xE],
-            timeout: 0x123
-        };
         let cmd = Command::Write(vec![0xA, 0xB, 0xC]);
         assert_eq!(cmd.script_line(), ":020A0B0C");
-        let cmd = Command::Query(vec![0xA, 0xB, 0xC], read);
-        assert_eq!(cmd.script_line(), ":03030223010A0B0C0D0E");
+        let cmd = Command::Query(vec![0xA, 0xB, 0xC], vec![0xD, 0xE]);
+        assert_eq!(cmd.script_line(), ":0303020A0B0C0D0E");
         let cmd = Command::SetTimeOut(0xDEADBEEF);
         assert_eq!(cmd.script_line(), ":10EFBEADDE");
         let cmd = Command::Log("foobar".to_string());
