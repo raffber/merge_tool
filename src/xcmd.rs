@@ -3,10 +3,6 @@ use crate::protocol::Protocol;
 use crate::crc::crc8;
 use byteorder::{LittleEndian, ByteOrder};
 
-struct ExtCmdProtocol {
-    xcmd_code: u8
-}
-
 const CMD_NONE: u8 = 0x00;
 const CMD_ADVANCE: u8 = 0x01;
 const CMD_RESET: u8 = 0x02;
@@ -26,25 +22,29 @@ const STATE_ERR: u8 = 0x06;
 
 const STATUS_SUCCESS: u8 = 0x06;
 
+pub struct ExtCmdProtocol {
+    xcmd_code: u8
+}
+
 impl ExtCmdProtocol {
-    fn new(xcmd_code: u8) -> Self {
+    pub fn new(xcmd_code: u8) -> Self {
         Self {
             xcmd_code
         }
     }
 
-    fn write(&self, mut data: Vec<u8>) -> Command {
+    pub fn write(&self, mut data: Vec<u8>) -> Command {
         data.push(crc8(&data));
         Command::Write(data)
     }
 
-    fn query(&self, mut tx: Vec<u8>, mut rx: Vec<u8>) -> Command {
+    pub fn query(&self, mut tx: Vec<u8>, mut rx: Vec<u8>) -> Command {
         tx.push(crc8(&tx));
         rx.push(crc8(&rx));
         Command::Query(tx, rx)
     }
 
-    fn advance_state(&self, fw_id: u8, wait_time: u32, expected_state: u8) -> Vec<Command> {
+    pub fn advance_state(&self, fw_id: u8, wait_time: u32, expected_state: u8) -> Vec<Command> {
         vec![
             Command::SetTimeOut(wait_time),
             self.write(vec![self.xcmd_code, fw_id, CMD_ADVANCE]),

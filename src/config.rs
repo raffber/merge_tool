@@ -1,5 +1,7 @@
 use serde::{Serialize, Deserialize};
 
+pub const EXT_CMD_CODE: u8 = 0x11;
+
 mod default {
     pub fn fw_id() -> u8 { 0 }
     pub fn header_offset() -> u64 { 0 }

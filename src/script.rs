@@ -3,7 +3,7 @@ use sha2::{Sha256, Digest};
 use std::iter::once;
 use itertools::Itertools;
 
-trait TimeModel {
+pub trait TimeModel {
     fn compute_write_time(&self, num_write: usize) -> f64;
     fn compute_read_time(&self, num_write: usize, num_read: usize) -> f64;
 
@@ -69,27 +69,31 @@ impl TimeModel for SimpleTimeModel {
     }
 }
 
-struct Script {
+pub struct Script {
     commands: Vec<Command>,
     time_model: Box<dyn TimeModel>,
 }
 
 impl Script {
-    fn new_with_model<T: 'static + TimeModel>(cmds: Vec<Command>, model: T) -> Self {
-        Self {
+    pub fn new_with_model<T: 'static + TimeModel>(cmds: Vec<Command>, model: T) -> Self {
+        let mut ret = Self {
             commands: cmds,
             time_model: Box::new(model)
-        }
+        };
+        ret.compute_progres();
+        ret
     }
 
-    fn new(cmds: Vec<Command>) -> Self {
-        Self {
+    pub fn new(cmds: Vec<Command>) -> Self {
+        let mut ret = Self {
             commands: cmds,
             time_model: Box::new(SimpleTimeModel::new(0.0, 0.0))
-        }
+        };
+        ret.compute_progres();
+        ret
     }
 
-    pub fn compute_progres(&mut self) {
+    fn compute_progres(&mut self) {
         let mut new_cmds = Vec::new();
         let time = self.time_model.compute(&self.commands);
         let total: f64 = time[time.len() - 1];
@@ -146,7 +150,6 @@ mod tests {
             Command::Write(vec![]),
         ];
         let mut script = Script::new(cmds);
-        script.compute_progres();
         let mut iter = script.commands.iter();
         assert_matches!(iter.next(), Some(Command::SetTimeOut(_)));
         assert_matches!(iter.next(), Some(Command::Write(_)));

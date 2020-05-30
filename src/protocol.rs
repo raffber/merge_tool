@@ -35,7 +35,7 @@ fn make_header(config: &Config) -> Command {
     Command::Header(header)
 }
 
-pub fn generate_script<P: Protocol>(protocol: P, fws: Vec<Firmware>, config: Config) -> Vec<Command> {
+pub fn generate_script<P: Protocol>(protocol: &P, fws: &[Firmware], config: &Config) -> Vec<Command> {
     assert_eq!(fws.len(), config.images.len());
     let mut ret = Vec::new();
 
