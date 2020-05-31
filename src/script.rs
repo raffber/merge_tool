@@ -188,6 +188,7 @@ mod tests {
         assert_eq!(splits.next(), Some(":01666F6F3D626172"));
         assert_eq!(splits.next(), Some(":02ABCDEF"));
         assert_eq!(splits.next(), Some(":030302ABCDEF1234"));
+        assert_eq!(splits.next(), Some(":22FF"));
         // now comes the SHA-256
         if let Some(x) = splits.next() {
             let x = x.as_bytes();
