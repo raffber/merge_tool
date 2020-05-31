@@ -1,4 +1,6 @@
 use serde::{Serialize, Deserialize};
+use crate::Error;
+use std::path::Path;
 
 pub const EXT_CMD_CODE: u8 = 0x11;
 
@@ -90,7 +92,7 @@ impl FwConfig {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Config {
-    pub product_id: u32,
+    pub product_id: u16,
     pub product_name: String,
     pub major_version: u8,
     pub btl_version: u8,
@@ -99,3 +101,8 @@ pub struct Config {
     pub time_state_transition: u32,
 }
 
+impl Config {
+    fn load(path: &Path) -> Result<Config, Error> {
+        todo!()
+    }
+}

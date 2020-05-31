@@ -12,6 +12,7 @@ mod script;
 mod protocol;
 mod xcmd;
 mod process;
+mod header;
 
 #[derive(Debug)]
 pub enum Error {
@@ -19,6 +20,7 @@ pub enum Error {
     InvalidAddress,
     Io(std::io::Error),
     InvalidHexFile,
+    InvalidConfig(String),
 }
 
 impl fmt::Display for Error {
