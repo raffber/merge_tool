@@ -19,7 +19,8 @@
     "terser-webpack-plugin": "^2.2.2",
     "webpack": "^4.41.2",
     "webpack-cli": "^3.3.10",
-    "rust-greenhorn": "git@github.com:raffber/greenhorn.git#46c5002"
+    "rust-greenhorn": "git@github.com:raffber/greenhorn.git#46c5002",
+    "bootstrap": "^4.5.0"
   },
   "scripts": {
     "build-dev": "electron-build-env neon build && webpack --config webpack.renderer.config.js --mode=development && webpack --config webpack.main.config.js --mode=development",
@@ -34,5 +35,6 @@
     "files": [
       "dist/*"
     ]
-  }
+  },
+  "dependencies": {}
 }

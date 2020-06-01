@@ -3,6 +3,7 @@ var {remote, ipcRenderer} = require('electron');
 
 import Application from 'rust-greenhorn/js/app.js';
 import Pipe from 'rust-greenhorn/js/websocket.js';
+import '../scss/main.scss';
 
 let app = null;
 
