@@ -1,3 +1,5 @@
+#![recursion_limit="512"]
+
 use neon::prelude::*;
 use greenhorn::{Runtime, WebSocketPipe};
 use std::net::SocketAddr;

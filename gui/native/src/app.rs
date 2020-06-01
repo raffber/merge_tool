@@ -24,10 +24,21 @@ impl Render for MainApp {
         use greenhorn::html;
 
         html!(
-            <div>
-                <h1>{format!("Say {}!", self.msg)}</>
-                <input type="button" @click={|_| MainMsg::SayHello} value="Hello" />
-                <input type="button" @click={|_| MainMsg::SayGoodbye} value="Goodbye" />
+            <div .main-app .container-fluid>
+                <h1>{"Merge & Release Tool"}</>
+                <div class="row align-items-center">
+                    <div class="custom-control custom-switch mx-1 col-auto">
+                        <input type="checkbox" class="custom-control-input" id="auto-save-toggle" />
+                        <label class="custom-control-label" for="auto-save-toggle">{"Auto Save"}</>
+                    </>
+                    <input type="text" class="col mx-1 form-control" placeholder="Path to config file..." />
+                    <button type="button" class="btn btn-secondary mx-1 col-auto">{"Open"}</>
+                </>
+                <div #main-button-row>                    
+                    <button type="button" class="btn btn-secondary mx-1">{"Merge"}</>
+                    <button type="button" class="btn btn-secondary mx-1">{"Release"}</>
+                    <button type="button" class="btn btn-primary mx-1">{"Generate Script"}</>
+                </>
             </>
         ).into()
     }

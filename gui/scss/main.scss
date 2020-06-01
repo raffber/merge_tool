@@ -1,3 +1,20 @@
 
 @import "../node_modules/bootstrap/scss/bootstrap";
 
+body {
+    background-color: #FAFAFA;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.main-app {
+    width: 100%;
+    height: 100vh;
+    user-select: none;    
+}
+
+#main-button-row {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+}

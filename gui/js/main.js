@@ -9,10 +9,14 @@ process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = true;
 function createWindow () {
   const port = addon.run();
   global.port = port;
+  let width = 1000;
+  if (process.env.NODE_ENV === "development") {
+    width = 1900;
+  }
 
   Menu.setApplicationMenu(null);
   const mainWindow = new BrowserWindow({
-    width: 1000,
+    width: width,
     height: 800,
     webPreferences: {
       webSecurity: false,
