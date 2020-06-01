@@ -1,13 +1,32 @@
 use serde::{Serialize, Deserialize};
 use crate::Error;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::fs::File;
+use std::io::Read;
 
 pub const EXT_CMD_CODE: u8 = 0x11;
 
 mod default {
     pub fn fw_id() -> u8 { 0 }
+    pub fn major_version() -> u8 { 0xFF }
+    pub fn minor_version() -> u8 { 0xFF }
+    pub fn build_version() -> u8 { 0xFF }
     pub fn header_offset() -> u64 { 0 }
     pub fn include_in_script() -> bool { false }
+    pub fn btl_version() -> u8 { 1 }
+    pub fn empty_string() -> String { "".to_string() }
+}
+
+fn skip_if_ff(value: &u8) -> bool {
+    *value == 0xFF
+}
+
+fn skip_if_zero(value: &u8) -> bool {
+    *value == 0
+}
+
+fn skip_if_one(value: &u8) -> bool {
+    *value == 1
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -62,13 +81,15 @@ pub struct DeviceConfig {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ImageVersion {
+    #[serde(default = "default::minor_version", skip_serializing_if = "skip_if_ff")]
     pub minor: u8,
+    #[serde(default = "default::build_version", skip_serializing_if = "skip_if_ff")]
     pub build: u8
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct FwConfig {
-    #[serde(default = "default::fw_id")]
+    #[serde(default = "default::fw_id", skip_serializing_if = "skip_if_zero")]
     pub fw_id: u8,
     pub btl_path: String,
     pub app_path: String,
@@ -94,15 +115,47 @@ impl FwConfig {
 pub struct Config {
     pub product_id: u16,
     pub product_name: String,
+    #[serde(default = "default::major_version", skip_serializing_if = "skip_if_ff")]
     pub major_version: u8,
+    #[serde(default = "default::btl_version", skip_serializing_if = "skip_if_one")]
     pub btl_version: u8,
     pub use_backdoor: bool,
     pub images: Vec<FwConfig>,
     pub time_state_transition: u32,
+    #[serde(default = "default::empty_string", skip_serializing_if = "String::is_empty")]
+    pub repo_path: String,
 }
 
 impl Config {
-    fn load(path: &Path) -> Result<Config, Error> {
-        todo!()
+    fn normalize_path(path: &str, config_path: &Path) -> String {
+        let mut path = PathBuf::from(path);
+        if path.is_relative() {
+            path = config_path.join(&path);
+        }
+        path.to_str().unwrap().to_string()
+    }
+
+    pub fn load_from_file(path: &Path) -> Result<Config, Error> {
+        let mut data = String::new();
+        File::open(path).map_err(Error::Io)?.read_to_string(&mut data);
+        Self::load_from_string(&data, path)
+    }
+
+    pub fn load_from_string(data: &str, config_path: &Path) -> Result<Config, Error> {
+        let mut config: Config = serde_json::from_str(data).map_err(Error::CannotParseConfig)?;
+        for fw_config in &mut config.images {
+            fw_config.btl_path = Self::normalize_path(&fw_config.btl_path, config_path);
+            fw_config.app_path = Self::normalize_path(&fw_config.app_path, config_path);
+        }
+        if config.repo_path.is_empty() {
+            let mut path = config_path;
+            while let Some(parent) = path.parent() {
+                let git_path = parent.join(".git");
+                if git_path.exists() {
+                    config.repo_path = git_path.to_str().unwrap().to_string()
+                }
+            }
+        }
+        Ok(config)
     }
 }

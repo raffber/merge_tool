@@ -772,6 +772,7 @@ dependencies = [
  "hex",
  "itertools",
  "serde",
+ "serde_json",
  "sha2",
 ]
 

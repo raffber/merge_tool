@@ -113,7 +113,7 @@ pub fn load_app(config: &mut Config, idx: usize) -> Result<Firmware, Error> {
     let fw_id = config.images[idx].fw_id;
     if fw_id != 0 && fw_id != header.fw_id() {
         return Err(Error::InvalidConfig(
-            format!("Build version in firmware and config does not match: {} vs. {}",
+            format!("Firmware ID in firmware and config does not match: {} vs. {}",
                     build, header.fw_id()) ) );
     } else if fw_id == 0 {
         config.images[idx].fw_id = header.fw_id();
@@ -125,7 +125,8 @@ pub fn load_app(config: &mut Config, idx: usize) -> Result<Firmware, Error> {
 }
 
 pub fn load_btl(config: &Config, idx: usize) -> Result<Firmware, Error> {
-    todo!()
+    let path = Path::new(&config.images[idx].btl_path);
+    let fw_config = &config.images[idx];
+    Firmware::load_from_file(&path, &fw_config.hex_file_format, &fw_config.device_config, &fw_config.btl_address)
 }
-
 

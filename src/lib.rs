@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use std::fmt;
+use serde_json::Error as JsonError;
 
 mod config;
 mod firmware;
@@ -21,6 +22,8 @@ pub enum Error {
     Io(std::io::Error),
     InvalidHexFile,
     InvalidConfig(String),
+    CannotParseConfig(JsonError),
+    CannotFindGitRepo,
 }
 
 impl fmt::Display for Error {
