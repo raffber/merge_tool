@@ -1,7 +1,1 @@
-{
-    "product_id": 1234,
-    "product_name": "Nimbus2000",
-    "use_backdoor": false,
-    "images": [],
-    "time_state_transition": 10
-}
+{"product_id":0,"product_name":"Nimbus2000","images":[],"time_state_transition":10,"repo_path":"/home/raff/coding/merge_tool/.git"}

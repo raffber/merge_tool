@@ -68,7 +68,7 @@ fn parse_line(line: String) -> Result<Line, Error> {
     if line.as_bytes()[0] != b':' {
         return Err(Error::InvalidHexFile)
     }
-    let data = hex::decode(&line[1..]).map_err(|x| Error::InvalidHexFile)?;
+    let data = hex::decode(&line[1..]).map_err(|_| Error::InvalidHexFile)?;
     let count = data[0] as usize;
     if count + 5 != data.len() {
         return Err(Error::InvalidHexFile);

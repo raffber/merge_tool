@@ -97,6 +97,7 @@ impl Protocol for ExtCmdProtocol {
         vec![
             Command::SetTimeOut(erase_time),
             Command::Write(vec![self.xcmd_code, fw_id, CMD_ADVANCE]),
+            Command::SetTimeOut(transition_time),
             Command::Query(vec![self.xcmd_code | 0x80, fw_id], vec![COM_OK, fw_id, STATE_RX_DATA, STATUS_SUCCESS]),
         ]
     }

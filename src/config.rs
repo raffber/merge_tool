@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 use crate::Error;
 use std::path::{Path, PathBuf};
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Write};
 
 pub const EXT_CMD_CODE: u8 = 0x11;
 
@@ -145,6 +145,12 @@ impl Config {
         let mut data = String::new();
         File::open(path).map_err(Error::Io)?.read_to_string(&mut data).map_err(Error::Io)?;
         Self::load_from_string(&data, path)
+    }
+
+    pub fn save(&self, path: &Path) -> Result<(), Error> {
+        let data = serde_json::to_string(self).unwrap();
+        let mut file = File::create(path).map_err(Error::Io)?;
+        file.write_all(data.as_bytes()).map_err(Error::Io)
     }
 
     pub fn load_from_string(data: &str, config_path: &Path) -> Result<Config, Error> {

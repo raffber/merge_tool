@@ -1,4 +1,4 @@
-use crate::config::{Config, FwConfig, EXT_CMD_CODE, HexFileFormat};
+use crate::config::{Config, EXT_CMD_CODE};
 use std::path::Path;
 use crate::Error;
 use crate::firmware::Firmware;

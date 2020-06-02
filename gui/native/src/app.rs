@@ -1,13 +1,11 @@
-use std::panic;
+use std::thread;
 use std::path::Path;
 
-use backtrace::Backtrace;
 use greenhorn::components::checkbox;
 use greenhorn::dialog::{FileFilter, FileOpenDialog, FileOpenMsg};
 use greenhorn::prelude::*;
 
 use merge_tool::config::Config;
-use merge_tool::Error;
 
 use crate::text_field::{TextField, TextFieldMsg};
 
@@ -83,17 +81,29 @@ impl MainApp {
         self.config = config;
     }
 
-    pub fn load_config(&mut self, path: String, ctx: &Context<Msg>) {
+    pub fn load_config(&mut self, path: String) {
         let path = Path::new(&path);
         match Config::load_from_file(path) {
             Ok(config) => {
                 self.apply_config(config);
+                self.auto_save = true;
             }
             Err(err) => {
                 println!("{:?}", err);
                 // TODO: ...
                 println!("TODO: error, print to log")
             }
+        }
+    }
+
+    pub fn config_changed(&self) {
+        if self.auto_save {
+            let config = self.config.clone();
+            let path = self.config_path.get().clone();
+            thread::spawn(move || {
+                let path = Path::new(&path);
+                config.save(path)
+            });
         }
     }
 }
@@ -111,7 +121,7 @@ impl App for MainApp {
             Msg::ConfigOpened(msg) => {
                 if let FileOpenMsg::Selected(path) = msg {
                     self.config_path.set(path.clone());
-                    self.load_config(path, &ctx);
+                    self.load_config(path);
                 }
             }
             Msg::ConfigPathMsg(msg) => {
@@ -123,22 +133,35 @@ impl App for MainApp {
             },
             Msg::ProductNameChanged(value) => {
                 self.config.product_name = value;
+                self.config_changed();
             }
 
             Msg::ConfigPathChanged(value) => {
-                self.load_config(value, &ctx);
+                self.load_config(value);
             }
             Msg::ProductIdMsg(msg) => {
                 self.product_id.update(msg, &ctx);
             },
-            Msg::ProductIdChanged(value) => {}
+            Msg::ProductIdChanged(value) => {
+                self.config.product_id = value;
+                self.config_changed();
+            }
 
             Msg::StateTransitionMsg(msg) => {
                 self.state_transition.update(msg, &ctx);
             },
-            Msg::StateTransitionChanged(value) => {}
-            Msg::UseBackdoorToggle => self.config.use_backdoor = !self.config.use_backdoor,
-            Msg::AutoSaveToggle => self.auto_save = !self.auto_save,
+            Msg::StateTransitionChanged(value) => {
+                self.config.time_state_transition = value;
+                self.config_changed();
+            }
+            Msg::UseBackdoorToggle => {
+                self.config.use_backdoor = !self.config.use_backdoor;
+                self.config_changed();
+            },
+            Msg::AutoSaveToggle => {
+                self.auto_save = !self.auto_save;
+                self.config_changed();
+            },
         }
         Updated::yes()
     }

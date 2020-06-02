@@ -1,7 +1,6 @@
 use std::path::Path;
 use crate::{Error, swap_bytearray};
 use crate::config::AddressRange;
-use std::iter::repeat;
 use std::fs::File;
 use std::io::{BufReader, BufRead, Write};
 use hex;
