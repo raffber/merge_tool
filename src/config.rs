@@ -148,7 +148,7 @@ impl Config {
     }
 
     pub fn save(&self, path: &Path) -> Result<(), Error> {
-        let data = serde_json::to_string(self).unwrap();
+        let data = serde_json::to_string_pretty(self).unwrap();
         let mut file = File::create(path).map_err(Error::Io)?;
         file.write_all(data.as_bytes()).map_err(Error::Io)
     }

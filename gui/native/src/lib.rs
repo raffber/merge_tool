@@ -1,4 +1,5 @@
 #![recursion_limit="512"]
+#![allow(dead_code)]
 
 use neon::prelude::*;
 use greenhorn::{Runtime, WebSocketPipe};
