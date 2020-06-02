@@ -2,63 +2,84 @@ use std::panic;
 use std::path::Path;
 
 use backtrace::Backtrace;
-use greenhorn::components::{checkbox, TextInput, TextInputMsg};
+use greenhorn::components::checkbox;
 use greenhorn::dialog::{FileFilter, FileOpenDialog, FileOpenMsg};
 use greenhorn::prelude::*;
 
 use merge_tool::config::Config;
 use merge_tool::Error;
 
+use crate::text_field::{TextField, TextFieldMsg};
+
 #[derive(Debug)]
 pub enum Msg {
     OpenConfig,
     ConfigOpened(FileOpenMsg),
 
-    ConfigPathMsg(TextInputMsg),
-    ConfigPathChanged(DomEvent),
+    ConfigPathMsg(TextFieldMsg),
+    ConfigPathChanged(String),
 
-    ProductNameMsg(TextInputMsg),
-    ProductNameChanged(DomEvent),
+    ProductNameMsg(TextFieldMsg),
+    ProductNameChanged(String),
 
-    ProductIdMsg(TextInputMsg),
-    ProductIdChanged(DomEvent),
+    ProductIdMsg(TextFieldMsg),
+    ProductIdChanged(u16),
 
-    StateTransitionMsg(TextInputMsg),
-    StateTransitionChanged(DomEvent),
+    StateTransitionMsg(TextFieldMsg),
+    StateTransitionChanged(u32),
 
     UseBackdoorToggle,
     AutoSaveToggle,
 }
 
 pub struct MainApp {
-    product_name: TextInput,
-    config_path: TextInput,
-    product_id: TextInput,
-    product_id_valid: bool,
-    state_transition: TextInput,
-    state_transition_valid: bool,
+    product_name: TextField<String>,
+    config_path: TextField<String>,
+    product_id: TextField<u16>,
+    state_transition: TextField<u32>,
     auto_save: bool,
     config: Config,
 }
 
+mod validate {
+    pub fn product_name(value: &str) -> Option<String> {
+        Some(value.to_string())
+    }
+
+    pub fn config_path(value: &str) -> Option<String> {
+        Some(value.to_string())
+    }
+
+    pub fn product_id(value: &str) -> Option<u16> {
+        u16::from_str_radix(&value, 16).ok()
+    }
+
+    pub fn state_transition(value: &str) -> Option<u32> {
+        u32::from_str_radix(&value, 16).ok()
+    }
+}
+
+
 impl MainApp {
     pub fn new() -> Self {
         Self {
-            product_name: Default::default(),
-            config_path: Default::default(),
-            product_id: Default::default(),
-            state_transition: Default::default(),
-            state_transition_valid: true,
+            product_name: TextField::new(validate::product_name, |x| x.to_string(), "".to_string())
+                .class("col-3 form-control").placeholder("e.g. Nimbus2000"),
+            config_path: TextField::new(validate::config_path, |x| x.to_string(), "".to_string())
+                .class("col mx-1 form-control").placeholder("Path to config file..."),
+            product_id: TextField::new(validate::product_id, |x| x.to_string(), 0)
+                .class("col-3 form-control").placeholder("e.g. 0xABCD"),
+            state_transition: TextField::new(validate::state_transition, |x| x.to_string(), 0)
+                .class( "col-3 form-control").placeholder( "in ms"),
             auto_save: false,
-            product_id_valid: true,
             config: Default::default(),
         }
     }
 
     pub fn apply_config(&mut self, config: Config) {
         self.product_name.set(config.product_name.clone());
-        self.product_id.set(format!("{:#X}", &config.product_id));
-        self.state_transition.set(format!("{}", &config.time_state_transition));
+        self.product_id.set(config.product_id);
+        self.state_transition.set(config.time_state_transition);
         self.config = config;
     }
 
@@ -93,38 +114,29 @@ impl App for MainApp {
                     self.load_config(path, &ctx);
                 }
             }
-            Msg::ConfigPathMsg(msg) => self.config_path.update(msg, &ctx),
+            Msg::ConfigPathMsg(msg) => {
+                self.config_path.update(msg, &ctx);
+            },
 
-            Msg::ProductNameMsg(msg) => self.product_name.update(msg, &ctx),
-            Msg::ProductNameChanged(evt) => {
-                self.config.product_name = evt.target_value().get_text().unwrap();
-            }
-
-            Msg::ConfigPathChanged(evt) => {
-                let path = evt.target_value().get_text().unwrap();
-                self.load_config(path, &ctx);
-            }
-            Msg::ProductIdMsg(msg) => self.product_id.update(msg, &ctx),
-            Msg::ProductIdChanged(evt) => {
-                let value = evt.target_value().get_text().unwrap();
-                if let Ok(value) = u16::from_str_radix(&value, 16) {
-                    self.product_id_valid = true;
-                    self.config.product_id = value;
-                } else {
-                    self.product_id_valid = false;
-                }
+            Msg::ProductNameMsg(msg) => {
+                self.product_name.update(msg, &ctx);
+            },
+            Msg::ProductNameChanged(value) => {
+                self.config.product_name = value;
             }
 
-            Msg::StateTransitionMsg(msg) => self.state_transition.update(msg, &ctx),
-            Msg::StateTransitionChanged(evt) => {
-                let value = evt.target_value().get_text().unwrap();
-                if let Ok(value) = u32::from_str_radix(&value, 16) {
-                    self.state_transition_valid = true;
-                    self.config.time_state_transition = value;
-                } else {
-                    self.state_transition_valid = false;
-                }
+            Msg::ConfigPathChanged(value) => {
+                self.load_config(value, &ctx);
             }
+            Msg::ProductIdMsg(msg) => {
+                self.product_id.update(msg, &ctx);
+            },
+            Msg::ProductIdChanged(value) => {}
+
+            Msg::StateTransitionMsg(msg) => {
+                self.state_transition.update(msg, &ctx);
+            },
+            Msg::StateTransitionChanged(value) => {}
             Msg::UseBackdoorToggle => self.config.use_backdoor = !self.config.use_backdoor,
             Msg::AutoSaveToggle => self.auto_save = !self.auto_save,
         }
@@ -138,24 +150,6 @@ impl Render for MainApp {
     fn render(&self) -> Node<Self::Message> {
         use greenhorn::html;
 
-        let mut state_transition = self.state_transition
-            .render(Msg::StateTransitionMsg)
-            .class("col-3 form-control")
-            .attr("placeholder", "in ms")
-            .on("keyup", Msg::StateTransitionChanged);
-        if !self.state_transition_valid {
-            state_transition = state_transition.class("is-invalid");
-        }
-
-        let mut product_id = self.product_id
-            .render(Msg::ProductIdMsg)
-            .class("col-3 form-control")
-            .attr("placeholder", "e.g. 0xABCD")
-            .on("keyup", Msg::ProductIdChanged);
-        if !self.product_id_valid {
-            product_id = product_id.class("is-invalid");
-        }
-
         html!(
             <div .main-app .container-fluid>
                 // path to config file
@@ -165,9 +159,8 @@ impl Render for MainApp {
                             .class("custom-control-input").id("auto-save-toggle")}
                         <label class="custom-control-label" for="auto-save-toggle">{"Auto Save"}</>
                     </>
-                    {self.config_path.render(Msg::ConfigPathMsg).class("col mx-1 form-control")
-                        .attr("placeholder", "Path to config file...")
-                        .on("keyup", Msg::ConfigPathChanged)}
+                    {self.config_path.render().build().map(Msg::ConfigPathMsg)}
+                    {self.config_path.change_event().subscribe(Msg::ConfigPathChanged)}
                     <button type="button" class="btn btn-secondary mx-1 col-auto"
                         @click={|_| Msg::OpenConfig}>{"Open"}</>
                 </>
@@ -175,18 +168,18 @@ impl Render for MainApp {
                 // row with product ID + Product name
                 <div class="row align-items-center my-2">
                     <span class="col-3">{"Product ID"}</>
-                    {product_id}
+                    {self.product_id.render().build().map(Msg::ProductIdMsg)}
+                    {self.product_id.change_event().subscribe(Msg::ProductIdChanged)}
                     <span class="col-3">{"Product Name"}</>
-                    {self.product_name.render(Msg::ProductNameMsg)
-                        .class("col-3 form-control")
-                        .attr("placeholder", "e.g. Nimbus2000")
-                        .on("keyup", Msg::ProductNameChanged)}
+                    {self.product_name.render().build().map(Msg::ProductNameMsg)}
+                    {self.product_name.change_event().subscribe(Msg::ProductNameChanged)}
                 </>
 
                 // row with state transition and "use backdoor"
                 <div class="row align-items-center my-2">
                     <span class="col-3">{"State Transition Time"}</>
-                    {state_transition}
+                    {self.state_transition.render().build().map(Msg::StateTransitionMsg)}
+                    {self.state_transition.change_event().subscribe(Msg::StateTransitionChanged)}
                     <div class="col-6 px-5 custom-control custom-checkbox">
                         {checkbox(self.config.use_backdoor, || Msg::UseBackdoorToggle)
                             .class("custom-control-input").id("use-backdoor")}

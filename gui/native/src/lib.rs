@@ -7,6 +7,7 @@ use std::str::FromStr;
 use std::{thread, panic};
 
 mod app;
+mod text_field;
 
 use crate::app::MainApp;
 use backtrace::Backtrace;
