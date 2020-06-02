@@ -1,7 +1,7 @@
 use crate::command::Command;
-use crate::protocol::Protocol;
 use crate::crc::crc8;
-use byteorder::{LittleEndian, ByteOrder};
+use crate::protocol::Protocol;
+use byteorder::{ByteOrder, LittleEndian};
 
 const CMD_NONE: u8 = 0x00;
 const CMD_ADVANCE: u8 = 0x01;
@@ -23,14 +23,12 @@ const STATE_ERR: u8 = 0x06;
 const STATUS_SUCCESS: u8 = 0x06;
 
 pub struct ExtCmdProtocol {
-    xcmd_code: u8
+    xcmd_code: u8,
 }
 
 impl ExtCmdProtocol {
     pub fn new(xcmd_code: u8) -> Self {
-        Self {
-            xcmd_code
-        }
+        Self { xcmd_code }
     }
 
     pub fn write(&self, mut data: Vec<u8>) -> Command {
@@ -48,10 +46,11 @@ impl ExtCmdProtocol {
         vec![
             Command::SetTimeOut(wait_time),
             self.write(vec![self.xcmd_code, fw_id, CMD_ADVANCE]),
-            self.query(vec![self.xcmd_code | 0x80, fw_id],
-                       vec![COM_OK, fw_id, expected_state, STATUS_SUCCESS]),
+            self.query(
+                vec![self.xcmd_code | 0x80, fw_id],
+                vec![COM_OK, fw_id, expected_state, STATUS_SUCCESS],
+            ),
         ]
-
     }
 }
 
@@ -60,22 +59,24 @@ impl Protocol for ExtCmdProtocol {
         vec![
             Command::SetTimeOut(wait_time),
             self.write(vec![self.xcmd_code, fw_id, CMD_ENTER]),
-            self.query(vec![self.xcmd_code | 0x80, fw_id, CMD_ENTER],
-                       vec![COM_OK, fw_id, STATE_IDLE, STATUS_SUCCESS]),
+            self.query(
+                vec![self.xcmd_code | 0x80, fw_id, CMD_ENTER],
+                vec![COM_OK, fw_id, STATE_IDLE, STATUS_SUCCESS],
+            ),
         ]
     }
 
     fn leave(&self, fw_id: u8, wait_time: u32) -> Vec<Command> {
         vec![
             Command::SetTimeOut(wait_time),
-            self.write(vec![self.xcmd_code, fw_id, CMD_RESET])
+            self.write(vec![self.xcmd_code, fw_id, CMD_RESET]),
         ]
     }
 
     fn reset(&self, fw_id: u8, wait_time: u32) -> Vec<Command> {
         vec![
             Command::SetTimeOut(wait_time),
-            self.write(vec![self.xcmd_code, fw_id, CMD_RESET])
+            self.write(vec![self.xcmd_code, fw_id, CMD_RESET]),
         ]
     }
 
@@ -86,7 +87,7 @@ impl Protocol for ExtCmdProtocol {
     fn send_validation_data(&self, fw_id: u8, data: &[u8]) -> Vec<Command> {
         let mut tx_data = vec![self.xcmd_code, fw_id, CMD_DATA];
         tx_data.extend(data);
-        vec![ Command::Write(tx_data) ]
+        vec![Command::Write(tx_data)]
     }
 
     fn check_validated(&self, fw_id: u8, wait_time: u32) -> Vec<Command> {
@@ -98,7 +99,10 @@ impl Protocol for ExtCmdProtocol {
             Command::SetTimeOut(erase_time),
             Command::Write(vec![self.xcmd_code, fw_id, CMD_ADVANCE]),
             Command::SetTimeOut(transition_time),
-            Command::Query(vec![self.xcmd_code | 0x80, fw_id], vec![COM_OK, fw_id, STATE_RX_DATA, STATUS_SUCCESS]),
+            Command::Query(
+                vec![self.xcmd_code | 0x80, fw_id],
+                vec![COM_OK, fw_id, STATE_RX_DATA, STATUS_SUCCESS],
+            ),
         ]
     }
 
@@ -118,4 +122,3 @@ impl Protocol for ExtCmdProtocol {
         self.advance_state(fw_id, wait_time, STATE_FINISHED)
     }
 }
-

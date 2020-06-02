@@ -15,7 +15,7 @@ impl<'a> Header<'a> {
     pub fn new(fw: &'a mut Firmware, offset: u64) -> Self {
         Self {
             fw,
-            offset: offset as usize
+            offset: offset as usize,
         }
     }
 

@@ -1,11 +1,11 @@
-#![recursion_limit="512"]
+#![recursion_limit = "512"]
 #![allow(dead_code)]
 
-use neon::prelude::*;
 use greenhorn::{Runtime, WebSocketPipe};
+use neon::prelude::*;
 use std::net::SocketAddr;
 use std::str::FromStr;
-use std::{thread, panic};
+use std::{panic, thread};
 
 mod app;
 mod text_field;
@@ -32,6 +32,4 @@ fn run(mut cx: FunctionContext) -> JsResult<JsNumber> {
     Ok(cx.number(port))
 }
 
-register_module!(mut cx, {
-    cx.export_function("run", run)
-});
+register_module!(mut cx, { cx.export_function("run", run) });

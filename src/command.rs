@@ -1,5 +1,4 @@
-use byteorder::{LittleEndian, ByteOrder};
-
+use byteorder::{ByteOrder, LittleEndian};
 
 #[derive(Clone, Debug)]
 pub enum Command {
@@ -10,7 +9,7 @@ pub enum Command {
     Header(Vec<(String, String)>),
     SetTimeOut(u32),
     Progress(u8),
-    Checksum(Vec<u8>)
+    Checksum(Vec<u8>),
 }
 
 impl Command {
@@ -22,16 +21,16 @@ impl Command {
                 ret.push(read.len() as u8);
                 ret.extend(write);
                 ret.extend(read);
-            },
+            }
             Command::Write(write) => {
                 ret.extend(write);
-            },
+            }
             Command::Log(x) => {
                 ret.extend(x.as_bytes());
-            },
+            }
             Command::SetError(x) => {
                 ret.extend(x.as_bytes());
-            },
+            }
             Command::Header(kv) => {
                 let mut first = true;
                 for (k, v) in kv {
@@ -43,18 +42,16 @@ impl Command {
                     ret.push(b'=');
                     ret.extend(v.as_bytes());
                 }
-            },
+            }
             Command::SetTimeOut(timeout) => {
                 let mut buf = [0_u8; 4];
                 LittleEndian::write_u32(&mut buf, *timeout);
                 ret.extend(&buf);
-            },
+            }
             Command::Progress(v) => {
                 ret.push(*v);
-            },
-            Command::Checksum(data) => {
-                ret.extend(data.iter())
             }
+            Command::Checksum(data) => ret.extend(data.iter()),
         }
         ret
     }
@@ -93,8 +90,10 @@ mod tests {
         assert_eq!(cmd.script_line(), ":10EFBEADDE");
         let cmd = Command::Log("foobar".to_string());
         assert_eq!(cmd.script_line(), ":20666F6F626172");
-        let cmd = Command::Header(vec![("foo".to_string(), "bar".to_string()),
-                                       ("more".to_string(),"stuff".to_string())]);
+        let cmd = Command::Header(vec![
+            ("foo".to_string(), "bar".to_string()),
+            ("more".to_string(), "stuff".to_string()),
+        ]);
         assert_eq!(cmd.script_line(), ":01666F6F3D6261727C6D6F72653D7374756666");
         let cmd = Command::SetError("foobar".to_string());
         assert_eq!(cmd.script_line(), ":21666F6F626172");

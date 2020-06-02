@@ -1,19 +1,19 @@
 #![allow(dead_code)]
 
-use std::fmt;
 use serde_json::Error as JsonError;
+use std::fmt;
 
-pub mod config;
-pub mod firmware;
-pub mod intel_hex;
-pub mod srecord;
-pub mod crc;
 pub mod command;
-pub mod script;
-pub mod protocol;
-pub mod xcmd;
-pub mod process;
+pub mod config;
+pub mod crc;
+pub mod firmware;
 pub mod header;
+pub mod intel_hex;
+pub mod process;
+pub mod protocol;
+pub mod script;
+pub mod srecord;
+pub mod xcmd;
 
 #[derive(Debug)]
 pub enum Error {
@@ -36,7 +36,7 @@ impl std::error::Error for Error {}
 
 pub fn swap_bytearray(data: &mut Vec<u8>) {
     for k in (0..data.len()).step_by(2) {
-        data.swap(k, k+1)
+        data.swap(k, k + 1)
     }
 }
 

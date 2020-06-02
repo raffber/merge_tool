@@ -1,7 +1,7 @@
-use crate::config::{DeviceConfig, AddressRange, HexFileFormat, Endianness};
-use crate::{Error, srecord, intel_hex};
-use std::path::Path;
+use crate::config::{AddressRange, DeviceConfig, Endianness, HexFileFormat};
+use crate::{intel_hex, srecord, Error};
 use std::iter::repeat;
+use std::path::Path;
 
 pub struct Firmware {
     pub range: AddressRange,
@@ -12,12 +12,16 @@ pub struct Firmware {
 impl Firmware {
     pub fn new(range: AddressRange, config: DeviceConfig, data: Vec<u8>) -> Result<Self, Error> {
         if range.begin % config.page_size != 0 {
-            return Err(Error::AddressRangeNotAlignedToPage)
+            return Err(Error::AddressRangeNotAlignedToPage);
         }
         if range.end + 1 % config.page_size != 0 {
-            return Err(Error::AddressRangeNotAlignedToPage)
+            return Err(Error::AddressRangeNotAlignedToPage);
         }
-        Ok(Self { data, range, config })
+        Ok(Self {
+            data,
+            range,
+            config,
+        })
     }
 
     pub fn merge(first: Firmware, second: Firmware) -> Result<Firmware, Error> {
@@ -26,31 +30,35 @@ impl Firmware {
         Ok(second)
     }
 
-    pub fn load_from_file(path: &Path, file_format: &HexFileFormat, config: &DeviceConfig, range: &AddressRange)
-        -> Result<Firmware, Error> {
+    pub fn load_from_file(
+        path: &Path,
+        file_format: &HexFileFormat,
+        config: &DeviceConfig,
+        range: &AddressRange,
+    ) -> Result<Firmware, Error> {
         let range = if config.word_addressing {
             AddressRange {
-                begin: 2*range.begin,
-                end: 2*range.end + 1
+                begin: 2 * range.begin,
+                end: 2 * range.end + 1,
             }
         } else {
             range.clone()
         };
         let ret = match file_format {
-            HexFileFormat::IntelHex => {
-                intel_hex::load(path, config.word_addressing, &range)
-            },
-            HexFileFormat::SRecord => {
-                srecord::load(path, config.word_addressing, &range)
-            },
+            HexFileFormat::IntelHex => intel_hex::load(path, config.word_addressing, &range),
+            HexFileFormat::SRecord => srecord::load(path, config.word_addressing, &range),
         };
         ret.and_then(|data| Firmware::new(range, config.clone(), data))
     }
 
     pub fn write_to_file(&self, path: &Path, file_format: &HexFileFormat) -> Result<(), Error> {
         match file_format {
-            HexFileFormat::IntelHex => intel_hex::save(path, self.config.word_addressing, &self.range, &self.data),
-            HexFileFormat::SRecord => srecord::save(path, self.config.word_addressing, &self.range, &self.data),
+            HexFileFormat::IntelHex => {
+                intel_hex::save(path, self.config.word_addressing, &self.range, &self.data)
+            }
+            HexFileFormat::SRecord => {
+                srecord::save(path, self.config.word_addressing, &self.range, &self.data)
+            }
         }
     }
 
@@ -61,10 +69,10 @@ impl Firmware {
     pub fn read_u16(&self, idx: usize) -> u16 {
         assert!(idx + 1 < self.data.len());
         let a = self.data[idx];
-        let b = self.data[idx+1];
+        let b = self.data[idx + 1];
         match self.config.endianness {
-            Endianness::Big => (b as u16 + ( (a as u16) << 8) ),
-            Endianness::Little => (a as u16 + ( (b as u16) << 8) ),
+            Endianness::Big => (b as u16 + ((a as u16) << 8)),
+            Endianness::Little => (a as u16 + ((b as u16) << 8)),
         }
     }
 
@@ -75,11 +83,11 @@ impl Firmware {
             Endianness::Big => {
                 self.data[idx] = msb;
                 self.data[idx + 1] = lsb;
-            },
+            }
             Endianness::Little => {
                 self.data[idx] = lsb;
                 self.data[idx + 1] = msb;
-            },
+            }
         }
     }
 
@@ -87,12 +95,12 @@ impl Firmware {
         match self.config.endianness {
             Endianness::Big => {
                 self.write_u16(idx, ((data >> 16) & 0xFFFF) as u16);
-                self.write_u16(idx+1, (data & 0xFFFF) as u16);
-            },
+                self.write_u16(idx + 1, (data & 0xFFFF) as u16);
+            }
             Endianness::Little => {
                 self.write_u16(idx, (data & 0xFFFF) as u16);
-                self.write_u16(idx+1, ((data >> 16) & 0xFFFF) as u16);
-            },
+                self.write_u16(idx + 1, ((data >> 16) & 0xFFFF) as u16);
+            }
         }
     }
 

@@ -1,5 +1,5 @@
-use std::thread;
 use std::path::Path;
+use std::thread;
 
 use greenhorn::components::checkbox;
 use greenhorn::dialog::{FileFilter, FileOpenDialog, FileOpenMsg, FileSaveDialog, FileSaveMsg};
@@ -52,17 +52,19 @@ mod validate {
     }
 }
 
-
 impl MainApp {
     pub fn new() -> Self {
         Self {
             product_name: TextField::new(validate::product_name, |x| x.to_string(), "".to_string())
-                .class("col-3 form-control").placeholder("e.g. Nimbus2000"),
+                .class("col-3 form-control")
+                .placeholder("e.g. Nimbus2000"),
             config_path: "".to_string(),
             product_id: TextField::new(validate::product_id, |x| x.to_string(), 0)
-                .class("form-control").placeholder("e.g. 0xABCD"),
+                .class("form-control")
+                .placeholder("e.g. 0xABCD"),
             state_transition: TextField::new(validate::state_transition, |x| x.to_string(), 0)
-                .class( "col-3 form-control").placeholder( "in ms"),
+                .class("col-3 form-control")
+                .placeholder("in ms"),
             auto_save: false,
             config: Default::default(),
         }
@@ -136,7 +138,7 @@ impl App for MainApp {
 
             Msg::ProductNameMsg(msg) => {
                 self.product_name.update(msg, &ctx);
-            },
+            }
             Msg::ProductNameChanged(value) => {
                 self.config.product_name = value;
                 self.config_changed();
@@ -144,7 +146,7 @@ impl App for MainApp {
 
             Msg::ProductIdMsg(msg) => {
                 self.product_id.update(msg, &ctx);
-            },
+            }
             Msg::ProductIdChanged(value) => {
                 self.config.product_id = value;
                 self.config_changed();
@@ -152,7 +154,7 @@ impl App for MainApp {
 
             Msg::StateTransitionMsg(msg) => {
                 self.state_transition.update(msg, &ctx);
-            },
+            }
             Msg::StateTransitionChanged(value) => {
                 self.config.time_state_transition = value;
                 self.config_changed();
@@ -160,11 +162,11 @@ impl App for MainApp {
             Msg::UseBackdoorToggle => {
                 self.config.use_backdoor = !self.config.use_backdoor;
                 self.config_changed();
-            },
+            }
             Msg::AutoSaveToggle => {
                 self.auto_save = !self.auto_save;
                 self.config_changed();
-            },
+            }
         }
         Updated::yes()
     }
@@ -218,16 +220,17 @@ impl Render for MainApp {
                         <label class="custom-control-label" for="use-backdoor">
                         {"Use Backdoor"}
                         </>
-                    </>                    
+                    </>
                 </>
 
                 // main action buttons
-                <div #main-button-row>                    
+                <div #main-button-row>
                     <button type="button" class="btn btn-secondary mx-1">{"Merge"}</>
                     <button type="button" class="btn btn-secondary mx-1">{"Release"}</>
                     <button type="button" class="btn btn-primary mx-1">{"Generate Script"}</>
                 </>
             </>
-        ).into()
+        )
+        .into()
     }
 }

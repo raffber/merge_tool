@@ -16,26 +16,35 @@ pub trait Protocol {
     fn finalize(&self, fw_id: u8, wait_time: u32) -> Vec<Command>;
 }
 
-
 fn make_header(config: &Config) -> Command {
     let mut header: Vec<_> = vec![
         ("product", config.product_name.clone()),
         ("product_id", config.product_id.to_string()),
         ("version", config.btl_version.to_string()),
-    ].iter().map(|(k,v)| (k.to_string(), v.to_string())).collect();
+    ]
+    .iter()
+    .map(|(k, v)| (k.to_string(), v.to_string()))
+    .collect();
     for fw in &config.images {
         header.push((
             format!("version_f{}", fw.fw_id),
-            format!("{}.{}.{}", config.major_version, fw.version.minor, fw.version.build)
+            format!(
+                "{}.{}.{}",
+                config.major_version, fw.version.minor, fw.version.build
+            ),
         ));
     }
     if config.use_backdoor {
-        header.push( ("backdoor".to_string(), "true".to_string()) );
+        header.push(("backdoor".to_string(), "true".to_string()));
     }
     Command::Header(header)
 }
 
-pub fn generate_script<P: Protocol>(protocol: &P, fws: &[Firmware], config: &Config) -> Vec<Command> {
+pub fn generate_script<P: Protocol>(
+    protocol: &P,
+    fws: &[Firmware],
+    config: &Config,
+) -> Vec<Command> {
     assert_eq!(fws.len(), config.images.len());
     let mut ret = Vec::new();
 
@@ -43,10 +52,16 @@ pub fn generate_script<P: Protocol>(protocol: &P, fws: &[Firmware], config: &Con
     for (fw, fw_config) in fws.iter().zip(&config.images) {
         let id = fw_config.fw_id;
         if !fw_config.include_in_script {
-            ret.push(Command::Log(format!("Skip bootload of {}!", fw_config.designator())));
+            ret.push(Command::Log(format!(
+                "Skip bootload of {}!",
+                fw_config.designator()
+            )));
             continue;
         }
-        ret.push(Command::Log(format!("Entering bootloader on {}...", fw_config.designator())));
+        ret.push(Command::Log(format!(
+            "Entering bootloader on {}...",
+            fw_config.designator()
+        )));
         ret.extend(protocol.enter(id, config.time_state_transition));
         ret.push(Command::SetError("Could not enter bootlader!".to_string()));
         ret.push(Command::Log("done".to_string()));
@@ -69,15 +84,22 @@ pub fn generate_script<P: Protocol>(protocol: &P, fws: &[Firmware], config: &Con
         ret.push(Command::Log("done".to_string()));
 
         ret.push(Command::Log("Start data transmission...".to_string()));
-        ret.extend(protocol.enter_receive(id, fw_config.timings.erase_time, config.time_state_transition));
+        ret.extend(protocol.enter_receive(
+            id,
+            fw_config.timings.erase_time,
+            config.time_state_transition,
+        ));
         ret.push(Command::SetError("failed".to_string()));
         ret.push(Command::Log("done".to_string()));
 
         ret.push(Command::SetTimeOut(fw_config.timings.data_send));
-        ret.push(Command::Log(format!("Programming {}...", fw_config.designator())));
+        ret.push(Command::Log(format!(
+            "Programming {}...",
+            fw_config.designator()
+        )));
         assert_eq!(fw.data.len() % DATA_LEN_PER_PACKAGE, 0);
-        for k in (0 .. fw.data.len()).step_by(DATA_LEN_PER_PACKAGE) {
-            let cmd = protocol.send_data(id, k as u64, &fw.data[k .. k + DATA_LEN_PER_PACKAGE]);
+        for k in (0..fw.data.len()).step_by(DATA_LEN_PER_PACKAGE) {
+            let cmd = protocol.send_data(id, k as u64, &fw.data[k..k + DATA_LEN_PER_PACKAGE]);
             if let Some(cmd) = cmd {
                 ret.push(cmd);
             }
@@ -98,4 +120,3 @@ pub fn generate_script<P: Protocol>(protocol: &P, fws: &[Firmware], config: &Con
     ret.push(Command::Log("Bootload successful!".to_string()));
     ret
 }
-

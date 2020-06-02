@@ -1,7 +1,7 @@
 use crate::command::Command;
-use sha2::{Sha256, Digest};
-use std::iter::once;
 use itertools::Itertools;
+use sha2::{Digest, Sha256};
+use std::iter::once;
 
 pub trait TimeModel {
     fn compute_write_time(&self, num_write: usize) -> f64;
@@ -17,28 +17,28 @@ pub trait TimeModel {
                     now += self.compute_read_time(write.len(), read.len());
                     now += current_timeout;
                     ret.push(now);
-                },
+                }
                 Command::Write(write) => {
                     now += self.compute_write_time(write.len());
                     now += current_timeout;
                     ret.push(now);
-                },
+                }
                 Command::Log(_) => {
                     ret.push(now);
-                },
+                }
                 Command::SetError(_) => {
                     ret.push(now);
-                },
+                }
                 Command::Header(_) => {
                     ret.push(now);
-                },
+                }
                 Command::SetTimeOut(x) => {
                     current_timeout = *x as f64 / 1000.0;
                     ret.push(now);
-                },
+                }
                 Command::Progress(_) => {
                     ret.push(now);
-                },
+                }
                 Command::Checksum(_) => {
                     ret.push(now);
                 }
@@ -55,7 +55,10 @@ struct SimpleTimeModel {
 
 impl SimpleTimeModel {
     fn new(read_byte_time: f64, write_byte_time: f64) -> Self {
-        Self { read_byte_time, write_byte_time }
+        Self {
+            read_byte_time,
+            write_byte_time,
+        }
     }
 }
 
@@ -78,7 +81,7 @@ impl Script {
     pub fn new_with_model<T: 'static + TimeModel>(cmds: Vec<Command>, model: T) -> Self {
         let mut ret = Self {
             commands: cmds,
-            time_model: Box::new(model)
+            time_model: Box::new(model),
         };
         ret.compute_progres();
         ret
@@ -87,7 +90,7 @@ impl Script {
     pub fn new(cmds: Vec<Command>) -> Self {
         let mut ret = Self {
             commands: cmds,
-            time_model: Box::new(SimpleTimeModel::new(0.0, 0.0))
+            time_model: Box::new(SimpleTimeModel::new(0.0, 0.0)),
         };
         ret.compute_progres();
         ret

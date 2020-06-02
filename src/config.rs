@@ -1,21 +1,39 @@
-use serde::{Serialize, Deserialize};
 use crate::Error;
-use std::path::{Path, PathBuf};
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 
 pub const EXT_CMD_CODE: u8 = 0x11;
 
 mod default {
-    pub fn fw_id() -> u8 { 0 }
-    pub fn major_version() -> u8 { 0xFF }
-    pub fn minor_version() -> u8 { 0xFF }
-    pub fn build_version() -> u8 { 0xFF }
-    pub fn header_offset() -> u64 { 0 }
-    pub fn include_in_script() -> bool { false }
-    pub fn btl_version() -> u8 { 1 }
-    pub fn empty_string() -> String { "".to_string() }
-    pub fn use_backdoor() -> bool { false }
+    pub fn fw_id() -> u8 {
+        0
+    }
+    pub fn major_version() -> u8 {
+        0xFF
+    }
+    pub fn minor_version() -> u8 {
+        0xFF
+    }
+    pub fn build_version() -> u8 {
+        0xFF
+    }
+    pub fn header_offset() -> u64 {
+        0
+    }
+    pub fn include_in_script() -> bool {
+        false
+    }
+    pub fn btl_version() -> u8 {
+        1
+    }
+    pub fn empty_string() -> String {
+        "".to_string()
+    }
+    pub fn use_backdoor() -> bool {
+        false
+    }
 }
 
 fn skip_if_ff(value: &u8) -> bool {
@@ -60,7 +78,7 @@ impl AddressRange {
 #[derive(Clone, Serialize, Deserialize)]
 pub enum HexFileFormat {
     IntelHex,
-    SRecord
+    SRecord,
 }
 
 impl HexFileFormat {
@@ -74,7 +92,8 @@ impl HexFileFormat {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum Endianness {
-    Big, Little
+    Big,
+    Little,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -89,7 +108,7 @@ pub struct ImageVersion {
     #[serde(default = "default::minor_version", skip_serializing_if = "skip_if_ff")]
     pub minor: u8,
     #[serde(default = "default::build_version", skip_serializing_if = "skip_if_ff")]
-    pub build: u8
+    pub build: u8,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -124,11 +143,17 @@ pub struct Config {
     pub major_version: u8,
     #[serde(default = "default::btl_version", skip_serializing_if = "skip_if_one")]
     pub btl_version: u8,
-    #[serde(default = "default::use_backdoor", skip_serializing_if = "skip_if_false")]
+    #[serde(
+        default = "default::use_backdoor",
+        skip_serializing_if = "skip_if_false"
+    )]
     pub use_backdoor: bool,
     pub images: Vec<FwConfig>,
     pub time_state_transition: u32,
-    #[serde(default = "default::empty_string", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default = "default::empty_string",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub repo_path: String,
 }
 
@@ -143,7 +168,10 @@ impl Config {
 
     pub fn load_from_file(path: &Path) -> Result<Config, Error> {
         let mut data = String::new();
-        File::open(path).map_err(Error::Io)?.read_to_string(&mut data).map_err(Error::Io)?;
+        File::open(path)
+            .map_err(Error::Io)?
+            .read_to_string(&mut data)
+            .map_err(Error::Io)?;
         Self::load_from_string(&data, path)
     }
 
@@ -184,7 +212,7 @@ impl Default for Config {
             use_backdoor: false,
             images: vec![],
             time_state_transition: 0,
-            repo_path: "".to_string()
+            repo_path: "".to_string(),
         }
     }
 }

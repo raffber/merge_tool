@@ -17,8 +17,11 @@ pub enum TextFieldMsg {
 }
 
 impl<T: 'static + Clone> TextField<T> {
-    pub fn new<F: 'static + Fn(&str) -> Option<T>, S: 'static + Fn(&T) -> String>
-            (fun: F, to_string: S, inital: T) -> Self {
+    pub fn new<F: 'static + Fn(&str) -> Option<T>, S: 'static + Fn(&T) -> String>(
+        fun: F,
+        to_string: S,
+        inital: T,
+    ) -> Self {
         let text = to_string(&inital);
         let valid = fun(&text).is_some();
         Self {
@@ -52,7 +55,9 @@ impl<T: 'static + Clone> TextField<T> {
         self.version += 1;
     }
 
-    pub fn get(&self) -> &T { &self.value }
+    pub fn get(&self) -> &T {
+        &self.value
+    }
 
     pub fn update<M: 'static + Send>(&mut self, msg: TextFieldMsg, ctx: &Context<M>) -> Updated {
         match msg {
