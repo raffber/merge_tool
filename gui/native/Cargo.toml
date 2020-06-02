@@ -16,6 +16,7 @@ neon-build = "0.4.0"
 
 [dependencies]
 neon = "0.4.0"
-greenhorn = {git = "https://github.com/raffber/greenhorn.git",  rev = "46c5002"}
+greenhorn = {git = "https://github.com/raffber/greenhorn.git",  rev = "9afc8c12c171fef089c97991ab478c17061c533d"}
 async-std = {version = "1.5.0", features = ["unstable"]}
 merge_tool = {path = "../.."}
+backtrace = "0.3.48"

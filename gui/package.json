@@ -19,7 +19,7 @@
     "terser-webpack-plugin": "^2.2.2",
     "webpack": "^4.41.2",
     "webpack-cli": "^3.3.10",
-    "rust-greenhorn": "git@github.com:raffber/greenhorn.git#46c5002",
+    "rust-greenhorn": "git@github.com:raffber/greenhorn.git#3ba560f4284065f3c1e74a2005f2b86fbc8d607b",
     "bootstrap": "^4.5.0"
   },
   "scripts": {

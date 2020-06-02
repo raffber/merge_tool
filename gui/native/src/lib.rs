@@ -4,13 +4,21 @@ use neon::prelude::*;
 use greenhorn::{Runtime, WebSocketPipe};
 use std::net::SocketAddr;
 use std::str::FromStr;
-use std::thread;
+use std::{thread, panic};
 
 mod app;
 
 use crate::app::MainApp;
+use backtrace::Backtrace;
 
 fn run(mut cx: FunctionContext) -> JsResult<JsNumber> {
+    panic::set_hook(Box::new(|info| {
+        let bt = Backtrace::new();
+        if let Some(loc) = info.payload().downcast_ref::<&str>() {
+            println!("Panic occured: {}", loc)
+        }
+        println!("{:?}", bt);
+    }));
     let addr = SocketAddr::from_str("127.0.0.1:0").unwrap();
     let pipe = WebSocketPipe::listen_to_addr(addr);
     let port = pipe.port();

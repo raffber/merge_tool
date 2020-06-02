@@ -3,17 +3,17 @@
 use std::fmt;
 use serde_json::Error as JsonError;
 
-mod config;
-mod firmware;
-mod intel_hex;
-mod srecord;
-mod crc;
-mod command;
-mod script;
-mod protocol;
-mod xcmd;
-mod process;
-mod header;
+pub mod config;
+pub mod firmware;
+pub mod intel_hex;
+pub mod srecord;
+pub mod crc;
+pub mod command;
+pub mod script;
+pub mod protocol;
+pub mod xcmd;
+pub mod process;
+pub mod header;
 
 #[derive(Debug)]
 pub enum Error {

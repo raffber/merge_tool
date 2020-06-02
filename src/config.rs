@@ -15,6 +15,7 @@ mod default {
     pub fn include_in_script() -> bool { false }
     pub fn btl_version() -> u8 { 1 }
     pub fn empty_string() -> String { "".to_string() }
+    pub fn use_backdoor() -> bool { false }
 }
 
 fn skip_if_ff(value: &u8) -> bool {
@@ -27,6 +28,10 @@ fn skip_if_zero(value: &u8) -> bool {
 
 fn skip_if_one(value: &u8) -> bool {
     *value == 1
+}
+
+fn skip_if_false(value: &bool) -> bool {
+    !*value
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -119,6 +124,7 @@ pub struct Config {
     pub major_version: u8,
     #[serde(default = "default::btl_version", skip_serializing_if = "skip_if_one")]
     pub btl_version: u8,
+    #[serde(default = "default::use_backdoor", skip_serializing_if = "skip_if_false")]
     pub use_backdoor: bool,
     pub images: Vec<FwConfig>,
     pub time_state_transition: u32,
@@ -137,7 +143,7 @@ impl Config {
 
     pub fn load_from_file(path: &Path) -> Result<Config, Error> {
         let mut data = String::new();
-        File::open(path).map_err(Error::Io)?.read_to_string(&mut data);
+        File::open(path).map_err(Error::Io)?.read_to_string(&mut data).map_err(Error::Io)?;
         Self::load_from_string(&data, path)
     }
 
@@ -152,10 +158,27 @@ impl Config {
             while let Some(parent) = path.parent() {
                 let git_path = parent.join(".git");
                 if git_path.exists() {
-                    config.repo_path = git_path.to_str().unwrap().to_string()
+                    config.repo_path = git_path.to_str().unwrap().to_string();
+                    break;
                 }
+                path = parent;
             }
         }
         Ok(config)
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            product_id: 0,
+            product_name: "".to_string(),
+            major_version: 0,
+            btl_version: 0,
+            use_backdoor: false,
+            images: vec![],
+            time_state_transition: 0,
+            repo_path: "".to_string()
+        }
     }
 }
