@@ -179,15 +179,15 @@ impl Render for MainApp {
         use greenhorn::html;
 
         html!(
-            <div .main-app .container-fluid>
+            <div .main-app .d-flex .flex-column>
                 // path to config file
-                <div class="row align-items-center my-2">
+                <div class="d-flex flex-row align-items-center my-2">
                     <div class="custom-control custom-switch mx-1 col-auto">
                         {checkbox(self.auto_save, || Msg::AutoSaveToggle)
                             .class("custom-control-input").id("auto-save-toggle")}
                         <label class="custom-control-label" for="auto-save-toggle">{"Auto Save"}</>
                     </>
-                    <span class="col form-control" readonly="">{&self.config_path}</>
+                    <span class="col form-control mx-1" readonly="">{&self.config_path}</>
                     <button type="button" class="btn btn-secondary mx-1 col-auto"
                         @click={|_| Msg::Open}>{"Open"}</>
                     <button type="button" class="btn btn-secondary mx-1 col-auto"
@@ -195,7 +195,7 @@ impl Render for MainApp {
                 </>
 
                 // row with product ID + Product name
-                <div class="row align-items-center my-2">
+                <div class="d-flex flex-row align-items-center my-2">
                     <span class="col-3">{"Product ID"}</>
                     <div class="input-group col-3" #product-id-div>
                         <div class="input-group-prepend">
@@ -210,7 +210,7 @@ impl Render for MainApp {
                 </>
 
                 // row with state transition and "use backdoor"
-                <div class="row align-items-center my-2">
+                <div class="d-flex flex-row align-items-center my-2">
                     <span class="col-3">{"State Transition Time [ms]"}</>
                     {self.state_transition.render().build().map(Msg::StateTransitionMsg)}
                     {self.state_transition.change_event().subscribe(Msg::StateTransitionChanged)}
@@ -223,8 +223,10 @@ impl Render for MainApp {
                     </>
                 </>
 
+                <div #images-container class="my-2 align-items-center flex-row"  />
+
                 // main action buttons
-                <div #main-button-row>
+                <div class="d-flex flex-row justify-content-end">
                     <button type="button" class="btn btn-secondary mx-1">{"Merge"}</>
                     <button type="button" class="btn btn-secondary mx-1">{"Release"}</>
                     <button type="button" class="btn btn-primary mx-1">{"Generate Script"}</>
