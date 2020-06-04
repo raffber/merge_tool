@@ -25,17 +25,28 @@ body {
     padding-right: 0px;
 }
 
-#images-container {
+#fws-container {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
 }
 
-#fw-add {
-    font-size: 5rem;
+#fws-title-bar {
+    border-bottom: 1px solid black;
+    padding-bottom: 0.5rem;
 }
 
-#fwconfig {
+#fws-title {
+    font-weight: bold;
+}
+
+#fw-config {
     min-width: 20rem;
+    flex: 1;
 }
+
+#fws-row {
+    flex: 1;
+}
+
+@import "icofont.css"

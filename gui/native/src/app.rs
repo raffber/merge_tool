@@ -261,9 +261,14 @@ impl Render for MainApp {
                     </>
                 </>
 
-                <div #images-container class="my-2 align-items-center d-flex flex-row">
-                    {self.render_fws()}
-                    <div> <span id="fw-add" @click={|_| Msg::FwPaneAdd}>{"+"}</> </>
+                <div #fws-container class="my-2 d-flex flex-column">
+                    <div #fws-title-bar class="d-flex flex-row justify-content-between align-items-center">
+                        <span class="mx-2" #fws-title>{"Firmware Images"}</>
+                        <button class="btn btn-secondary" @click={|_| Msg::FwPaneAdd}>
+                            <i class="icofont-ui-add" />
+                        </>
+                    </>
+                    <div #fws-row class="d-flex flex-row">{self.render_fws()}</>                    
                 </>
 
                 // main action buttons

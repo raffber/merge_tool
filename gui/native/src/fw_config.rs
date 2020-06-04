@@ -40,6 +40,6 @@ impl Render for FwPane {
     type Message = FwMsg;
 
     fn render(&self) -> Node<Self::Message> {
-        html!( <div #fwconfig>{"Foobar uaahh!!!!"}</> ).into()
+        html!( <div #fw-config>{"Foobar uaahh!!!!"}</> ).into()
     }
 }

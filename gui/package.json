@@ -6,6 +6,8 @@
   "author": "Raphael Bernhard <beraphae@gmail.com>",
   "license": "MIT",
   "devDependencies": {
+    "base64-inline-loader": "^1.1.1",
+    "bootstrap": "^4.5.0",
     "css-loader": "^3.0.0",
     "electron": "^8.3.0",
     "electron-build-env": "^0.2.0",
@@ -14,13 +16,12 @@
     "neon-cli": "^0.4.0",
     "node-loader": "^0.6.0",
     "node-sass": "^4.13.0",
+    "rust-greenhorn": "git@github.com:raffber/greenhorn.git#3ba560f4284065f3c1e74a2005f2b86fbc8d607b",
     "sass-loader": "^8.0.0",
     "style-loader": "^0.23.1",
     "terser-webpack-plugin": "^2.2.2",
     "webpack": "^4.41.2",
-    "webpack-cli": "^3.3.10",
-    "rust-greenhorn": "git@github.com:raffber/greenhorn.git#3ba560f4284065f3c1e74a2005f2b86fbc8d607b",
-    "bootstrap": "^4.5.0"
+    "webpack-cli": "^3.3.10"
   },
   "scripts": {
     "build-dev": "electron-build-env neon build && webpack --config webpack.renderer.config.js --mode=development && webpack --config webpack.main.config.js --mode=development",
