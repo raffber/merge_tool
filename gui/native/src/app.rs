@@ -5,9 +5,11 @@ use greenhorn::components::checkbox;
 use greenhorn::dialog::{FileFilter, FileOpenDialog, FileOpenMsg, FileSaveDialog, FileSaveMsg};
 use greenhorn::prelude::*;
 
-use merge_tool::config::Config;
+use merge_tool::config::{Config, FwConfig};
 
 use crate::text_field::{TextField, TextFieldMsg};
+use crate::fw_config::{FwPane, FwMsg};
+use arrayvec::ArrayVec;
 
 #[derive(Debug)]
 pub enum Msg {
@@ -25,6 +27,11 @@ pub enum Msg {
     StateTransitionMsg(TextFieldMsg),
     StateTransitionChanged(u32),
 
+    FwPaneMsg(usize, FwMsg),
+    FwPaneRemove(usize),
+    FwPaneUpdated(usize, FwConfig),
+    FwPaneAdd,
+
     UseBackdoorToggle,
     AutoSaveToggle,
 }
@@ -36,6 +43,7 @@ pub struct MainApp {
     state_transition: TextField<u32>,
     auto_save: bool,
     config: Config,
+    fw_configs: Vec<Component<FwPane>>
 }
 
 mod validate {
@@ -67,6 +75,7 @@ impl MainApp {
                 .placeholder("in ms"),
             auto_save: false,
             config: Default::default(),
+            fw_configs: vec![]
         }
     }
 
@@ -105,6 +114,20 @@ impl MainApp {
         if self.auto_save {
             self.save_config();
         }
+    }
+
+    pub fn render_fws(&self) -> Node<Msg> {
+        let ret = self.fw_configs.iter()
+            .enumerate()
+            .map(|(k, x)| {
+                let component = x.mount().map(move |msg| Msg::FwPaneMsg(k, msg));
+                let locked = x.lock();
+                let remove: Node<Msg> = locked.remove.subscribe(move |_| Msg::FwPaneRemove(k)).into();
+                let updated: Node<Msg> = locked.updated.subscribe(move |config| Msg::FwPaneUpdated(k, config)).into();
+                let mut nodes = ArrayVec::from([component, remove, updated]);
+                 Node::new_from_iter(nodes.drain(..))
+            });
+        Node::new_from_iter(ret)
     }
 }
 
@@ -167,6 +190,21 @@ impl App for MainApp {
                 self.auto_save = !self.auto_save;
                 self.config_changed();
             }
+            Msg::FwPaneMsg(k, msg) => {
+                let ctx = ctx.map(move |x| Msg::FwPaneMsg(k, x));
+                self.fw_configs[k].update(msg, ctx);
+            }
+            Msg::FwPaneRemove(k) => {
+                self.fw_configs.remove(k);
+                self.config.images.remove(k);
+            }
+            Msg::FwPaneUpdated(k, fw_config) => {
+                self.config.images[k] = fw_config;
+            }
+            Msg::FwPaneAdd => {
+                self.config.images.push(Default::default());
+                self.fw_configs.push(Component::new(FwPane::new()))
+            }
         }
         Updated::yes()
     }
@@ -223,13 +261,16 @@ impl Render for MainApp {
                     </>
                 </>
 
-                <div #images-container class="my-2 align-items-center flex-row"  />
+                <div #images-container class="my-2 align-items-center d-flex flex-row">
+                    {self.render_fws()}
+                    <div> <span id="fw-add" @click={|_| Msg::FwPaneAdd}>{"+"}</> </>
+                </>
 
                 // main action buttons
-                <div class="d-flex flex-row justify-content-end">
+                <div class="d-flex flex-row justify-content-end my-2">
                     <button type="button" class="btn btn-secondary mx-1">{"Merge"}</>
                     <button type="button" class="btn btn-secondary mx-1">{"Release"}</>
-                    <button type="button" class="btn btn-primary mx-1">{"Generate Script"}</>
+                    <button type="button" class="btn btn-primary ml-1">{"Generate Script"}</>
                 </>
             </>
         )

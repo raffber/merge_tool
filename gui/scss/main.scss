@@ -27,4 +27,15 @@ body {
 
 #images-container {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+#fw-add {
+    font-size: 5rem;
+}
+
+#fwconfig {
+    min-width: 20rem;
 }

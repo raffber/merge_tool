@@ -52,7 +52,7 @@ fn skip_if_false(value: &bool) -> bool {
     !*value
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct Timings {
     pub data_send: u32,
     pub data_send_done: u32,
@@ -60,7 +60,7 @@ pub struct Timings {
     pub erase_time: u32,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct AddressRange {
     pub begin: u64,
     pub end: u64,
@@ -75,10 +75,16 @@ impl AddressRange {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum HexFileFormat {
     IntelHex,
     SRecord,
+}
+
+impl Default for HexFileFormat {
+    fn default() -> Self {
+        HexFileFormat::IntelHex
+    }
 }
 
 impl HexFileFormat {
@@ -90,20 +96,26 @@ impl HexFileFormat {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum Endianness {
     Big,
     Little,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+impl Default for Endianness {
+    fn default() -> Self {
+        Endianness::Little
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct DeviceConfig {
     pub word_addressing: bool,
     pub endianness: Endianness,
     pub page_size: u64,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct ImageVersion {
     #[serde(default = "default::minor_version", skip_serializing_if = "skip_if_ff")]
     pub minor: u8,
@@ -111,7 +123,7 @@ pub struct ImageVersion {
     pub build: u8,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct FwConfig {
     #[serde(default = "default::fw_id", skip_serializing_if = "skip_if_zero")]
     pub fw_id: u8,
@@ -135,7 +147,7 @@ impl FwConfig {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Config {
     pub product_id: u16,
     pub product_name: String,

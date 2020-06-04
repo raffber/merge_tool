@@ -9,6 +9,7 @@ use std::{panic, thread};
 
 mod app;
 mod text_field;
+mod fw_config;
 
 use crate::app::MainApp;
 use backtrace::Backtrace;
