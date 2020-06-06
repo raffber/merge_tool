@@ -11,6 +11,7 @@ use crate::text_field::{TextField, TextFieldMsg};
 use crate::fw_config::{FwPane, FwMsg};
 use crate::lean_field::{LeanMsg, LeanField};
 use arrayvec::ArrayVec;
+use chrono::{Local, Timelike};
 
 #[derive(Debug)]
 pub enum Msg {
@@ -43,7 +44,8 @@ pub struct MainApp {
     state_transition: TextField<u32>,
     auto_save: bool,
     config: Config,
-    fw_configs: Vec<Component<FwPane>>
+    fw_configs: Vec<Component<FwPane>>,
+    log: Vec<String>,
 }
 
 mod validate {
@@ -69,8 +71,25 @@ impl MainApp {
             state_transition: TextField::new(validate::state_transition, |x| x.to_string(), 0),
             auto_save: false,
             config: Default::default(),
-            fw_configs: vec![]
+            fw_configs: vec![],
+            log: vec![Self::say_greeting()]
         }
+    }
+
+    fn say_greeting() -> String {
+        // let's have a bit of fun ;)
+        let lt = Local::now();
+        if lt.hour() > 22 {
+            "You should go to sleep!"
+        } else if lt.hour() > 17 {
+            "Good evening!"
+        } else if lt.hour() > 12 {
+            "Good afternoon!"
+        } else if lt.hour() > 7 {
+            "Good morning!"
+        } else {
+            "You are early... couldn't sleep?"
+        }.to_string()
     }
 
     pub fn apply_config(&mut self, config: Config) {
@@ -134,6 +153,17 @@ impl MainApp {
             self.config_changed();
         }
         updated.1
+    }
+
+    pub fn render_log(&self) -> ElementBuilder<Msg> {
+        const JS: &'static str = r#"{
+            let tgt = event.target;
+            tgt.value = tgt.getAttribute('value');
+            tgt.scrollTop = tgt.scrollHeight;
+        }"#;
+        Node::html().elem("textarea").class("form-control flex-fill mr-1").id("log-area")
+            .attr("rows", "3").attr("value", self.log.join("\n"))
+            .attr("readonly", "").js_event("render", JS)
     }
 }
 
@@ -291,10 +321,11 @@ impl Render for MainApp {
                 </>
 
                 // main action buttons
-                <div class="d-flex flex-row justify-content-end my-2">
-                    <button type="button" class="btn btn-secondary mx-1">{"Merge"}</>
-                    <button type="button" class="btn btn-secondary mx-1">{"Release"}</>
-                    <button type="button" class="btn btn-primary ml-1">{"Generate Script"}</>
+                <div class="d-flex flex-row my-2">
+                    {self.render_log()}
+                    <button type="button" class="btn btn-secondary mx-1 main-btn">{"Merge"}</>
+                    <button type="button" class="btn btn-secondary mx-1 main-btn">{"Release"}</>
+                    <button type="button" class="btn btn-primary ml-1 main-btn">{"Generate Script"}</>
                 </>
             </>
         )

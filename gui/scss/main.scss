@@ -67,4 +67,14 @@ body {
     min-width: fit-content;
 }
 
+#log-area {
+    resize: none;
+    background: white;
+}
+
+.main-btn {
+    min-width: fit-content;
+    align-self: flex-end;
+}
+
 @import "icofont.css"
