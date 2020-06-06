@@ -9,6 +9,7 @@ use merge_tool::config::{Config, FwConfig};
 
 use crate::text_field::{TextField, TextFieldMsg};
 use crate::fw_config::{FwPane, FwMsg};
+use crate::lean_field::{LeanMsg, LeanField};
 use arrayvec::ArrayVec;
 
 #[derive(Debug)]
@@ -21,8 +22,7 @@ pub enum Msg {
     ProductNameMsg(TextFieldMsg),
     ProductNameChanged(String),
 
-    ProductIdMsg(TextFieldMsg),
-    ProductIdChanged(u16),
+    ProductIdMsg(LeanMsg),
 
     StateTransitionMsg(TextFieldMsg),
     StateTransitionChanged(u32),
@@ -39,7 +39,7 @@ pub enum Msg {
 pub struct MainApp {
     product_name: TextField<String>,
     config_path: String,
-    product_id: TextField<u16>,
+    product_id: LeanField<u16>,
     state_transition: TextField<u32>,
     auto_save: bool,
     config: Config,
@@ -65,7 +65,7 @@ impl MainApp {
         Self {
             product_name: TextField::new(validate::product_name, |x| x.to_string(), "".to_string()),
             config_path: "".to_string(),
-            product_id: TextField::new(validate::product_id, |x| format!("{:X}", x), 0),
+            product_id: LeanField::new(validate::product_id, |x| format!("{:X}", x)),
             state_transition: TextField::new(validate::state_transition, |x| x.to_string(), 0),
             auto_save: false,
             config: Default::default(),
@@ -128,6 +128,13 @@ impl MainApp {
             });
         Node::new_from_iter(ret)
     }
+
+    pub fn prop(&mut self, updated: (bool, Updated)) -> Updated {
+        if updated.0 {
+            self.config_changed();
+        }
+        updated.1
+    }
 }
 
 impl App for MainApp {
@@ -172,12 +179,8 @@ impl App for MainApp {
             }
 
             Msg::ProductIdMsg(msg) => {
-                self.product_id.update(msg, &ctx)
-            }
-            Msg::ProductIdChanged(value) => {
-                self.config.product_id = value;
-                self.config_changed();
-                Updated::yes()
+                let ret = self.product_id.update(&mut self.config.product_id, msg);
+                self.prop(ret)
             }
 
             Msg::StateTransitionMsg(msg) => {
@@ -255,7 +258,6 @@ impl Render for MainApp {
                         </>
                         {self.product_id.render().class("form-control")
                             .attr("placeholder", "e.g. 0xABCD").build().map(Msg::ProductIdMsg)}
-                        {self.product_id.change_event().subscribe(Msg::ProductIdChanged)}
                     </>
                     <span class="col-3">{"Product Name"}</>
                     {self.product_name.render().class("col-3 form-control")
