@@ -23,6 +23,17 @@ pub enum FwMsg {
     BtlAddrMsg(AddressPaneMsg),
     BtlAddrUpdated(AddressRange),
     IncludeToggle,
+    PageSizeMsg(TextFieldMsg),
+    PageSizeChanged(u64),
+    WordAddressingToggle,
+    TimeDataSendMsg(TextFieldMsg),
+    TimeDataSendChanged(u32),
+    TimeSendDoneMsg(TextFieldMsg),
+    TimeSendDoneChanged(u32),
+    TimeLeaveMsg(TextFieldMsg),
+    TimeLeaveChanged(u32),
+    TimeEraseMsg(TextFieldMsg),
+    TimeEraseChanged(u32),
 }
 
 pub struct FwPane {
@@ -35,6 +46,12 @@ pub struct FwPane {
     app_addr: AddressPane,
     btl_addr: AddressPane,
     include_id: String,
+    page_size: TextField<u64>,
+    word_addressing_id: String,
+    time_data_send: TextField<u32>,
+    time_send_done: TextField<u32>,
+    time_leave: TextField<u32>,
+    time_erase: TextField<u32>,
 }
 
 impl Default for FwPane {
@@ -54,14 +71,31 @@ impl Default for FwPane {
                                      String::new()),
             app_addr: Default::default(),
             btl_addr: Default::default(),
-            include_id: format!("{}", Id::new().data())
+            include_id: format!("{}", Id::new().data()),
+            word_addressing_id: format!("{}", Id::new().data()),
+            time_data_send: Self::make_time_field(),
+            time_send_done: Self::make_time_field(),
+            time_leave: Self::make_time_field(),
+            page_size: TextField::new(|x| u64::from_str_radix(x, 16).ok(),
+                                      |x| format!("{:X}", x),
+                                      2),
+            time_erase: Self::make_time_field(),
         }
     }
 }
 
 impl FwPane {
     pub fn new() -> Self {
-        Default::default()
+        let mut ret : FwPane = Default::default();
+        ret.config.fw_id = 1;
+        ret.config.device_config.page_size = 2;
+        ret
+    }
+
+    fn make_time_field() -> TextField<u32> {
+        TextField::new(|x| u32::from_str_radix(x, 16).ok(),
+                       |x| x.to_string(),
+                       0)
     }
 
     pub fn with_config(config: &FwConfig) -> Self {
@@ -153,6 +187,45 @@ impl App for FwPane {
                 self.emit(&ctx);
                 Updated::yes()
             }
+            FwMsg::WordAddressingToggle => {
+                self.config.device_config.word_addressing = !self.config.device_config.word_addressing;
+                self.emit(&ctx);
+                Updated::yes()
+            }
+            FwMsg::PageSizeMsg(msg) => self.page_size.update(msg, &ctx),
+            FwMsg::PageSizeChanged(page_size) => {
+                self.config.device_config.page_size = page_size;
+                self.emit(&ctx);
+                Updated::no()
+            }
+
+            FwMsg::TimeDataSendMsg(msg) => self.time_data_send.update(msg, &ctx),
+            FwMsg::TimeDataSendChanged(time) => {
+                self.config.timings.data_send = time;
+                self.emit(&ctx);
+                Updated::no()
+            }
+
+            FwMsg::TimeSendDoneMsg(msg) => self.time_send_done.update(msg, &ctx),
+            FwMsg::TimeSendDoneChanged(time) => {
+                self.config.timings.data_send_done = time;
+                self.emit(&ctx);
+                Updated::no()
+            }
+
+            FwMsg::TimeLeaveMsg(msg) => self.time_leave.update(msg, &ctx),
+            FwMsg::TimeLeaveChanged(time) => {
+                self.config.timings.leave_btl = time;
+                self.emit(&ctx);
+                Updated::no()
+            }
+
+            FwMsg::TimeEraseMsg(msg) => self.time_erase.update(msg, &ctx),
+            FwMsg::TimeEraseChanged(time) => {
+                self.config.timings.erase_time = time;
+                self.emit(&ctx);
+                Updated::no()
+            }
         }
     }
 }
@@ -197,7 +270,50 @@ impl Render for FwPane {
                     {self.btl_addr.render().map(FwMsg::BtlAddrMsg)}
                     {self.btl_addr.changed.subscribe(FwMsg::BtlAddrUpdated)}
                 </div>
+                <div class="d-flex flex-row align-items-center my-2">
+                    <span class="col-4">{"Page Size"}</>
+                    {self.page_size.render().class("form-control flex-fill")
+                        .attr("placeholder", "in hex").build().map(FwMsg::PageSizeMsg)}
+                    {self.page_size.change_event().subscribe(FwMsg::PageSizeChanged)}
+                </div>
+                <div class="d-flex flex-row justify-content-end my-2 custom-control custom-checkbox">
+                    {checkbox(self.config.device_config.word_addressing, || FwMsg::WordAddressingToggle)
+                        .class("custom-control-input").id(self.word_addressing_id.clone())}
+                    <label class="custom-control-label" for={self.word_addressing_id.clone()}>
+                        {"Word Addresssing"}
+                    </>
+                </div>
+
+                // timings
+                <div class="d-flex flex-row align-items-center my-2">
+                    <span class="col-6">{"Time between data send"}</>
+                    {self.time_data_send.render().class("form-control flex-fill")
+                        .attr("placeholder", "in ms").build().map(FwMsg::TimeDataSendMsg)}
+                    {self.time_data_send.change_event().subscribe(FwMsg::TimeDataSendChanged)}
+                </div>
+                <div class="d-flex flex-row align-items-center my-2">
+                    <span class="col-6">{"Time after send done"}</>
+                    {self.time_send_done.render().class("form-control flex-fill")
+                        .attr("placeholder", "in ms").build().map(FwMsg::TimeSendDoneMsg)}
+                    {self.time_send_done.change_event().subscribe(FwMsg::TimeSendDoneChanged)}
+                </div>
+                <div class="d-flex flex-row align-items-center my-2">
+                    <span class="col-6">{"Time to leave bootloader"}</>
+                    {self.time_leave.render().class("form-control flex-fill")
+                        .attr("placeholder", "in ms").build().map(FwMsg::TimeLeaveMsg)}
+                    {self.time_leave.change_event().subscribe(FwMsg::TimeLeaveChanged)}
+                </div>
+                <div class="d-flex flex-row align-items-center my-2">
+                    <span class="col-6">{"Erase Time"}</>
+                    {self.time_erase.render().class("form-control flex-fill")
+                        .attr("placeholder", "in ms").build().map(FwMsg::TimeEraseMsg)}
+                    {self.time_erase.change_event().subscribe(FwMsg::TimeEraseChanged)}
+                </div>
+
+                // fill up the rest of the space
                 <div class="flex-fill"/>
+
+                // and the remove button...
                 <div class="d-flex flex-row justify-content-end my-2">
                     <button type="button" class="btn btn-secondary"
                         @click={|_| FwMsg::Remove}>{"Remove"}</>

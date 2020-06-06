@@ -17,7 +17,7 @@ function createWindow () {
   Menu.setApplicationMenu(null);
   const mainWindow = new BrowserWindow({
     width: width,
-    height: 800,
+    height: 1000,
     webPreferences: {
       webSecurity: false,
       nodeIntegration: true
