@@ -67,7 +67,7 @@ impl MainApp {
                 .class("col-3 form-control")
                 .placeholder("e.g. Nimbus2000"),
             config_path: "".to_string(),
-            product_id: TextField::new(validate::product_id, |x| x.to_string(), 0)
+            product_id: TextField::new(validate::product_id, |x| format!("{:X}", x), 0)
                 .class("form-control")
                 .placeholder("e.g. 0xABCD"),
             state_transition: TextField::new(validate::state_transition, |x| x.to_string(), 0)
@@ -84,10 +84,15 @@ impl MainApp {
         self.product_id.set(config.product_id);
         self.state_transition.set(config.time_state_transition);
         self.config = config;
+        for fw_config in &self.config.images {
+            let comp = Component::new(FwPane::with_config(fw_config));
+            self.fw_configs.push(comp);
+        }
     }
 
     pub fn load_config(&mut self, path: String) {
         let path = Path::new(&path);
+        self.fw_configs.clear();
         match Config::load_from_file(path) {
             Ok(config) => {
                 self.apply_config(config);
@@ -125,7 +130,7 @@ impl MainApp {
                 let remove: Node<Msg> = locked.remove.subscribe(move |_| Msg::FwPaneRemove(k)).into();
                 let updated: Node<Msg> = locked.updated.subscribe(move |config| Msg::FwPaneUpdated(k, config)).into();
                 let mut nodes = ArrayVec::from([component, remove, updated]);
-                 Node::new_from_iter(nodes.drain(..))
+                Node::new_from_iter(nodes.drain(..))
             });
         Node::new_from_iter(ret)
     }
@@ -138,75 +143,90 @@ impl App for MainApp {
             Msg::Open => {
                 let dialog = FileOpenDialog::new("Open a config file", "")
                     .with_filter(FileFilter::new("GCTBtl Config files").push("gctmrg"));
-                ctx.dialog(dialog, Msg::ConfigOpened)
+                ctx.dialog(dialog, Msg::ConfigOpened);
+                Updated::no()
             }
             Msg::ConfigOpened(msg) => {
                 if let FileOpenMsg::Selected(path) = msg {
                     self.config_path = path.clone();
                     self.load_config(path);
                 }
+                Updated::yes()
             }
 
             Msg::SaveAs => {
                 let dialog = FileSaveDialog::new("Save config file as...", "config.json.gctmrg")
                     .with_filter(FileFilter::new("gctmrg Config files").push("gctmrg"));
-                ctx.dialog(dialog, Msg::ConfigSavedAs)
+                ctx.dialog(dialog, Msg::ConfigSavedAs);
+                Updated::no()
             }
             Msg::ConfigSavedAs(msg) => {
                 if let FileSaveMsg::SaveTo(path) = msg {
                     self.config_path = path.clone();
                     self.save_config();
                 }
+                Updated::yes()
             }
 
             Msg::ProductNameMsg(msg) => {
-                self.product_name.update(msg, &ctx);
+                self.product_name.update(msg, &ctx)
             }
             Msg::ProductNameChanged(value) => {
                 self.config.product_name = value;
                 self.config_changed();
+                Updated::yes()
             }
 
             Msg::ProductIdMsg(msg) => {
-                self.product_id.update(msg, &ctx);
+                self.product_id.update(msg, &ctx)
             }
             Msg::ProductIdChanged(value) => {
                 self.config.product_id = value;
                 self.config_changed();
+                Updated::yes()
             }
 
             Msg::StateTransitionMsg(msg) => {
                 self.state_transition.update(msg, &ctx);
+                Updated::yes()
             }
             Msg::StateTransitionChanged(value) => {
                 self.config.time_state_transition = value;
                 self.config_changed();
+                Updated::yes()
             }
             Msg::UseBackdoorToggle => {
                 self.config.use_backdoor = !self.config.use_backdoor;
                 self.config_changed();
+                Updated::yes()
             }
             Msg::AutoSaveToggle => {
                 self.auto_save = !self.auto_save;
                 self.config_changed();
+                Updated::yes()
             }
             Msg::FwPaneMsg(k, msg) => {
                 let ctx = ctx.map(move |x| Msg::FwPaneMsg(k, x));
-                self.fw_configs[k].update(msg, ctx);
+                self.fw_configs[k].update(msg, ctx)
             }
             Msg::FwPaneRemove(k) => {
                 self.fw_configs.remove(k);
                 self.config.images.remove(k);
+                self.config_changed();
+                Updated::yes()
             }
             Msg::FwPaneUpdated(k, fw_config) => {
                 self.config.images[k] = fw_config;
+                self.config_changed();
+                Updated::yes()
             }
             Msg::FwPaneAdd => {
                 self.config.images.push(Default::default());
-                self.fw_configs.push(Component::new(FwPane::new()))
+                self.fw_configs.push(Component::new(FwPane::new()));
+                self.config_changed();
+                Updated::yes()
             }
         }
-        Updated::yes()
     }
 }
 
@@ -225,7 +245,7 @@ impl Render for MainApp {
                             .class("custom-control-input").id("auto-save-toggle")}
                         <label class="custom-control-label" for="auto-save-toggle">{"Auto Save"}</>
                     </>
-                    <span class="col form-control mx-1" readonly="">{&self.config_path}</>
+                    <span class="form-control mx-1" readonly="">{&self.config_path}</>
                     <button type="button" class="btn btn-secondary mx-1 col-auto"
                         @click={|_| Msg::Open}>{"Open"}</>
                     <button type="button" class="btn btn-secondary mx-1 col-auto"

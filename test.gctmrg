@@ -1,7 +1,69 @@
 {
   "product_id": 4660,
   "product_name": "Nimbus2000",
-  "images": [],
+  "images": [
+    {
+      "btl_path": "",
+      "app_path": "",
+      "version": {
+        "minor": 0,
+        "build": 0
+      },
+      "app_address": {
+        "begin": 0,
+        "end": 0
+      },
+      "btl_address": {
+        "begin": 0,
+        "end": 0
+      },
+      "include_in_script": false,
+      "header_offset": 0,
+      "hex_file_format": "IntelHex",
+      "device_config": {
+        "word_addressing": false,
+        "endianness": "Little",
+        "page_size": 0
+      },
+      "timings": {
+        "data_send": 0,
+        "data_send_done": 0,
+        "leave_btl": 0,
+        "erase_time": 0
+      }
+    },
+    {
+      "fw_id": 3,
+      "btl_path": "",
+      "app_path": "",
+      "version": {
+        "minor": 0,
+        "build": 0
+      },
+      "app_address": {
+        "begin": 0,
+        "end": 0
+      },
+      "btl_address": {
+        "begin": 0,
+        "end": 0
+      },
+      "include_in_script": false,
+      "header_offset": 0,
+      "hex_file_format": "IntelHex",
+      "device_config": {
+        "word_addressing": false,
+        "endianness": "Little",
+        "page_size": 0
+      },
+      "timings": {
+        "data_send": 0,
+        "data_send_done": 0,
+        "leave_btl": 0,
+        "erase_time": 0
+      }
+    }
+  ],
   "time_state_transition": 16,
   "repo_path": "/home/raff/coding/merge_tool/.git"
 }

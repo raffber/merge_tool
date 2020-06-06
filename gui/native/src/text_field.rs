@@ -2,11 +2,11 @@ use greenhorn::prelude::*;
 
 pub struct TextField<T: 'static + Clone> {
     value: T,
-    version: u32,
+    version: Id,
     valid: bool,
     change: Event<T>,
-    validator: Box<dyn Fn(&str) -> Option<T>>,
-    to_string: Box<dyn Fn(&T) -> String>,
+    validator: Box<dyn Send + Fn(&str) -> Option<T>>,
+    to_string: Box<dyn Send + Fn(&T) -> String>,
     class: String,
     placeholder: String,
 }
@@ -17,7 +17,7 @@ pub enum TextFieldMsg {
 }
 
 impl<T: 'static + Clone> TextField<T> {
-    pub fn new<F: 'static + Fn(&str) -> Option<T>, S: 'static + Fn(&T) -> String>(
+    pub fn new<F: 'static + Send + Fn(&str) -> Option<T>, S: 'static + Send + Fn(&T) -> String>(
         fun: F,
         to_string: S,
         inital: T,
@@ -26,7 +26,7 @@ impl<T: 'static + Clone> TextField<T> {
         let valid = fun(&text).is_some();
         Self {
             value: inital,
-            version: 0,
+            version: Id::new(),
             valid,
             change: Default::default(),
             validator: Box::new(fun),
@@ -52,7 +52,7 @@ impl<T: 'static + Clone> TextField<T> {
 
     pub fn set(&mut self, value: T) {
         self.value = value;
-        self.version += 1;
+        self.version = Id::new();
     }
 
     pub fn get(&self) -> &T {
@@ -93,7 +93,7 @@ impl<T: 'static + Clone> TextField<T> {
         let mut ret = Node::html()
             .elem("input")
             .attr("type", "text")
-            .attr("__value_version", self.version)
+            .attr("__value_version", self.version.data())
             .on("keyup", TextFieldMsg::KeyUp)
             .attr("value", text)
             .class(self.class.clone())
