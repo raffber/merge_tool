@@ -63,16 +63,10 @@ mod validate {
 impl MainApp {
     pub fn new() -> Self {
         Self {
-            product_name: TextField::new(validate::product_name, |x| x.to_string(), "".to_string())
-                .class("col-3 form-control")
-                .placeholder("e.g. Nimbus2000"),
+            product_name: TextField::new(validate::product_name, |x| x.to_string(), "".to_string()),
             config_path: "".to_string(),
-            product_id: TextField::new(validate::product_id, |x| format!("{:X}", x), 0)
-                .class("form-control")
-                .placeholder("e.g. 0xABCD"),
-            state_transition: TextField::new(validate::state_transition, |x| x.to_string(), 0)
-                .class("col-3 form-control")
-                .placeholder("in ms"),
+            product_id: TextField::new(validate::product_id, |x| format!("{:X}", x), 0),
+            state_transition: TextField::new(validate::state_transition, |x| x.to_string(), 0),
             auto_save: false,
             config: Default::default(),
             fw_configs: vec![]
@@ -259,18 +253,21 @@ impl Render for MainApp {
                         <div class="input-group-prepend">
                             <span class="input-group-text">{"0x"}</span>
                         </>
-                        {self.product_id.render().build().map(Msg::ProductIdMsg)}
+                        {self.product_id.render().class("form-control")
+                            .attr("placeholder", "e.g. 0xABCD").build().map(Msg::ProductIdMsg)}
+                        {self.product_id.change_event().subscribe(Msg::ProductIdChanged)}
                     </>
-                    {self.product_id.change_event().subscribe(Msg::ProductIdChanged)}
                     <span class="col-3">{"Product Name"}</>
-                    {self.product_name.render().build().map(Msg::ProductNameMsg)}
+                    {self.product_name.render().class("col-3 form-control")
+                        .attr("placeholder", "e.g. Nimbus2000").build().map(Msg::ProductNameMsg)}
                     {self.product_name.change_event().subscribe(Msg::ProductNameChanged)}
                 </>
 
                 // row with state transition and "use backdoor"
                 <div class="d-flex flex-row align-items-center my-2">
                     <span class="col-3">{"State Transition Time [ms]"}</>
-                    {self.state_transition.render().build().map(Msg::StateTransitionMsg)}
+                    {self.state_transition.render() .class("col-3 form-control")
+                        .attr("placeholder", "in ms").build().map(Msg::StateTransitionMsg)}
                     {self.state_transition.change_event().subscribe(Msg::StateTransitionChanged)}
                     <div class="col-6 px-5 custom-control custom-checkbox">
                         {checkbox(self.config.use_backdoor, || Msg::UseBackdoorToggle)

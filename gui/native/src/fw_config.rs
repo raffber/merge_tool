@@ -4,7 +4,6 @@ use merge_tool::config::{FwConfig, AddressRange};
 use crate::text_field::{TextField, TextFieldMsg};
 use greenhorn::dialog::{FileOpenDialog, FileOpenMsg, FileFilter};
 use crate::address_pane::{AddressPane, AddressPaneMsg};
-use crate::app::Msg::FwPaneMsg;
 use greenhorn::components::checkbox;
 
 #[derive(Debug)]
@@ -46,13 +45,13 @@ impl Default for FwPane {
             remove: Default::default(),
             fw_id: TextField::new(|x| u8::from_str_radix(x, 16).ok(),
                                   |x| format!("{:X}", x),
-                                  1).class("form-control flex-fill"),
+                                  1),
             btl_path: TextField::new(|x| Some(x.to_string()),
                                      |x| x.clone(),
-                                     String::new()).class("form-control flex-fill"),
+                                     String::new()),
             app_path: TextField::new(|x| Some(x.to_string()),
                                      |x| x.clone(),
-                                     String::new()).class("form-control flex-fill"),
+                                     String::new()),
             app_addr: Default::default(),
             btl_addr: Default::default(),
             include_id: format!("{}", Id::new().data())
@@ -171,18 +170,20 @@ impl Render for FwPane {
 
                 <div class="d-flex flex-row align-items-center my-2">
                     <span class="col-4">{"Firmware ID"}</>
-                    {self.fw_id.render().build().map(FwMsg::FwIdMsg)}
+                    {self.fw_id.render().class("form-control flex-fill").build().map(FwMsg::FwIdMsg)}
                     {self.fw_id.change_event().subscribe(FwMsg::FwIdChanged)}
                 </>
                 <div class="d-flex flex-row align-items-center my-2">
                     <span class="col-4">{"App Path"}</>
-                    {self.app_path.render().build().map(FwMsg::AppPathMsg)}
+                    {self.app_path.render().class("form-control flex-fill")
+                        .build().map(FwMsg::AppPathMsg)}
                     <button type="button" class="btn btn-secondary mx-1"
                         @click={|_| FwMsg::OpenApp}>{"..."}</>
                 </>
                 <div class="d-flex flex-row align-items-center my-2">
                     <span class="col-4">{"Btl Path"}</>
-                    {self.btl_path.render().build().map(FwMsg::BtlPathMsg)}
+                    {self.btl_path.render().class("form-control flex-fill")
+                        .build().map(FwMsg::BtlPathMsg)}
                     <button type="button" class="btn btn-secondary mx-1"
                         @click={|_| FwMsg::OpenBtl}>{"..."}</>
                 </>

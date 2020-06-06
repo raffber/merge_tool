@@ -7,8 +7,6 @@ pub struct TextField<T: 'static + Clone> {
     change: Event<T>,
     validator: Box<dyn Send + Fn(&str) -> Option<T>>,
     to_string: Box<dyn Send + Fn(&T) -> String>,
-    class: String,
-    placeholder: String,
 }
 
 #[derive(Debug)]
@@ -31,19 +29,7 @@ impl<T: 'static + Clone> TextField<T> {
             change: Default::default(),
             validator: Box::new(fun),
             to_string: Box::new(to_string),
-            class: "".to_string(),
-            placeholder: "".to_string(),
         }
-    }
-
-    pub fn class<S: Into<String>>(mut self, value: S) -> Self {
-        self.class = value.into();
-        self
-    }
-
-    pub fn placeholder<S: Into<String>>(mut self, value: S) -> Self {
-        self.placeholder = value.into();
-        self
     }
 
     pub fn change_event(&self) -> &Event<T> {
@@ -96,8 +82,6 @@ impl<T: 'static + Clone> TextField<T> {
             .attr("__value_version", self.version.data())
             .on("keyup", TextFieldMsg::KeyUp)
             .attr("value", text)
-            .class(self.class.clone())
-            .attr("placeholder", self.placeholder.clone())
             .js_event("render", render_fun);
         if !self.valid {
             ret = ret.class("is-invalid");

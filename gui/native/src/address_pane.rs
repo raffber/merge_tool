@@ -41,8 +41,6 @@ impl AddressPane {
             |x| u64::from_str_radix(x, 16).ok(),
             |x| format!("{:X}", x),
             initial)
-                .class("form-control flex-fill")
-                .placeholder("in hex")
     }
 }
 
@@ -71,9 +69,11 @@ impl Render for AddressPane {
     fn render(&self) -> Node<Self::Message> {
         html!(
             <div class="d-flex flex-row align-items-center flex-fill">
-                {self.begin_field.render().build().map(AddressPaneMsg::BeginMsg)}
+                {self.begin_field.render().class("form-control flex-fill")
+                    .attr("placeholder", "in hex").build().map(AddressPaneMsg::BeginMsg)}
                 <span class="mx-2">{"to"}</>
-                {self.end_field.render().build().map(AddressPaneMsg::EndMsg)}
+                {self.end_field.render() .class("form-control flex-fill")
+                    .attr("placeholder", "in hex").build().map(AddressPaneMsg::EndMsg)}
 
                 {self.begin_field.change_event().subscribe(AddressPaneMsg::BeginUpdated)}
                 {self.end_field.change_event().subscribe(AddressPaneMsg::EndUpdated)}
