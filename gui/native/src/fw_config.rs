@@ -262,42 +262,41 @@ impl Render for FwPane {
 
     fn render(&self) -> Node<Self::Message> {
         html!(<div #fw-config>
-                <div class="custom-control custom-switch mx-3 col-auto">
-                    {checkbox(self.config.include_in_script, || FwMsg::IncludeToggle)
-                        .class("custom-control-input").id(self.include_id.clone())}
-                    <label class="custom-control-label" for={self.include_id.clone()}>{"Include in Script"}</>
-                </>
-
-                <div class="d-flex flex-row align-items-center my-2">
+                <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-4">{"Firmware ID"}</>
                     {self.fw_id.render().class("form-control flex-fill").build().map(FwMsg::FwIdMsg)}
                     {self.fw_id.change_event().subscribe(FwMsg::FwIdChanged)}
+                    <div class="custom-control custom-switch include-script-checkbox ml-2">
+                        {checkbox(self.config.include_in_script, || FwMsg::IncludeToggle)
+                            .class("custom-control-input").id(self.include_id.clone())}
+                        <label class="custom-control-label" for={self.include_id.clone()}>{"Include in Script"}</>
+                    </>
                 </>
-                <div class="d-flex flex-row align-items-center my-2">
+                <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-4">{"App Path"}</>
                     {self.app_path.render().class("form-control flex-fill")
                         .build().map(FwMsg::AppPathMsg)}
-                    <button type="button" class="btn btn-secondary mx-1"
+                    <button type="button" class="btn btn-secondary ml-2"
                         @click={|_| FwMsg::OpenApp}>{"..."}</>
                 </>
-                <div class="d-flex flex-row align-items-center my-2">
+                <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-4">{"Btl Path"}</>
                     {self.btl_path.render().class("form-control flex-fill")
                         .build().map(FwMsg::BtlPathMsg)}
-                    <button type="button" class="btn btn-secondary mx-1"
+                    <button type="button" class="btn btn-secondary ml-2"
                         @click={|_| FwMsg::OpenBtl}>{"..."}</>
                 </>
-                <div class="d-flex flex-row align-items-center my-2">
+                <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-4">{"App Address"}</>
                     {self.app_addr.render().map(FwMsg::AppAddrMsg)}
                     {self.app_addr.changed.subscribe(FwMsg::AppAddrUpdated)}
                 </div>
-                <div class="d-flex flex-row align-items-center my-2">
+                <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-4">{"Btl Address"}</>
                     {self.btl_addr.render().map(FwMsg::BtlAddrMsg)}
                     {self.btl_addr.changed.subscribe(FwMsg::BtlAddrUpdated)}
                 </div>
-                <div class="d-flex flex-row align-items-center my-2">
+                <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-4">{"Page Size"}</>
                     {self.page_size.render().class("form-control flex-fill")
                         .attr("placeholder", "in hex").build().map(FwMsg::PageSizeMsg)}
@@ -310,7 +309,7 @@ impl Render for FwPane {
                         </>
                     </div>
                 </div>
-                <div class="d-flex flex-row align-items-center my-2">
+                <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-4">{"Hex Format"}</>
                     <select class="form-control"
                         $change="app.send(event.target, event.target.selectedIndex)"
@@ -319,7 +318,7 @@ impl Render for FwPane {
                       <option>{"S-Record *.s37"}</option>
                     </select>
                 </>
-                <div class="d-flex flex-row align-items-center my-2">
+                <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-4">{"Header Offset"}</>
                     {self.header_offset.render().class("form-control flex-fill")
                         .attr("placeholder", "in hex").build().map(FwMsg::HeaderOffsetMsg)}
@@ -327,25 +326,25 @@ impl Render for FwPane {
                 </div>
 
                 // timings
-                <div class="d-flex flex-row align-items-center my-2">
+                <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-6">{"Time between data send"}</>
                     {self.time_data_send.render().class("form-control flex-fill")
                         .attr("placeholder", "in ms").build().map(FwMsg::TimeDataSendMsg)}
                     {self.time_data_send.change_event().subscribe(FwMsg::TimeDataSendChanged)}
                 </div>
-                <div class="d-flex flex-row align-items-center my-2">
+                <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-6">{"Time after send done"}</>
                     {self.time_send_done.render().class("form-control flex-fill")
                         .attr("placeholder", "in ms").build().map(FwMsg::TimeSendDoneMsg)}
                     {self.time_send_done.change_event().subscribe(FwMsg::TimeSendDoneChanged)}
                 </div>
-                <div class="d-flex flex-row align-items-center my-2">
+                <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-6">{"Time to leave bootloader"}</>
                     {self.time_leave.render().class("form-control flex-fill")
                         .attr("placeholder", "in ms").build().map(FwMsg::TimeLeaveMsg)}
                     {self.time_leave.change_event().subscribe(FwMsg::TimeLeaveChanged)}
                 </div>
-                <div class="d-flex flex-row align-items-center my-2">
+                <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-6">{"Erase Time"}</>
                     {self.time_erase.render().class("form-control flex-fill")
                         .attr("placeholder", "in ms").build().map(FwMsg::TimeEraseMsg)}

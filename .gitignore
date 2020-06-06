@@ -2,3 +2,5 @@ target
 cli/target
 .idea
 gui/greenhorn/
+
+gui/out/

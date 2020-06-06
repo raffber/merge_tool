@@ -3,22 +3,22 @@
   "product_name": "Nimbus2000",
   "images": [
     {
-      "btl_path": "",
-      "app_path": "",
+      "btl_path": "/home/raff/coding/merge_tool/test.gctmrg/",
+      "app_path": "/home/raff/coding/merge_tool/test.gctmrg/",
       "version": {
         "minor": 0,
         "build": 0
       },
       "app_address": {
-        "begin": 0,
-        "end": 0
+        "begin": 18,
+        "end": 1603
       },
       "btl_address": {
-        "begin": 0,
-        "end": 0
+        "begin": 1,
+        "end": 18
       },
-      "include_in_script": false,
-      "header_offset": 0,
+      "include_in_script": true,
+      "header_offset": 18,
       "hex_file_format": "IntelHex",
       "device_config": {
         "word_addressing": false,
@@ -26,41 +26,41 @@
         "page_size": 0
       },
       "timings": {
-        "data_send": 0,
-        "data_send_done": 0,
-        "leave_btl": 0,
-        "erase_time": 0
+        "data_send": 1,
+        "data_send_done": 2,
+        "leave_btl": 3,
+        "erase_time": 4
       }
     },
     {
-      "fw_id": 3,
-      "btl_path": "",
-      "app_path": "",
+      "fw_id": 2,
+      "btl_path": "/home/raff/coding/merge_tool/test.gctmrg/",
+      "app_path": "/home/raff/coding/merge_tool/test.gctmrg/",
       "version": {
         "minor": 0,
         "build": 0
       },
       "app_address": {
-        "begin": 0,
-        "end": 0
+        "begin": 36,
+        "end": 9491
       },
       "btl_address": {
-        "begin": 0,
-        "end": 0
+        "begin": 1,
+        "end": 18
       },
-      "include_in_script": false,
-      "header_offset": 0,
-      "hex_file_format": "IntelHex",
+      "include_in_script": true,
+      "header_offset": 171,
+      "hex_file_format": "SRecord",
       "device_config": {
         "word_addressing": false,
         "endianness": "Little",
-        "page_size": 0
+        "page_size": 2
       },
       "timings": {
-        "data_send": 0,
-        "data_send_done": 0,
-        "leave_btl": 0,
-        "erase_time": 0
+        "data_send": 1,
+        "data_send_done": 2,
+        "leave_btl": 3,
+        "erase_time": 4
       }
     }
   ],
