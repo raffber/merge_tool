@@ -275,13 +275,13 @@ impl Render for FwPane {
                     {self.page_size.render().class("form-control flex-fill")
                         .attr("placeholder", "in hex").build().map(FwMsg::PageSizeMsg)}
                     {self.page_size.change_event().subscribe(FwMsg::PageSizeChanged)}
-                </div>
-                <div class="d-flex flex-row justify-content-end my-2 custom-control custom-checkbox">
-                    {checkbox(self.config.device_config.word_addressing, || FwMsg::WordAddressingToggle)
-                        .class("custom-control-input").id(self.word_addressing_id.clone())}
-                    <label class="custom-control-label" for={self.word_addressing_id.clone()}>
-                        {"Word Addresssing"}
-                    </>
+                    <div class="custom-control custom-checkbox mx-2 word-addressing-checkbox">
+                        {checkbox(self.config.device_config.word_addressing, || FwMsg::WordAddressingToggle)
+                            .class("custom-control-input").id(self.word_addressing_id.clone())}
+                        <label class="custom-control-label" for={self.word_addressing_id.clone()}>
+                            {"Word Addresssing"}
+                        </>
+                    </div>
                 </div>
 
                 // timings
