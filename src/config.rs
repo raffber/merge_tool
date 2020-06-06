@@ -123,7 +123,7 @@ pub struct ImageVersion {
     pub build: u8,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, Default)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct FwConfig {
     #[serde(default = "default::fw_id", skip_serializing_if = "skip_if_zero")]
     pub fw_id: u8,
@@ -139,6 +139,24 @@ pub struct FwConfig {
     pub hex_file_format: HexFileFormat,
     pub device_config: DeviceConfig,
     pub timings: Timings,
+}
+
+impl Default for FwConfig {
+    fn default() -> Self {
+        FwConfig {
+            fw_id: 1,
+            btl_path: "".to_string(),
+            app_path: "".to_string(),
+            version: Default::default(),
+            app_address: Default::default(),
+            btl_address: Default::default(),
+            include_in_script: true,
+            header_offset: 0,
+            hex_file_format: Default::default(),
+            device_config: Default::default(),
+            timings: Default::default(),
+        }
+    }
 }
 
 impl FwConfig {

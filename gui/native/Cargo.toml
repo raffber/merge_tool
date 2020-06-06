@@ -21,3 +21,4 @@ async-std = {version = "1.5.0", features = ["unstable"]}
 merge_tool = {path = "../.."}
 backtrace = "0.3.48"
 arrayvec = "0.5.1"
+serde_json = "1.0"

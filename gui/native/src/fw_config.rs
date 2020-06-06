@@ -1,10 +1,11 @@
 use greenhorn::prelude::*;
 use greenhorn::html;
-use merge_tool::config::{FwConfig, AddressRange};
+use merge_tool::config::{FwConfig, AddressRange, HexFileFormat};
 use crate::text_field::{TextField, TextFieldMsg};
 use greenhorn::dialog::{FileOpenDialog, FileOpenMsg, FileFilter};
 use crate::address_pane::{AddressPane, AddressPaneMsg};
 use greenhorn::components::checkbox;
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub enum FwMsg {
@@ -34,6 +35,9 @@ pub enum FwMsg {
     TimeLeaveChanged(u32),
     TimeEraseMsg(TextFieldMsg),
     TimeEraseChanged(u32),
+    HexSelectChanged(JsonValue),
+    HeaderOffsetMsg(TextFieldMsg),
+    HeaderOffsetChanged(u64),
 }
 
 pub struct FwPane {
@@ -48,6 +52,7 @@ pub struct FwPane {
     include_id: String,
     page_size: TextField<u64>,
     word_addressing_id: String,
+    header_offset: TextField<u64>,
     time_data_send: TextField<u32>,
     time_send_done: TextField<u32>,
     time_leave: TextField<u32>,
@@ -73,6 +78,10 @@ impl Default for FwPane {
             btl_addr: Default::default(),
             include_id: format!("{}", Id::new().data()),
             word_addressing_id: format!("{}", Id::new().data()),
+            header_offset: TextField::new(|x| u64::from_str_radix(x, 16).ok(),
+                           |x| format!("{:X}", x),
+                           0)
+,
             time_data_send: Self::make_time_field(),
             time_send_done: Self::make_time_field(),
             time_leave: Self::make_time_field(),
@@ -87,13 +96,12 @@ impl Default for FwPane {
 impl FwPane {
     pub fn new() -> Self {
         let mut ret : FwPane = Default::default();
-        ret.config.fw_id = 1;
         ret.config.device_config.page_size = 2;
         ret
     }
 
     fn make_time_field() -> TextField<u32> {
-        TextField::new(|x| u32::from_str_radix(x, 16).ok(),
+        TextField::new(|x| u32::from_str(x).ok(),
                        |x| x.to_string(),
                        0)
     }
@@ -226,6 +234,25 @@ impl App for FwPane {
                 self.emit(&ctx);
                 Updated::no()
             }
+
+            FwMsg::HexSelectChanged(value) => {
+                let idx: u32 = serde_json::from_value(value).unwrap();
+                if idx == 0 {
+                    self.config.hex_file_format = HexFileFormat::IntelHex;
+                } else if idx == 1 {
+                    self.config.hex_file_format = HexFileFormat::SRecord;
+                } else {
+                    panic!();
+                }
+                self.emit(&ctx);
+                Updated::no()
+            }
+            FwMsg::HeaderOffsetMsg(msg) => self.header_offset.update(msg, &ctx),
+            FwMsg::HeaderOffsetChanged(value) => {
+                self.config.header_offset = value;
+                self.emit(&ctx);
+                Updated::no()
+            }
         }
     }
 }
@@ -282,6 +309,21 @@ impl Render for FwPane {
                             {"Word Addresssing"}
                         </>
                     </div>
+                </div>
+                <div class="d-flex flex-row align-items-center my-2">
+                    <span class="col-4">{"Hex Format"}</>
+                    <select class="form-control"
+                        $change="app.send(event.target, event.target.selectedIndex)"
+                        @rpc={FwMsg::HexSelectChanged}>
+                      <option>{"Intel Hex *.hex"}</option>
+                      <option>{"S-Record *.s37"}</option>
+                    </select>
+                </>
+                <div class="d-flex flex-row align-items-center my-2">
+                    <span class="col-4">{"Header Offset"}</>
+                    {self.header_offset.render().class("form-control flex-fill")
+                        .attr("placeholder", "in hex").build().map(FwMsg::HeaderOffsetMsg)}
+                    {self.header_offset.change_event().subscribe(FwMsg::HeaderOffsetChanged)}
                 </div>
 
                 // timings

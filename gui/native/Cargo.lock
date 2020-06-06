@@ -821,6 +821,7 @@ dependencies = [
  "merge_tool",
  "neon",
  "neon-build",
+ "serde_json",
 ]
 
 [[package]]
