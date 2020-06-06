@@ -3,6 +3,8 @@ use greenhorn::html;
 use crate::text_field::{TextField, TextFieldMsg};
 use merge_tool::config::AddressRange;
 
+// TODO: deny end < begin
+
 #[derive(Debug)]
 pub enum AddressPaneMsg {
     BeginMsg(TextFieldMsg),
@@ -27,18 +29,18 @@ impl Default for AddressPane {
 impl AddressPane {
     pub fn new(range: AddressRange) -> Self {
         Self {
-            data: range,
+            data: range.clone(),
             changed: Default::default(),
-            begin_field: Self::make_text_field(),
-            end_field: Self::make_text_field(),
+            begin_field: Self::make_text_field(range.begin),
+            end_field: Self::make_text_field(range.end),
         }
     }
 
-    fn make_text_field() -> TextField<u64> {
+    fn make_text_field(initial: u64) -> TextField<u64> {
         TextField::new(
             |x| u64::from_str_radix(x, 16).ok(),
             |x| format!("{:X}", x),
-            1)
+            initial)
                 .class("form-control flex-fill")
                 .placeholder("in hex")
     }

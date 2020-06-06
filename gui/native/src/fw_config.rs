@@ -4,6 +4,8 @@ use merge_tool::config::{FwConfig, AddressRange};
 use crate::text_field::{TextField, TextFieldMsg};
 use greenhorn::dialog::{FileOpenDialog, FileOpenMsg, FileFilter};
 use crate::address_pane::{AddressPane, AddressPaneMsg};
+use crate::app::Msg::FwPaneMsg;
+use greenhorn::components::checkbox;
 
 #[derive(Debug)]
 pub enum FwMsg {
@@ -21,6 +23,7 @@ pub enum FwMsg {
     AppAddrUpdated(AddressRange),
     BtlAddrMsg(AddressPaneMsg),
     BtlAddrUpdated(AddressRange),
+    IncludeToggle,
 }
 
 pub struct FwPane {
@@ -32,6 +35,7 @@ pub struct FwPane {
     app_path: TextField<String>,
     app_addr: AddressPane,
     btl_addr: AddressPane,
+    include_id: String,
 }
 
 impl Default for FwPane {
@@ -51,6 +55,7 @@ impl Default for FwPane {
                                      String::new()).class("form-control flex-fill"),
             app_addr: Default::default(),
             btl_addr: Default::default(),
+            include_id: format!("{}", Id::new().data())
         }
     }
 }
@@ -76,6 +81,10 @@ impl FwPane {
     fn make_path_relative(&self, path: &str) -> String {
         // TODO: ...
         path.into()
+    }
+
+    fn emit(&self, ctx: &Context<FwMsg>) {
+        ctx.emit(&self.updated, self.config.clone());
     }
 }
 
@@ -123,20 +132,27 @@ impl App for FwPane {
 
             FwMsg::FwIdChanged(id) => {
                 self.config.fw_id = id;
-                ctx.emit(&self.updated, self.config.clone());
+                self.emit(&ctx);
                 Updated::no()
             }
 
             FwMsg::AppAddrMsg(msg) => self.app_addr.update(msg, ctx.map(FwMsg::AppAddrMsg)),
             FwMsg::AppAddrUpdated(range) => {
                 self.config.app_address = range;
+                self.emit(&ctx);
                 Updated::no()
             }
 
             FwMsg::BtlAddrMsg(msg) => self.btl_addr.update(msg, ctx.map(FwMsg::BtlAddrMsg)),
             FwMsg::BtlAddrUpdated(range) => {
                 self.config.btl_address = range;
+                self.emit(&ctx);
                 Updated::no()
+            }
+            FwMsg::IncludeToggle => {
+                self.config.include_in_script = !self.config.include_in_script;
+                self.emit(&ctx);
+                Updated::yes()
             }
         }
     }
@@ -146,8 +162,13 @@ impl Render for FwPane {
     type Message = FwMsg;
 
     fn render(&self) -> Node<Self::Message> {
-        html!( <div #fw-config >
-                // row with product ID + Product name
+        html!(<div #fw-config>
+                <div class="custom-control custom-switch mx-3 col-auto">
+                    {checkbox(self.config.include_in_script, || FwMsg::IncludeToggle)
+                        .class("custom-control-input").id(self.include_id.clone())}
+                    <label class="custom-control-label" for={self.include_id.clone()}>{"Include in Script"}</>
+                </>
+
                 <div class="d-flex flex-row align-items-center my-2">
                     <span class="col-4">{"Firmware ID"}</>
                     {self.fw_id.render().build().map(FwMsg::FwIdMsg)}
