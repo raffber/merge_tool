@@ -76,7 +76,7 @@ pub fn write_fws(config: &Config, fws: &[Firmware], target_folder: &Path) -> Res
     Ok(())
 }
 
-pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
+pub fn release(config: &mut Config, config_dir: &Path, _output_dir: &Path) -> Result<(), Error> {
     let _repo_path = config.get_repo_path(config_dir)?;
     // TODO: ....
     Ok(())

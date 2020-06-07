@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 merge_tool = {path = ".."}
+clap = "2.33.1"
