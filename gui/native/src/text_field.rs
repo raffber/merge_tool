@@ -1,39 +1,38 @@
 use greenhorn::prelude::*;
 
-pub struct TextField<T: 'static + Clone> {
-    value: T,
-    version: Id,
-    valid: bool,
-    change: Event<T>,
-    validator: Box<dyn Send + Fn(&str) -> Option<T>>,
-    to_string: Box<dyn Send + Fn(&T) -> String>,
-}
-
 #[derive(Debug)]
 pub enum TextFieldMsg {
     KeyUp(DomEvent),
 }
 
-impl<T: 'static + Clone> TextField<T> {
+pub struct TextField<T: 'static + Clone + Default> {
+    value: T,
+    version: Id,
+    valid: bool,
+    validator: Box<dyn Send + Fn(&str) -> Option<T>>,
+    to_string: Box<dyn Send + Fn(&T) -> String>,
+}
+
+impl<T: 'static + Clone + Default> TextField<T> {
     pub fn new<F: 'static + Send + Fn(&str) -> Option<T>, S: 'static + Send + Fn(&T) -> String>(
         fun: F,
-        to_string: S,
-        inital: T,
+        to_string: S
     ) -> Self {
+        let inital = Default::default();
         let text = to_string(&inital);
         let valid = fun(&text).is_some();
         Self {
             value: inital,
             version: Id::new(),
             valid,
-            change: Default::default(),
             validator: Box::new(fun),
             to_string: Box::new(to_string),
         }
     }
 
-    pub fn change_event(&self) -> &Event<T> {
-        &self.change
+    pub fn with_value(mut self, value: T) -> Self {
+        self.value = value;
+        self
     }
 
     pub fn set(&mut self, value: T) {
@@ -41,26 +40,22 @@ impl<T: 'static + Clone> TextField<T> {
         self.version = Id::new();
     }
 
-    pub fn get(&self) -> &T {
-        &self.value
-    }
-
-    pub fn update<M: 'static + Send>(&mut self, msg: TextFieldMsg, ctx: &Context<M>) -> Updated {
+    pub fn update(&mut self, value: &mut T, msg: TextFieldMsg) -> (bool, Updated) {
         match msg {
             TextFieldMsg::KeyUp(evt) => {
                 let text = evt.target_value().get_text().unwrap();
                 let old_valid = self.valid;
-                if let Some(value) = (*self.validator)(&text) {
-                    self.value = value;
-                    ctx.emit(&self.change, self.value.clone());
+                if let Some(v) = (*self.validator)(&text) {
+                    *value = v.clone();
+                    self.set(v);
                     self.valid = true;
                 } else {
                     self.valid = false;
                 }
                 if old_valid != self.valid {
-                    Updated::yes()
+                    (self.valid, Updated::yes())
                 } else {
-                    Updated::no()
+                    (self.valid, Updated::no())
                 }
             }
         }

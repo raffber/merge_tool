@@ -1,21 +1,21 @@
 use greenhorn::prelude::*;
 use greenhorn::html;
 use merge_tool::config::AddressRange;
-use crate::lean_field::{LeanMsg, LeanField};
+use crate::text_field::{TextFieldMsg, TextField};
 
 // TODO: deny end < begin
 
 #[derive(Debug)]
 pub enum AddressPaneMsg {
-    BeginMsg(LeanMsg),
-    EndMsg(LeanMsg),
+    BeginMsg(TextFieldMsg),
+    EndMsg(TextFieldMsg),
 }
 
 pub struct AddressPane {
     pub data: AddressRange,
     pub changed: Event<AddressRange>,
-    begin_field: LeanField<u64>,
-    end_field: LeanField<u64>,
+    begin_field: TextField<u64>,
+    end_field: TextField<u64>,
 }
 
 impl Default for AddressPane {
@@ -34,8 +34,8 @@ impl AddressPane {
         }
     }
 
-    fn make_text_field() -> LeanField<u64> {
-        LeanField::new(
+    fn make_text_field() -> TextField<u64> {
+        TextField::new(
             |x| u64::from_str_radix(x, 16).ok(),
             |x| format!("{:X}", x))
     }

@@ -5,15 +5,15 @@ use greenhorn::dialog::{FileOpenDialog, FileOpenMsg, FileFilter};
 use crate::address_pane::{AddressPane, AddressPaneMsg};
 use greenhorn::components::checkbox;
 use std::str::FromStr;
-use crate::lean_field::{LeanMsg, LeanField};
+use crate::text_field::{TextFieldMsg, TextField};
 
 #[derive(Debug)]
 pub enum FwMsg {
     Remove,
     UpdateConfig(FwConfig),
-    FwIdMsg(LeanMsg),
-    AppPathMsg(LeanMsg),
-    BtlPathMsg(LeanMsg),
+    FwIdMsg(TextFieldMsg),
+    AppPathMsg(TextFieldMsg),
+    BtlPathMsg(TextFieldMsg),
     OpenApp,
     OpenBtl,
     OpenAppDialog(FileOpenMsg),
@@ -21,33 +21,33 @@ pub enum FwMsg {
     AppAddrMsg(AddressPaneMsg),
     BtlAddrMsg(AddressPaneMsg),
     IncludeToggle,
-    PageSizeMsg(LeanMsg),
+    PageSizeMsg(TextFieldMsg),
     WordAddressingToggle,
-    TimeDataSendMsg(LeanMsg),
-    TimeSendDoneMsg(LeanMsg),
-    TimeLeaveMsg(LeanMsg),
-    TimeEraseMsg(LeanMsg),
+    TimeDataSendMsg(TextFieldMsg),
+    TimeSendDoneMsg(TextFieldMsg),
+    TimeLeaveMsg(TextFieldMsg),
+    TimeEraseMsg(TextFieldMsg),
     HexSelectChanged(JsonValue),
-    HeaderOffsetMsg(LeanMsg),
+    HeaderOffsetMsg(TextFieldMsg),
 }
 
 pub struct FwPane {
     config: FwConfig,
     pub updated: Event<FwConfig>,
     pub remove: Event<()>,
-    fw_id: LeanField<u8>,
-    btl_path: LeanField<String>,
-    app_path: LeanField<String>,
+    fw_id: TextField<u8>,
+    btl_path: TextField<String>,
+    app_path: TextField<String>,
     app_addr: AddressPane,
     btl_addr: AddressPane,
     include_id: String,
-    page_size: LeanField<u64>,
+    page_size: TextField<u64>,
     word_addressing_id: String,
-    header_offset: LeanField<u64>,
-    time_data_send: LeanField<u32>,
-    time_send_done: LeanField<u32>,
-    time_leave: LeanField<u32>,
-    time_erase: LeanField<u32>,
+    header_offset: TextField<u64>,
+    time_data_send: TextField<u32>,
+    time_send_done: TextField<u32>,
+    time_leave: TextField<u32>,
+    time_erase: TextField<u32>,
 }
 
 impl Default for FwPane {
@@ -56,23 +56,23 @@ impl Default for FwPane {
             config: Default::default(),
             updated: Default::default(),
             remove: Default::default(),
-            fw_id: LeanField::new(|x| u8::from_str_radix(x, 16).ok(),
+            fw_id: TextField::new(|x| u8::from_str_radix(x, 16).ok(),
                                   |x| format!("{:X}", x)),
-            btl_path: LeanField::new(|x| Some(x.to_string()),
+            btl_path: TextField::new(|x| Some(x.to_string()),
                                      |x| x.clone()),
-            app_path: LeanField::new(|x| Some(x.to_string()),
+            app_path: TextField::new(|x| Some(x.to_string()),
                                      |x| x.clone()),
             app_addr: Default::default(),
             btl_addr: Default::default(),
             include_id: format!("{}", Id::new().data()),
             word_addressing_id: format!("{}", Id::new().data()),
-            header_offset: LeanField::new(|x| u64::from_str_radix(x, 16).ok(),
-                           |x| format!("{:X}", x))
+            header_offset: TextField::new(|x| u64::from_str_radix(x, 16).ok(),
+                                          |x| format!("{:X}", x))
 ,
             time_data_send: Self::make_time_field(),
             time_send_done: Self::make_time_field(),
             time_leave: Self::make_time_field(),
-            page_size: LeanField::new(|x| u64::from_str_radix(x, 16).ok(),
+            page_size: TextField::new(|x| u64::from_str_radix(x, 16).ok(),
                                       |x| format!("{:X}", x)),
             time_erase: Self::make_time_field(),
         }
@@ -86,8 +86,8 @@ impl FwPane {
         ret
     }
 
-    fn make_time_field() -> LeanField<u32> {
-        LeanField::new(|x| u32::from_str(x).ok(),
+    fn make_time_field() -> TextField<u32> {
+        TextField::new(|x| u32::from_str(x).ok(),
                        |x| x.to_string())
     }
 

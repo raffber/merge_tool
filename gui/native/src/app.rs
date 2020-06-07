@@ -8,7 +8,7 @@ use greenhorn::prelude::*;
 use merge_tool::config::{Config, FwConfig};
 
 use crate::fw_config::{FwPane, FwMsg};
-use crate::lean_field::{LeanMsg, LeanField};
+use crate::text_field::{TextFieldMsg, TextField};
 use arrayvec::ArrayVec;
 use chrono::{Local, Timelike};
 
@@ -19,9 +19,9 @@ pub enum Msg {
     ConfigSavedAs(FileSaveMsg),
     ConfigOpened(FileOpenMsg),
 
-    ProductNameMsg(LeanMsg),
-    ProductIdMsg(LeanMsg),
-    StateTransitionMsg(LeanMsg),
+    ProductNameMsg(TextFieldMsg),
+    ProductIdMsg(TextFieldMsg),
+    StateTransitionMsg(TextFieldMsg),
 
     FwPaneMsg(usize, FwMsg),
     FwPaneRemove(usize),
@@ -33,10 +33,10 @@ pub enum Msg {
 }
 
 pub struct MainApp {
-    product_name: LeanField<String>,
+    product_name: TextField<String>,
     config_path: String,
-    product_id: LeanField<u16>,
-    state_transition: LeanField<u32>,
+    product_id: TextField<u16>,
+    state_transition: TextField<u32>,
     auto_save: bool,
     config: Config,
     fw_configs: Vec<Component<FwPane>>,
@@ -60,10 +60,10 @@ mod validate {
 impl MainApp {
     pub fn new() -> Self {
         Self {
-            product_name: LeanField::new(validate::product_name, |x| x.to_string()),
+            product_name: TextField::new(validate::product_name, |x| x.to_string()),
             config_path: "".to_string(),
-            product_id: LeanField::new(validate::product_id, |x| format!("{:X}", x)),
-            state_transition: LeanField::new(validate::state_transition, |x| x.to_string()),
+            product_id: TextField::new(validate::product_id, |x| format!("{:X}", x)),
+            state_transition: TextField::new(validate::state_transition, |x| x.to_string()),
             auto_save: false,
             config: Default::default(),
             fw_configs: vec![],
