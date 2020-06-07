@@ -7,7 +7,6 @@ use greenhorn::prelude::*;
 
 use merge_tool::config::{Config, FwConfig};
 
-use crate::text_field::{TextField, TextFieldMsg};
 use crate::fw_config::{FwPane, FwMsg};
 use crate::lean_field::{LeanMsg, LeanField};
 use arrayvec::ArrayVec;
@@ -20,13 +19,9 @@ pub enum Msg {
     ConfigSavedAs(FileSaveMsg),
     ConfigOpened(FileOpenMsg),
 
-    ProductNameMsg(TextFieldMsg),
-    ProductNameChanged(String),
-
+    ProductNameMsg(LeanMsg),
     ProductIdMsg(LeanMsg),
-
-    StateTransitionMsg(TextFieldMsg),
-    StateTransitionChanged(u32),
+    StateTransitionMsg(LeanMsg),
 
     FwPaneMsg(usize, FwMsg),
     FwPaneRemove(usize),
@@ -38,10 +33,10 @@ pub enum Msg {
 }
 
 pub struct MainApp {
-    product_name: TextField<String>,
+    product_name: LeanField<String>,
     config_path: String,
     product_id: LeanField<u16>,
-    state_transition: TextField<u32>,
+    state_transition: LeanField<u32>,
     auto_save: bool,
     config: Config,
     fw_configs: Vec<Component<FwPane>>,
@@ -65,10 +60,10 @@ mod validate {
 impl MainApp {
     pub fn new() -> Self {
         Self {
-            product_name: TextField::new(validate::product_name, |x| x.to_string(), "".to_string()),
+            product_name: LeanField::new(validate::product_name, |x| x.to_string()),
             config_path: "".to_string(),
             product_id: LeanField::new(validate::product_id, |x| format!("{:X}", x)),
-            state_transition: TextField::new(validate::state_transition, |x| x.to_string(), 0),
+            state_transition: LeanField::new(validate::state_transition, |x| x.to_string()),
             auto_save: false,
             config: Default::default(),
             fw_configs: vec![],
@@ -173,7 +168,7 @@ impl App for MainApp {
         match msg {
             Msg::Open => {
                 let dialog = FileOpenDialog::new("Open a config file", "")
-                    .with_filter(FileFilter::new("GCTBtl Config files").push("gctmrg"));
+                    .with_filter(FileFilter::new("gctmrg Config files").push("gctmrg"));
                 ctx.dialog(dialog, Msg::ConfigOpened);
                 Updated::no()
             }
@@ -200,12 +195,8 @@ impl App for MainApp {
             }
 
             Msg::ProductNameMsg(msg) => {
-                self.product_name.update(msg, &ctx)
-            }
-            Msg::ProductNameChanged(value) => {
-                self.config.product_name = value;
-                self.config_changed();
-                Updated::yes()
+                let ret = self.product_name.update(&mut self.config.product_name, msg);
+                self.prop(ret)
             }
 
             Msg::ProductIdMsg(msg) => {
@@ -214,13 +205,8 @@ impl App for MainApp {
             }
 
             Msg::StateTransitionMsg(msg) => {
-                self.state_transition.update(msg, &ctx);
-                Updated::yes()
-            }
-            Msg::StateTransitionChanged(value) => {
-                self.config.time_state_transition = value;
-                self.config_changed();
-                Updated::yes()
+                let ret = self.state_transition.update(&mut self.config.time_state_transition, msg);
+                self.prop(ret)
             }
             Msg::UseBackdoorToggle => {
                 self.config.use_backdoor = !self.config.use_backdoor;
@@ -292,7 +278,6 @@ impl Render for MainApp {
                     <span class="col-3">{"Product Name"}</>
                     {self.product_name.render().class("col-3 form-control")
                         .attr("placeholder", "e.g. Nimbus2000").build().map(Msg::ProductNameMsg)}
-                    {self.product_name.change_event().subscribe(Msg::ProductNameChanged)}
                 </>
 
                 // row with state transition and "use backdoor"
@@ -300,7 +285,6 @@ impl Render for MainApp {
                     <span class="col-3">{"State Transition Time [ms]"}</>
                     {self.state_transition.render() .class("col-3 form-control")
                         .attr("placeholder", "in ms").build().map(Msg::StateTransitionMsg)}
-                    {self.state_transition.change_event().subscribe(Msg::StateTransitionChanged)}
                     <div class="col-6 px-5 custom-control custom-checkbox">
                         {checkbox(self.config.use_backdoor, || Msg::UseBackdoorToggle)
                             .class("custom-control-input").id("use-backdoor")}
