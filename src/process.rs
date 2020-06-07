@@ -10,9 +10,9 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-pub fn merge_firmware(config: &mut Config, idx: usize) -> Result<Firmware, Error> {
-    let app = load_app(config, idx)?;
-    let btl = load_btl(config, idx)?;
+pub fn merge_firmware(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Firmware, Error> {
+    let app = load_app(config, idx, config_dir)?;
+    let btl = load_btl(config, idx, config_dir)?;
     Firmware::merge(btl, app)
 }
 
@@ -33,11 +33,11 @@ fn generate_script_filename(config: &Config) -> String {
     parts.join("")
 }
 
-pub fn create_script(config: &mut Config, output_dir: &Path) -> Result<(), Error> {
+pub fn create_script(config: &mut Config, config_dir: &Path, output_dir: &Path) -> Result<(), Error> {
     let protocol = ExtCmdProtocol::new(EXT_CMD_CODE);
     let mut fws = Vec::new();
     for idx in 0..config.images.len() {
-        fws.push(load_app(config, idx)?);
+        fws.push(load_app(config, idx, config_dir)?);
     }
     let cmds = generate_script(&protocol, &fws, config);
     let filename = generate_script_filename(config);
@@ -54,10 +54,10 @@ pub fn write_crc(fw: &mut Firmware) {
     fw.write_u32(0, crc);
 }
 
-pub fn merge_all(config: &mut Config) -> Result<Vec<Firmware>, Error> {
+pub fn merge_all(config: &mut Config, config_dir: &Path) -> Result<Vec<Firmware>, Error> {
     let mut ret = Vec::new();
     for idx in 0..config.images.len() {
-        let fw = merge_firmware(config, idx)?;
+        let fw = merge_firmware(config, idx, config_dir)?;
         ret.push(fw);
     }
     Ok(ret)
@@ -76,7 +76,12 @@ pub fn write_fws(config: &Config, fws: &[Firmware], target_folder: &Path) -> Res
     Ok(())
 }
 
-pub fn load_app(config: &mut Config, idx: usize) -> Result<Firmware, Error> {
+pub fn release(_config: &mut Config, _config_dir: &Path) -> Result<(), Error> {
+    Ok(())
+}
+
+pub fn load_app(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Firmware, Error> {
+    // TODO: use config dir to infer path
     let path = Path::new(&config.images[idx].app_path);
     let mut fw = Firmware::load_from_file(
         &path,
@@ -149,7 +154,7 @@ pub fn load_app(config: &mut Config, idx: usize) -> Result<Firmware, Error> {
     Ok(fw)
 }
 
-pub fn load_btl(config: &Config, idx: usize) -> Result<Firmware, Error> {
+pub fn load_btl(config: &Config, idx: usize, config_dir: &Path) -> Result<Firmware, Error> {
     let path = Path::new(&config.images[idx].btl_path);
     let fw_config = &config.images[idx];
     Firmware::load_from_file(

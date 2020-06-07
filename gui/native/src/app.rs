@@ -14,6 +14,7 @@ use chrono::{Local, Timelike};
 use crate::runner::RunnerMsg;
 use crate::runner;
 use futures::StreamExt;
+use crate::app::Msg::LogMsg;
 
 #[derive(Debug)]
 pub enum Msg {
@@ -264,43 +265,54 @@ impl App for MainApp {
             Msg::LogMsg(msg) => {
                 match msg {
                     RunnerMsg::Info(msg) => self.log.push(format!("[INFO] {}", msg)),
-                    RunnerMsg::Warn(msg) => self.log.push(format!("[INFO] {}", msg)),
-                    RunnerMsg::Error(msg) =>  self.log.push(format!("[INFO] {}", msg)),
+                    RunnerMsg::Warn(msg) => self.log.push(format!("[WARN] {}", msg)),
+                    RunnerMsg::Error(msg) =>  self.log.push(format!("[ERROR] {}", msg)),
                     RunnerMsg::Failure(msg) => {
-                        self.log.push(format!("[INFO] {}", msg));
+                        self.log.push(format!("[FAIL] {}", msg));
                         self.process_active = false;
                     },
                     RunnerMsg::Success(msg) => {
-                        self.log.push(format!("[INFO] {}", msg));
+                        self.log.push(format!("[SUCCESS] {}", msg));
                         self.process_active = false;
                     },
                 }
                 Updated::yes()
             }
             Msg::GenerateScript => {
+                if self.config_path.trim().is_empty() {
+                    return self.update(LogMsg(RunnerMsg::Failure("No config file specified!".to_string())), ctx);
+                }
                 if self.process_active {
                     return Updated::no()
                 }
                 self.process_active = true;
-                let path = Path::new("script.txt");
+                let path = Path::new(&self.config_path);
                 let stream = runner::generate_script(self.config.clone(), path);
                 ctx.subscribe(stream.map(Msg::LogMsg));
                 Updated::no()
             }
             Msg::Merge => {
+                if self.config_path.trim().is_empty() {
+                    return self.update(LogMsg(RunnerMsg::Failure("No config file specified!".to_string())), ctx);
+                }
                 if self.process_active {
                     return Updated::no()
                 }
                 self.process_active = true;
-                ctx.subscribe(runner::merge(self.config.clone()).map(Msg::LogMsg));
+                let path = Path::new(&self.config_path);
+                ctx.subscribe(runner::merge(self.config.clone(), path).map(Msg::LogMsg));
                 Updated::no()
             }
             Msg::Release => {
+                if self.config_path.trim().is_empty() {
+                    return self.update(LogMsg(RunnerMsg::Failure("No config file specified!".to_string())), ctx);
+                }
                 if self.process_active {
                     return Updated::no()
                 }
                 self.process_active = true;
-                ctx.subscribe(runner::release(self.config.clone()).map(Msg::LogMsg));
+                let path = Path::new(&self.config_path);
+                ctx.subscribe(runner::release(self.config.clone(), path).map(Msg::LogMsg));
                 Updated::no()
             }
         }
