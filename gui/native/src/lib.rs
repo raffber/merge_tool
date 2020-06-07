@@ -7,9 +7,9 @@ use std::net::SocketAddr;
 use std::str::FromStr;
 use std::{panic, thread};
 
+mod address_pane;
 mod app;
 mod fw_config;
-mod address_pane;
 mod text_field;
 
 use crate::app::MainApp;

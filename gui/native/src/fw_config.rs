@@ -1,11 +1,11 @@
-use greenhorn::prelude::*;
-use greenhorn::html;
-use merge_tool::config::{FwConfig, HexFileFormat};
-use greenhorn::dialog::{FileOpenDialog, FileOpenMsg, FileFilter};
 use crate::address_pane::{AddressPane, AddressPaneMsg};
+use crate::text_field::{TextField, TextFieldMsg};
 use greenhorn::components::checkbox;
+use greenhorn::dialog::{FileFilter, FileOpenDialog, FileOpenMsg};
+use greenhorn::html;
+use greenhorn::prelude::*;
+use merge_tool::config::{FwConfig, HexFileFormat};
 use std::str::FromStr;
-use crate::text_field::{TextFieldMsg, TextField};
 
 #[derive(Debug)]
 pub enum FwMsg {
@@ -56,24 +56,21 @@ impl Default for FwPane {
             config: Default::default(),
             updated: Default::default(),
             remove: Default::default(),
-            fw_id: TextField::new(|x| u8::from_str_radix(x, 16).ok(),
-                                  |x| format!("{:X}", x)),
-            btl_path: TextField::new(|x| Some(x.to_string()),
-                                     |x| x.clone()),
-            app_path: TextField::new(|x| Some(x.to_string()),
-                                     |x| x.clone()),
+            fw_id: TextField::new(|x| u8::from_str_radix(x, 16).ok(), |x| format!("{:X}", x)),
+            btl_path: TextField::new(|x| Some(x.to_string()), |x| x.clone()),
+            app_path: TextField::new(|x| Some(x.to_string()), |x| x.clone()),
             app_addr: Default::default(),
             btl_addr: Default::default(),
             include_id: format!("{}", Id::new().data()),
             word_addressing_id: format!("{}", Id::new().data()),
-            header_offset: TextField::new(|x| u64::from_str_radix(x, 16).ok(),
-                                          |x| format!("{:X}", x))
-,
+            header_offset: TextField::new(
+                |x| u64::from_str_radix(x, 16).ok(),
+                |x| format!("{:X}", x),
+            ),
             time_data_send: Self::make_time_field(),
             time_send_done: Self::make_time_field(),
             time_leave: Self::make_time_field(),
-            page_size: TextField::new(|x| u64::from_str_radix(x, 16).ok(),
-                                      |x| format!("{:X}", x)),
+            page_size: TextField::new(|x| u64::from_str_radix(x, 16).ok(), |x| format!("{:X}", x)),
             time_erase: Self::make_time_field(),
         }
     }
@@ -81,14 +78,13 @@ impl Default for FwPane {
 
 impl FwPane {
     pub fn new() -> Self {
-        let mut ret : FwPane = Default::default();
+        let mut ret: FwPane = Default::default();
         ret.config.device_config.page_size = 2;
         ret
     }
 
     fn make_time_field() -> TextField<u32> {
-        TextField::new(|x| u32::from_str(x).ok(),
-                       |x| x.to_string())
+        TextField::new(|x| u32::from_str(x).ok(), |x| x.to_string())
     }
 
     pub fn with_config(config: &FwConfig) -> Self {
@@ -99,9 +95,7 @@ impl FwPane {
 
     fn open_hex_file(&self) -> FileOpenDialog {
         FileOpenDialog::new("Open hex file...", "~")
-            .with_filter(FileFilter::new("hex files")
-                .push("s37")
-                .push("hex"))
+            .with_filter(FileFilter::new("hex files").push("s37").push("hex"))
     }
 
     fn make_path_relative(&self, path: &str) -> String {
@@ -127,7 +121,7 @@ impl App for FwPane {
             FwMsg::Remove => {
                 ctx.emit(&self.remove, ());
                 Updated::no()
-            },
+            }
 
             FwMsg::UpdateConfig(config) => {
                 self.config = config;
@@ -136,7 +130,7 @@ impl App for FwPane {
             FwMsg::FwIdMsg(msg) => {
                 let ret = self.fw_id.update(&mut self.config.fw_id, msg);
                 self.prop(&ctx, ret)
-            },
+            }
             FwMsg::OpenApp => {
                 ctx.dialog(self.open_hex_file(), FwMsg::OpenAppDialog);
                 Updated::no()
@@ -166,8 +160,8 @@ impl App for FwPane {
             FwMsg::AppPathMsg(msg) => {
                 let ret = self.app_path.update(&mut self.config.app_path, msg);
                 self.prop(&ctx, ret)
-            },
-            FwMsg::BtlPathMsg(msg) =>{
+            }
+            FwMsg::BtlPathMsg(msg) => {
                 let ret = self.btl_path.update(&mut self.config.btl_path, msg);
                 self.prop(&ctx, ret)
             }
@@ -178,7 +172,7 @@ impl App for FwPane {
                     self.emit(&ctx);
                 }
                 ret
-            },
+            }
 
             FwMsg::BtlAddrMsg(msg) => {
                 let (changed, ret) = self.btl_addr.update(msg, &mut self.config.btl_address);
@@ -186,7 +180,7 @@ impl App for FwPane {
                     self.emit(&ctx);
                 }
                 ret
-            },
+            }
 
             FwMsg::IncludeToggle => {
                 self.config.include_in_script = !self.config.include_in_script;
@@ -194,34 +188,45 @@ impl App for FwPane {
                 Updated::yes()
             }
             FwMsg::WordAddressingToggle => {
-                self.config.device_config.word_addressing = !self.config.device_config.word_addressing;
+                self.config.device_config.word_addressing =
+                    !self.config.device_config.word_addressing;
                 self.emit(&ctx);
                 Updated::yes()
             }
             FwMsg::PageSizeMsg(msg) => {
-                let ret = self.page_size.update(&mut self.config.device_config.page_size, msg);
+                let ret = self
+                    .page_size
+                    .update(&mut self.config.device_config.page_size, msg);
                 self.prop(&ctx, ret)
-            },
+            }
 
             FwMsg::TimeDataSendMsg(msg) => {
-                let ret = self.time_data_send.update(&mut self.config.timings.data_send, msg);
+                let ret = self
+                    .time_data_send
+                    .update(&mut self.config.timings.data_send, msg);
                 self.prop(&ctx, ret)
-            },
+            }
 
-            FwMsg::TimeSendDoneMsg(msg) =>{
-                let ret = self.time_send_done.update(&mut self.config.timings.data_send_done, msg);
+            FwMsg::TimeSendDoneMsg(msg) => {
+                let ret = self
+                    .time_send_done
+                    .update(&mut self.config.timings.data_send_done, msg);
                 self.prop(&ctx, ret)
             }
 
             FwMsg::TimeLeaveMsg(msg) => {
-                let ret = self.time_leave.update(&mut self.config.timings.leave_btl, msg);
+                let ret = self
+                    .time_leave
+                    .update(&mut self.config.timings.leave_btl, msg);
                 self.prop(&ctx, ret)
-            },
+            }
 
-            FwMsg::TimeEraseMsg(msg) =>{
-                let ret = self.time_erase.update(&mut self.config.timings.erase_time, msg);
+            FwMsg::TimeEraseMsg(msg) => {
+                let ret = self
+                    .time_erase
+                    .update(&mut self.config.timings.erase_time, msg);
                 self.prop(&ctx, ret)
-            },
+            }
 
             FwMsg::HexSelectChanged(value) => {
                 let idx: u32 = serde_json::from_value(value).unwrap();
@@ -235,8 +240,10 @@ impl App for FwPane {
                 self.emit(&ctx);
                 Updated::no()
             }
-            FwMsg::HeaderOffsetMsg(msg) =>{
-                let ret = self.header_offset.update(&mut self.config.header_offset, msg);
+            FwMsg::HeaderOffsetMsg(msg) => {
+                let ret = self
+                    .header_offset
+                    .update(&mut self.config.header_offset, msg);
                 self.prop(&ctx, ret)
             }
         }

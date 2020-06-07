@@ -7,8 +7,8 @@ use greenhorn::prelude::*;
 
 use merge_tool::config::{Config, FwConfig};
 
-use crate::fw_config::{FwPane, FwMsg};
-use crate::text_field::{TextFieldMsg, TextField};
+use crate::fw_config::{FwMsg, FwPane};
+use crate::text_field::{TextField, TextFieldMsg};
 use arrayvec::ArrayVec;
 use chrono::{Local, Timelike};
 
@@ -67,7 +67,7 @@ impl MainApp {
             auto_save: false,
             config: Default::default(),
             fw_configs: vec![],
-            log: vec![Self::say_greeting()]
+            log: vec![Self::say_greeting()],
         }
     }
 
@@ -84,7 +84,8 @@ impl MainApp {
             "Good morning!"
         } else {
             "You are early... couldn't sleep?"
-        }.to_string()
+        }
+        .to_string()
     }
 
     pub fn apply_config(&mut self, config: Config) {
@@ -130,16 +131,20 @@ impl MainApp {
     }
 
     pub fn render_fws(&self) -> Node<Msg> {
-        let ret = self.fw_configs.iter()
-            .enumerate()
-            .map(|(k, x)| {
-                let component = x.mount().map(move |msg| Msg::FwPaneMsg(k, msg));
-                let locked = x.lock();
-                let remove: Node<Msg> = locked.remove.subscribe(move |_| Msg::FwPaneRemove(k)).into();
-                let updated: Node<Msg> = locked.updated.subscribe(move |config| Msg::FwPaneUpdated(k, config)).into();
-                let mut nodes = ArrayVec::from([component, remove, updated]);
-                Node::new_from_iter(nodes.drain(..))
-            });
+        let ret = self.fw_configs.iter().enumerate().map(|(k, x)| {
+            let component = x.mount().map(move |msg| Msg::FwPaneMsg(k, msg));
+            let locked = x.lock();
+            let remove: Node<Msg> = locked
+                .remove
+                .subscribe(move |_| Msg::FwPaneRemove(k))
+                .into();
+            let updated: Node<Msg> = locked
+                .updated
+                .subscribe(move |config| Msg::FwPaneUpdated(k, config))
+                .into();
+            let mut nodes = ArrayVec::from([component, remove, updated]);
+            Node::new_from_iter(nodes.drain(..))
+        });
         Node::new_from_iter(ret)
     }
 
@@ -156,9 +161,14 @@ impl MainApp {
             tgt.value = tgt.getAttribute('value');
             tgt.scrollTop = tgt.scrollHeight;
         }"#;
-        Node::html().elem("textarea").class("form-control flex-fill mr-1").id("log-area")
-            .attr("rows", "3").attr("value", self.log.join("\n"))
-            .attr("readonly", "").js_event("render", JS)
+        Node::html()
+            .elem("textarea")
+            .class("form-control flex-fill mr-1")
+            .id("log-area")
+            .attr("rows", "3")
+            .attr("value", self.log.join("\n"))
+            .attr("readonly", "")
+            .js_event("render", JS)
     }
 }
 
@@ -205,7 +215,9 @@ impl App for MainApp {
             }
 
             Msg::StateTransitionMsg(msg) => {
-                let ret = self.state_transition.update(&mut self.config.time_state_transition, msg);
+                let ret = self
+                    .state_transition
+                    .update(&mut self.config.time_state_transition, msg);
                 self.prop(ret)
             }
             Msg::UseBackdoorToggle => {

@@ -16,7 +16,7 @@ pub struct TextField<T: 'static + Clone + Default> {
 impl<T: 'static + Clone + Default> TextField<T> {
     pub fn new<F: 'static + Send + Fn(&str) -> Option<T>, S: 'static + Send + Fn(&T) -> String>(
         fun: F,
-        to_string: S
+        to_string: S,
     ) -> Self {
         let inital = Default::default();
         let text = to_string(&inital);
