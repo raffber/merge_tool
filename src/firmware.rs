@@ -122,11 +122,10 @@ impl Firmware {
     }
 
     pub fn prepend(&mut self, data: &Vec<u8>, addr: u64) -> Result<(), Error> {
-        let gap = self.range.begin + (data.len() as u64);
-        if gap < addr {
+        if self.range.begin < addr + (data.len() as u64) {
             return Err(Error::InvalidAddress);
         }
-        let gap = gap - addr;
+        let gap = self.range.begin - (addr + (data.len() as u64));
         let mut new_code = Vec::new();
         new_code.extend(data);
         new_code.extend(repeat(0xFF).take(gap as usize));

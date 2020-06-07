@@ -156,7 +156,7 @@ pub fn load_app(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Fi
 }
 
 pub fn load_btl(config: &Config, idx: usize, config_dir: &Path) -> Result<Firmware, Error> {
-    let path = Config::normalize_path(&config.images[idx].app_path, config_dir)?;
+    let path = Config::normalize_path(&config.images[idx].btl_path, config_dir)?;
     let fw_config = &config.images[idx];
     Firmware::load_from_file(
         &path,

@@ -16,6 +16,9 @@ fn merge() {
     let config_dir = Config::get_config_dir(config_path).unwrap();
     let mut config = Config::load_from_file(config_path).unwrap();
     let fws = process::merge_all(&mut config, &config_dir).unwrap();
+    let fw = &fws[0];
+    assert_eq!(fw.range.begin, 0xAA00);
+    assert_eq!(fw.range.end, 0xABFF);
     let output_dir = config_dir.join("out");
     create_dir_all(&output_dir).unwrap();
     process::write_fws(&config, &fws[0..1], &output_dir).unwrap();
