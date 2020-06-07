@@ -11,6 +11,7 @@ mod address_pane;
 mod app;
 mod fw_config;
 mod text_field;
+mod runner;
 
 use crate::app::MainApp;
 use backtrace::Backtrace;

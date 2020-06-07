@@ -11,6 +11,9 @@ use crate::fw_config::{FwMsg, FwPane};
 use crate::text_field::{TextField, TextFieldMsg};
 use arrayvec::ArrayVec;
 use chrono::{Local, Timelike};
+use crate::runner::RunnerMsg;
+use crate::runner;
+use futures::StreamExt;
 
 #[derive(Debug)]
 pub enum Msg {
@@ -30,6 +33,10 @@ pub enum Msg {
 
     UseBackdoorToggle,
     AutoSaveToggle,
+    LogMsg(RunnerMsg),
+    GenerateScript,
+    Merge,
+    Release,
 }
 
 pub struct MainApp {
@@ -41,10 +48,12 @@ pub struct MainApp {
     config: Config,
     fw_configs: Vec<Component<FwPane>>,
     log: Vec<String>,
+    process_active: bool,
 }
 
 mod validate {
     pub fn product_name(value: &str) -> Option<String> {
+        // TODO: improve validation
         Some(value.to_string())
     }
 
@@ -68,6 +77,7 @@ impl MainApp {
             config: Default::default(),
             fw_configs: vec![],
             log: vec![Self::say_greeting()],
+            process_active: false
         }
     }
 
@@ -251,6 +261,48 @@ impl App for MainApp {
                 self.config_changed();
                 Updated::yes()
             }
+            Msg::LogMsg(msg) => {
+                match msg {
+                    RunnerMsg::Info(msg) => self.log.push(format!("[INFO] {}", msg)),
+                    RunnerMsg::Warn(msg) => self.log.push(format!("[INFO] {}", msg)),
+                    RunnerMsg::Error(msg) =>  self.log.push(format!("[INFO] {}", msg)),
+                    RunnerMsg::Failure(msg) => {
+                        self.log.push(format!("[INFO] {}", msg));
+                        self.process_active = false;
+                    },
+                    RunnerMsg::Success(msg) => {
+                        self.log.push(format!("[INFO] {}", msg));
+                        self.process_active = false;
+                    },
+                }
+                Updated::yes()
+            }
+            Msg::GenerateScript => {
+                if self.process_active {
+                    return Updated::no()
+                }
+                self.process_active = true;
+                let path = Path::new("script.txt");
+                let stream = runner::generate_script(self.config.clone(), path);
+                ctx.subscribe(stream.map(Msg::LogMsg));
+                Updated::no()
+            }
+            Msg::Merge => {
+                if self.process_active {
+                    return Updated::no()
+                }
+                self.process_active = true;
+                ctx.subscribe(runner::merge(self.config.clone()).map(Msg::LogMsg));
+                Updated::no()
+            }
+            Msg::Release => {
+                if self.process_active {
+                    return Updated::no()
+                }
+                self.process_active = true;
+                ctx.subscribe(runner::release(self.config.clone()).map(Msg::LogMsg));
+                Updated::no()
+            }
         }
     }
 }
@@ -319,9 +371,9 @@ impl Render for MainApp {
                 // main action buttons
                 <div class="d-flex flex-row my-2">
                     {self.render_log()}
-                    <button type="button" class="btn btn-secondary mx-1 main-btn">{"Merge"}</>
-                    <button type="button" class="btn btn-secondary mx-1 main-btn">{"Release"}</>
-                    <button type="button" class="btn btn-primary ml-1 main-btn">{"Generate Script"}</>
+                    <button type="button" class="btn btn-secondary mx-1 main-btn" @click={|_| Msg::Merge}>{"Merge"}</>
+                    <button type="button" class="btn btn-secondary mx-1 main-btn" @click={|_| Msg::Release}>{"Release"}</>
+                    <button type="button" class="btn btn-primary ml-1 main-btn" @click={|_| Msg::GenerateScript}>{"Generate Script"}</>
                 </>
             </>
         )
