@@ -1,6 +1,6 @@
 use greenhorn::prelude::*;
 use greenhorn::html;
-use merge_tool::config::{FwConfig, AddressRange, HexFileFormat};
+use merge_tool::config::{FwConfig, HexFileFormat};
 use crate::text_field::{TextField, TextFieldMsg};
 use greenhorn::dialog::{FileOpenDialog, FileOpenMsg, FileFilter};
 use crate::address_pane::{AddressPane, AddressPaneMsg};
@@ -20,9 +20,7 @@ pub enum FwMsg {
     OpenBtlDialog(FileOpenMsg),
     FwIdChanged(u8),
     AppAddrMsg(AddressPaneMsg),
-    AppAddrUpdated(AddressRange),
     BtlAddrMsg(AddressPaneMsg),
-    BtlAddrUpdated(AddressRange),
     IncludeToggle,
     PageSizeMsg(TextFieldMsg),
     PageSizeChanged(u64),
@@ -177,19 +175,22 @@ impl App for FwPane {
                 Updated::no()
             }
 
-            FwMsg::AppAddrMsg(msg) => self.app_addr.update(msg, ctx.map(FwMsg::AppAddrMsg)),
-            FwMsg::AppAddrUpdated(range) => {
-                self.config.app_address = range;
-                self.emit(&ctx);
-                Updated::no()
-            }
+            FwMsg::AppAddrMsg(msg) => {
+                let (changed, ret) = self.app_addr.update(msg, &mut self.config.app_address);
+                if changed {
+                    self.emit(&ctx);
+                }
+                ret
+            },
 
-            FwMsg::BtlAddrMsg(msg) => self.btl_addr.update(msg, ctx.map(FwMsg::BtlAddrMsg)),
-            FwMsg::BtlAddrUpdated(range) => {
-                self.config.btl_address = range;
-                self.emit(&ctx);
-                Updated::no()
-            }
+            FwMsg::BtlAddrMsg(msg) => {
+                let (changed, ret) = self.btl_addr.update(msg, &mut self.config.btl_address);
+                if changed {
+                    self.emit(&ctx);
+                }
+                ret
+            },
+
             FwMsg::IncludeToggle => {
                 self.config.include_in_script = !self.config.include_in_script;
                 self.emit(&ctx);
@@ -289,12 +290,10 @@ impl Render for FwPane {
                 <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-4">{"App Address"}</>
                     {self.app_addr.render().map(FwMsg::AppAddrMsg)}
-                    {self.app_addr.changed.subscribe(FwMsg::AppAddrUpdated)}
                 </div>
                 <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-4">{"Btl Address"}</>
                     {self.btl_addr.render().map(FwMsg::BtlAddrMsg)}
-                    {self.btl_addr.changed.subscribe(FwMsg::BtlAddrUpdated)}
                 </div>
                 <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-4">{"Page Size"}</>
