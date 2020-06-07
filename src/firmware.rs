@@ -14,7 +14,7 @@ impl Firmware {
         if range.begin % config.page_size != 0 {
             return Err(Error::AddressRangeNotAlignedToPage);
         }
-        if range.end + 1 % config.page_size != 0 {
+        if (range.end + 1) % config.page_size != 0 {
             return Err(Error::AddressRangeNotAlignedToPage);
         }
         Ok(Self {
@@ -132,6 +132,7 @@ impl Firmware {
         new_code.extend(repeat(0xFF).take(gap as usize));
         new_code.extend(self.data.clone());
         self.data = new_code;
+        self.range.begin = addr;
         Ok(())
     }
 }

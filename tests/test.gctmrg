@@ -1,0 +1,59 @@
+{
+  "product_id": 1541,
+  "product_name": "Nimbus2000",
+  "images": [
+    {
+      "btl_path": "btl_f1.hex",
+      "app_path": "app_f1.hex",
+      "app_address": {
+        "begin": 43776,
+        "end": 44031
+      },
+      "btl_address": {
+        "begin": 43520,
+        "end": 43775
+      },
+      "include_in_script": true,
+      "header_offset": 4,
+      "hex_file_format": "IntelHex",
+      "device_config": {
+        "word_addressing": false,
+        "endianness": "Little",
+        "page_size": 64
+      },
+      "timings": {
+        "data_send": 1,
+        "data_send_done": 2,
+        "leave_btl": 3,
+        "erase_time": 4
+      }
+    },
+    {
+      "btl_path": "btl_f2.hex",
+      "app_path": "app_f2.hex",
+      "app_address": {
+        "begin": 43776,
+        "end": 44031
+      },
+      "btl_address": {
+        "begin": 43520,
+        "end": 43775
+      },
+      "include_in_script": true,
+      "header_offset": 4,
+      "hex_file_format": "IntelHex",
+      "device_config": {
+        "word_addressing": false,
+        "endianness": "Little",
+        "page_size": 64
+      },
+      "timings": {
+        "data_send": 1,
+        "data_send_done": 2,
+        "leave_btl": 3,
+        "erase_time": 4
+      }
+    }
+  ],
+  "time_state_transition": 5
+}

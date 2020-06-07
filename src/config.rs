@@ -20,7 +20,7 @@ mod default {
         0xFF
     }
     pub fn header_offset() -> u64 {
-        0
+        4
     }
     pub fn include_in_script() -> bool {
         false
@@ -50,6 +50,10 @@ fn skip_if_one(value: &u8) -> bool {
 
 fn skip_if_false(value: &bool) -> bool {
     !*value
+}
+
+fn skip_if_version(value: &ImageVersion) -> bool {
+    value.build == 0xFF && value.minor == 0xFF
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
@@ -115,12 +119,21 @@ pub struct DeviceConfig {
     pub page_size: u64,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, Default)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ImageVersion {
     #[serde(default = "default::minor_version", skip_serializing_if = "skip_if_ff")]
     pub minor: u8,
     #[serde(default = "default::build_version", skip_serializing_if = "skip_if_ff")]
     pub build: u8,
+}
+
+impl Default for ImageVersion {
+    fn default() -> Self {
+        Self {
+            minor: 0xFF,
+            build: 0xFF
+        }
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -129,12 +142,12 @@ pub struct FwConfig {
     pub fw_id: u8,
     pub btl_path: String,
     pub app_path: String,
+    #[serde(default = "Default::default", skip_serializing_if = "skip_if_version")]
     pub version: ImageVersion,
     pub app_address: AddressRange,
     pub btl_address: AddressRange,
     #[serde(default = "default::include_in_script")]
     pub include_in_script: bool,
-    #[serde(default = "default::header_offset")]
     pub header_offset: u64,
     pub hex_file_format: HexFileFormat,
     pub device_config: DeviceConfig,
@@ -144,14 +157,14 @@ pub struct FwConfig {
 impl Default for FwConfig {
     fn default() -> Self {
         FwConfig {
-            fw_id: 1,
+            fw_id: default::fw_id(),
             btl_path: "".to_string(),
             app_path: "".to_string(),
             version: Default::default(),
             app_address: Default::default(),
             btl_address: Default::default(),
             include_in_script: true,
-            header_offset: 0,
+            header_offset: default::header_offset(),
             hex_file_format: Default::default(),
             device_config: Default::default(),
             timings: Default::default(),
@@ -250,8 +263,8 @@ impl Default for Config {
         Config {
             product_id: 0,
             product_name: "".to_string(),
-            major_version: 0,
-            btl_version: 0,
+            major_version: 0xFF,
+            btl_version: 1,
             use_backdoor: false,
             images: vec![],
             time_state_transition: 0,
