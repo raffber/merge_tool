@@ -76,13 +76,14 @@ pub fn write_fws(config: &Config, fws: &[Firmware], target_folder: &Path) -> Res
     Ok(())
 }
 
-pub fn release(_config: &mut Config, _config_dir: &Path) -> Result<(), Error> {
+pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
+    let _repo_path = config.get_repo_path(config_dir)?;
+    // TODO: ....
     Ok(())
 }
 
 pub fn load_app(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Firmware, Error> {
-    // TODO: use config dir to infer path
-    let path = Path::new(&config.images[idx].app_path);
+    let path = Config::normalize_path(&config.images[idx].app_path, config_dir)?;
     let mut fw = Firmware::load_from_file(
         &path,
         &config.images[idx].hex_file_format,
@@ -155,7 +156,7 @@ pub fn load_app(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Fi
 }
 
 pub fn load_btl(config: &Config, idx: usize, config_dir: &Path) -> Result<Firmware, Error> {
-    let path = Path::new(&config.images[idx].btl_path);
+    let path = Config::normalize_path(&config.images[idx].app_path, config_dir)?;
     let fw_config = &config.images[idx];
     Firmware::load_from_file(
         &path,

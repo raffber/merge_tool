@@ -195,12 +195,12 @@ impl Config {
             .unwrap_or(PathBuf::from("/")))
     }
 
-    pub fn normalize_path(path: &str, config_dir: &Path) -> Result<String, Error> {
+    pub fn normalize_path(path: &str, config_dir: &Path) -> Result<PathBuf, Error> {
         let mut path = PathBuf::from(path);
         if path.is_relative() {
             path = canonicalize(config_dir.join(&path)).map_err(Error::Io)?;
         }
-        Ok(path.to_str().unwrap().to_string())
+        Ok(path)
     }
 
     pub fn load_from_file(path: &Path) -> Result<Config, Error> {
@@ -209,7 +209,7 @@ impl Config {
             .map_err(Error::Io)?
             .read_to_string(&mut data)
             .map_err(Error::Io)?;
-        Self::load_from_string(&data, path)
+        Self::load_from_string(&data)
     }
 
     pub fn save(&self, path: &Path) -> Result<(), Error> {
@@ -218,10 +218,14 @@ impl Config {
         file.write_all(data.as_bytes()).map_err(Error::Io)
     }
 
-    pub fn get_repo_path(&self, config_path: &Path) -> Result<PathBuf, Error> {
+    pub fn get_repo_path(&self, config_dir: &Path) -> Result<PathBuf, Error> {
         let repo_path = self.repo_path.trim();
         if repo_path.is_empty() {
-            let mut path = config_path;
+            let mut path = config_dir;
+            let git_path = path.join(".git");
+            if git_path.exists() {
+                return Ok(git_path);
+            }
             while let Some(parent) = path.parent() {
                 let git_path = parent.join(".git");
                 if git_path.exists() {
@@ -235,19 +239,8 @@ impl Config {
         }
     }
 
-    pub fn load_from_string(data: &str, config_path: &Path) -> Result<Config, Error> {
-        let mut config: Config = serde_json::from_str(data).map_err(Error::CannotParseConfig)?;
-        let config_dir = Config::get_config_dir(config_path)?;
-        for fw_config in &mut config.images {
-            let app_path = fw_config.app_path.trim();
-            if !app_path.is_empty() {
-                fw_config.app_path = Self::normalize_path(&fw_config.app_path, &config_dir)?;
-            }
-            let btl_path = fw_config.btl_path.trim();
-            if !btl_path.is_empty() {
-                fw_config.btl_path = Self::normalize_path(&fw_config.btl_path, &config_dir)?;
-            }
-        }
+    pub fn load_from_string(data: &str) -> Result<Config, Error> {
+        let config: Config = serde_json::from_str(data).map_err(Error::CannotParseConfig)?;
         Ok(config)
     }
 }
