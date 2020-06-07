@@ -1,6 +1,6 @@
 use crate::Error;
 use serde::{Deserialize, Serialize};
-use std::fs::File;
+use std::fs::{File, canonicalize};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
@@ -188,12 +188,19 @@ pub struct Config {
 }
 
 impl Config {
-    fn normalize_path(path: &str, config_path: &Path) -> String {
+    pub fn get_config_dir(config_path: &Path) -> Result<PathBuf, Error> {
+        let config_path = canonicalize(config_path).map_err(Error::Io)?;
+        Ok(config_path.parent()
+            .map(|x| x.to_path_buf())
+            .unwrap_or(PathBuf::from("/")))
+    }
+
+    pub fn normalize_path(path: &str, config_dir: &Path) -> Result<String, Error> {
         let mut path = PathBuf::from(path);
         if path.is_relative() {
-            path = config_path.join(&path);
+            path = canonicalize(config_dir.join(&path)).map_err(Error::Io)?;
         }
-        path.to_str().unwrap().to_string()
+        Ok(path.to_str().unwrap().to_string())
     }
 
     pub fn load_from_file(path: &Path) -> Result<Config, Error> {
@@ -211,21 +218,34 @@ impl Config {
         file.write_all(data.as_bytes()).map_err(Error::Io)
     }
 
-    pub fn load_from_string(data: &str, config_path: &Path) -> Result<Config, Error> {
-        let mut config: Config = serde_json::from_str(data).map_err(Error::CannotParseConfig)?;
-        for fw_config in &mut config.images {
-            fw_config.btl_path = Self::normalize_path(&fw_config.btl_path, config_path);
-            fw_config.app_path = Self::normalize_path(&fw_config.app_path, config_path);
-        }
-        if config.repo_path.is_empty() {
+    pub fn get_repo_path(&self, config_path: &Path) -> Result<PathBuf, Error> {
+        let repo_path = self.repo_path.trim();
+        if repo_path.is_empty() {
             let mut path = config_path;
             while let Some(parent) = path.parent() {
                 let git_path = parent.join(".git");
                 if git_path.exists() {
-                    config.repo_path = git_path.to_str().unwrap().to_string();
-                    break;
+                    return Ok(git_path);
                 }
                 path = parent;
+            }
+            Err(Error::CannotFindGitRepo)
+        } else {
+            Ok(repo_path.into())
+        }
+    }
+
+    pub fn load_from_string(data: &str, config_path: &Path) -> Result<Config, Error> {
+        let mut config: Config = serde_json::from_str(data).map_err(Error::CannotParseConfig)?;
+        let config_dir = Config::get_config_dir(config_path)?;
+        for fw_config in &mut config.images {
+            let app_path = fw_config.app_path.trim();
+            if !app_path.is_empty() {
+                fw_config.app_path = Self::normalize_path(&fw_config.app_path, &config_dir)?;
+            }
+            let btl_path = fw_config.btl_path.trim();
+            if !btl_path.is_empty() {
+                fw_config.btl_path = Self::normalize_path(&fw_config.btl_path, &config_dir)?;
             }
         }
         Ok(config)

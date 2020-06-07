@@ -3,7 +3,7 @@ use futures::Stream;
 use futures::channel::mpsc;
 use std::thread;
 use merge_tool::process;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::fs::create_dir_all;
 
 #[derive(Debug)]
@@ -15,14 +15,17 @@ pub enum RunnerMsg {
     Success(String),
 }
 
-fn config_dir(config_path: &Path) -> PathBuf {
-    todo!()
-}
-
 pub fn generate_script(mut config: Config, config_path: &Path) -> impl Stream<Item=RunnerMsg> {
     let (tx, rx) = mpsc::unbounded();
-    let config_dir = config_dir(config_path);
+    let config_path = config_path.to_path_buf();
     thread::spawn(move || {
+        let config_dir = match Config::get_config_dir(&config_path) {
+            Ok(dir) => dir,
+            Err(_) => {
+                tx.unbounded_send(RunnerMsg::Failure("Unable to retrieve config directory.".to_string())).unwrap();
+                return;
+            },
+        };
         let folderpath = config_dir.join("out");
         if let Err(_) = create_dir_all(&folderpath) {
             tx.unbounded_send(RunnerMsg::Failure("Cannot create output directory!".to_string())).unwrap();
@@ -39,8 +42,15 @@ pub fn generate_script(mut config: Config, config_path: &Path) -> impl Stream<It
 
 pub fn release(config: Config, config_path: &Path) -> impl Stream<Item=RunnerMsg> {
     let (tx, rx) = mpsc::unbounded();
-    let config_dir = config_dir(config_path);
+    let config_path = config_path.to_path_buf();
     thread::spawn(move || {
+        let config_dir = match Config::get_config_dir(&config_path) {
+            Ok(dir) => dir,
+            Err(_) => {
+                tx.unbounded_send(RunnerMsg::Failure("Unable to retrieve config directory.".to_string())).unwrap();
+                return;
+            },
+        };
         let mut config = config;
         match process::release(&mut config, &config_dir) {
             Ok(_) => {
@@ -65,11 +75,18 @@ fn do_merge(config: &mut Config, config_dir: &Path, target_dir: &Path) -> Result
 
 pub fn merge(config: Config, config_path: &Path) -> impl Stream<Item=RunnerMsg> {
     let (tx, rx) = mpsc::unbounded();
-    let config_dir = config_dir(config_path);
-    let folderpath = config_dir.join("out");
+    let config_path = config_path.to_path_buf();
     thread::spawn(move || {
+        let config_dir = match Config::get_config_dir(&config_path) {
+            Ok(dir) => dir,
+            Err(_) => {
+                tx.unbounded_send(RunnerMsg::Failure("Unable to retrieve config directory.".to_string())).unwrap();
+                return;
+            },
+        };
+        let target_dir = config_dir.join("out");
         let mut config = config;
-        let msg = match do_merge(&mut config, &config_dir, &folderpath) {
+        let msg = match do_merge(&mut config, &config_dir, &target_dir) {
             Ok(msg) => msg,
             Err(msg) => msg,
         };
