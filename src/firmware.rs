@@ -106,7 +106,7 @@ impl Firmware {
 
     pub fn image_length(&self) -> usize {
         let mut k = self.data.len() - 1;
-        while self.data[k] != 0xFF {
+        while self.data[k] == 0xFF {
             k -= 1;
             if k == 0 {
                 break;

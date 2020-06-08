@@ -89,8 +89,23 @@ impl FwPane {
 
     pub fn with_config(config: &FwConfig) -> Self {
         let mut ret = Self::new();
-        ret.config = config.clone();
+        ret.apply(config);
         ret
+    }
+
+    pub fn apply(&mut self, config: &FwConfig) {
+        self.config = config.clone();
+        self.fw_id.set(config.fw_id);
+        self.app_path.set(config.app_path.clone());
+        self.btl_path.set(config.btl_path.clone());
+        self.header_offset.set(config.header_offset);
+        self.page_size.set(config.device_config.page_size);
+        self.app_addr.set(&config.app_address);
+        self.btl_addr.set(&config.btl_address);
+        self.time_data_send.set(config.timings.data_send);
+        self.time_send_done.set(config.timings.data_send_done);
+        self.time_erase.set(config.timings.erase_time);
+        self.time_leave.set(config.timings.leave_btl);
     }
 
     fn open_hex_file(&self) -> FileOpenDialog {

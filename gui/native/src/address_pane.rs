@@ -34,6 +34,11 @@ impl AddressPane {
         }
     }
 
+    pub fn set(&mut self, range: &AddressRange) {
+        self.begin_field.set(range.begin);
+        self.end_field.set(range.end);
+    }
+
     fn make_text_field() -> TextField<u64> {
         TextField::new(|x| u64::from_str_radix(x, 16).ok(), |x| format!("{:X}", x))
     }
