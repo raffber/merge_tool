@@ -1,10 +1,10 @@
-use merge_tool::config::Config;
-use futures::Stream;
 use futures::channel::mpsc;
-use std::thread;
+use futures::Stream;
+use merge_tool::config::Config;
 use merge_tool::process;
-use std::path::Path;
 use std::fs::create_dir_all;
+use std::path::Path;
+use std::thread;
 
 #[derive(Debug)]
 pub enum RunnerMsg {
@@ -15,20 +15,26 @@ pub enum RunnerMsg {
     Success(String),
 }
 
-pub fn generate_script(mut config: Config, config_path: &Path) -> impl Stream<Item=RunnerMsg> {
+pub fn generate_script(mut config: Config, config_path: &Path) -> impl Stream<Item = RunnerMsg> {
     let (tx, rx) = mpsc::unbounded();
     let config_path = config_path.to_path_buf();
     thread::spawn(move || {
         let config_dir = match Config::get_config_dir(&config_path) {
             Ok(dir) => dir,
             Err(_) => {
-                tx.unbounded_send(RunnerMsg::Failure("Unable to retrieve config directory.".to_string())).unwrap();
+                tx.unbounded_send(RunnerMsg::Failure(
+                    "Unable to retrieve config directory.".to_string(),
+                ))
+                .unwrap();
                 return;
-            },
+            }
         };
         let folderpath = config_dir.join("out");
         if let Err(_) = create_dir_all(&folderpath) {
-            tx.unbounded_send(RunnerMsg::Failure("Cannot create output directory!".to_string())).unwrap();
+            tx.unbounded_send(RunnerMsg::Failure(
+                "Cannot create output directory!".to_string(),
+            ))
+            .unwrap();
             return;
         }
         let msg = match process::create_script(&mut config, &config_dir, &folderpath) {
@@ -40,54 +46,77 @@ pub fn generate_script(mut config: Config, config_path: &Path) -> impl Stream<It
     rx
 }
 
-pub fn release(config: Config, config_path: &Path) -> impl Stream<Item=RunnerMsg> {
+pub fn release(config: Config, config_path: &Path) -> impl Stream<Item = RunnerMsg> {
     let (tx, rx) = mpsc::unbounded();
     let config_path = config_path.to_path_buf();
     thread::spawn(move || {
         let config_dir = match Config::get_config_dir(&config_path) {
             Ok(dir) => dir,
             Err(_) => {
-                tx.unbounded_send(RunnerMsg::Failure("Unable to retrieve config directory.".to_string())).unwrap();
+                tx.unbounded_send(RunnerMsg::Failure(
+                    "Unable to retrieve config directory.".to_string(),
+                ))
+                .unwrap();
                 return;
-            },
+            }
         };
         let target_dir = config_dir.join("out");
         if let Err(_) = create_dir_all(&target_dir) {
-            tx.unbounded_send(RunnerMsg::Failure("Cannot create output directory!".to_string())).unwrap();
+            tx.unbounded_send(RunnerMsg::Failure(
+                "Cannot create output directory!".to_string(),
+            ))
+            .unwrap();
             return;
         }
         let mut config = config;
         match process::release(&mut config, &config_dir, &target_dir) {
             Ok(_) => {
-                tx.unbounded_send(RunnerMsg::Success("Successfully released firmware!".to_string())).unwrap();
-            },
+                tx.unbounded_send(RunnerMsg::Success(
+                    "Successfully released firmware!".to_string(),
+                ))
+                .unwrap();
+            }
             Err(err) => {
-                tx.unbounded_send(RunnerMsg::Success(format!("Error releaseing firmware: {}", err))).unwrap();
-            },
+                tx.unbounded_send(RunnerMsg::Success(format!(
+                    "Error releaseing firmware: {}",
+                    err
+                )))
+                .unwrap();
+            }
         }
     });
     rx
 }
 
-fn do_merge(config: &mut Config, config_dir: &Path, target_dir: &Path) -> Result<RunnerMsg, RunnerMsg> {
-    create_dir_all(&target_dir).map_err(|_| RunnerMsg::Failure("Cannot create output directory!".to_string()))?;
+fn do_merge(
+    config: &mut Config,
+    config_dir: &Path,
+    target_dir: &Path,
+) -> Result<RunnerMsg, RunnerMsg> {
+    create_dir_all(&target_dir)
+        .map_err(|_| RunnerMsg::Failure("Cannot create output directory!".to_string()))?;
     let fws = process::merge_all(config, config_dir)
         .map_err(|err| RunnerMsg::Failure(format!("Cannot merge firmware images: {}", err)))?;
     process::write_fws(config, &fws, target_dir)
         .map_err(|err| RunnerMsg::Failure(format!("Cannot write firmware images: {}", err)))?;
-    Ok(RunnerMsg::Success("Successfully merged firmware files!".to_string()))
+    Ok(RunnerMsg::Success(
+        "Successfully merged firmware files!".to_string(),
+    ))
 }
 
-pub fn merge(config: Config, config_path: &Path) -> impl Stream<Item=RunnerMsg> {
+pub fn merge(config: Config, config_path: &Path) -> impl Stream<Item = RunnerMsg> {
     let (tx, rx) = mpsc::unbounded();
     let config_path = config_path.to_path_buf();
     thread::spawn(move || {
         let config_dir = match Config::get_config_dir(&config_path) {
             Ok(dir) => dir,
             Err(_) => {
-                tx.unbounded_send(RunnerMsg::Failure("Unable to retrieve config directory.".to_string())).unwrap();
+                tx.unbounded_send(RunnerMsg::Failure(
+                    "Unable to retrieve config directory.".to_string(),
+                ))
+                .unwrap();
                 return;
-            },
+            }
         };
         let target_dir = config_dir.join("out");
         let mut config = config;

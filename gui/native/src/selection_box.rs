@@ -5,7 +5,6 @@ pub enum SelectionBoxMsg {
     SelectedIndexChanged(JsonValue),
 }
 
-
 pub struct SelectionBox {
     items: Vec<String>,
     version: Id,
@@ -34,7 +33,7 @@ impl SelectionBox {
                     panic!();
                 }
                 self.selected_index = idx;
-            },
+            }
         }
         self.selected_index
     }
@@ -49,12 +48,20 @@ impl SelectionBox {
             }
         }";
 
-        Node::html().elem("select")
-            .js_event("change", "app.send(event.target, event.target.selectedIndex)")
+        Node::html()
+            .elem("select")
+            .js_event(
+                "change",
+                "app.send(event.target, event.target.selectedIndex)",
+            )
             .js_event("render", render_fun)
             .rpc(SelectionBoxMsg::SelectedIndexChanged)
             .attr("__value_version", self.version)
             .attr("__selected_index", self.selected_index)
-            .add( self.items.iter().map(|x| Node::html().elem("option").text(x).build() ) )
+            .add(
+                self.items
+                    .iter()
+                    .map(|x| Node::html().elem("option").text(x).build()),
+            )
     }
 }

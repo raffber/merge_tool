@@ -1,9 +1,9 @@
 use merge_tool::config::{AddressRange, Config, FwConfig};
 use merge_tool::intel_hex;
-use std::fs::{File, create_dir_all};
+use merge_tool::process;
+use std::fs::{create_dir_all, File};
 use std::io::Write;
 use std::path::Path;
-use merge_tool::process;
 
 #[test]
 fn merge() {

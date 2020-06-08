@@ -1,6 +1,6 @@
 use crate::Error;
 use serde::{Deserialize, Serialize};
-use std::fs::{File, canonicalize};
+use std::fs::{canonicalize, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
@@ -131,7 +131,7 @@ impl Default for ImageVersion {
     fn default() -> Self {
         Self {
             minor: 0xFF,
-            build: 0xFF
+            build: 0xFF,
         }
     }
 }
@@ -203,7 +203,8 @@ pub struct Config {
 impl Config {
     pub fn get_config_dir(config_path: &Path) -> Result<PathBuf, Error> {
         let config_path = canonicalize(config_path).map_err(Error::Io)?;
-        Ok(config_path.parent()
+        Ok(config_path
+            .parent()
             .map(|x| x.to_path_buf())
             .unwrap_or(PathBuf::from("/")))
     }

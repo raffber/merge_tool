@@ -10,9 +10,9 @@ use std::{panic, thread};
 mod address_pane;
 mod app;
 mod fw_config;
-mod text_field;
 mod runner;
 mod selection_box;
+mod text_field;
 
 use crate::app::MainApp;
 use backtrace::Backtrace;

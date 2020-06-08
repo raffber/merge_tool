@@ -10,7 +10,11 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-pub fn merge_firmware(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Firmware, Error> {
+pub fn merge_firmware(
+    config: &mut Config,
+    idx: usize,
+    config_dir: &Path,
+) -> Result<Firmware, Error> {
     let app = load_app(config, idx, config_dir)?;
     let btl = load_btl(config, idx, config_dir)?;
     Firmware::merge(btl, app)
@@ -33,7 +37,11 @@ fn generate_script_filename(config: &Config) -> String {
     parts.join("")
 }
 
-pub fn create_script(config: &mut Config, config_dir: &Path, output_dir: &Path) -> Result<(), Error> {
+pub fn create_script(
+    config: &mut Config,
+    config_dir: &Path,
+    output_dir: &Path,
+) -> Result<(), Error> {
     let protocol = ExtCmdProtocol::new(EXT_CMD_CODE);
     let mut fws = Vec::new();
     for idx in 0..config.images.len() {

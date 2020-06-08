@@ -1,4 +1,5 @@
 use crate::address_pane::{AddressPane, AddressPaneMsg};
+use crate::selection_box::{SelectionBox, SelectionBoxMsg};
 use crate::text_field::{TextField, TextFieldMsg};
 use greenhorn::components::checkbox;
 use greenhorn::dialog::{FileFilter, FileOpenDialog, FileOpenMsg};
@@ -6,7 +7,6 @@ use greenhorn::html;
 use greenhorn::prelude::*;
 use merge_tool::config::{FwConfig, HexFileFormat};
 use std::str::FromStr;
-use crate::selection_box::{SelectionBoxMsg, SelectionBox};
 
 #[derive(Debug)]
 pub enum FwMsg {
@@ -75,7 +75,7 @@ impl Default for FwPane {
             time_leave: Self::make_time_field(),
             page_size: TextField::new(|x| u64::from_str_radix(x, 16).ok(), |x| format!("{:X}", x)),
             time_erase: Self::make_time_field(),
-            hex_file_type: SelectionBox::new(hex_file_types, 0)
+            hex_file_type: SelectionBox::new(hex_file_types, 0),
         }
     }
 }
@@ -113,10 +113,10 @@ impl FwPane {
         match config.hex_file_format {
             HexFileFormat::IntelHex => {
                 self.hex_file_type.set(0);
-            },
+            }
             HexFileFormat::SRecord => {
                 self.hex_file_type.set(1);
-            },
+            }
         }
     }
 
@@ -260,7 +260,7 @@ impl App for FwPane {
                 self.config.hex_file_format = match kind {
                     0 => HexFileFormat::IntelHex,
                     1 => HexFileFormat::SRecord,
-                    _ => panic!()
+                    _ => panic!(),
                 };
                 self.emit(&ctx);
                 Updated::no()

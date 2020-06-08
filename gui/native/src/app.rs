@@ -7,14 +7,14 @@ use greenhorn::prelude::*;
 
 use merge_tool::config::{Config, FwConfig};
 
+use crate::app::Msg::LogMsg;
 use crate::fw_config::{FwMsg, FwPane};
+use crate::runner;
+use crate::runner::RunnerMsg;
 use crate::text_field::{TextField, TextFieldMsg};
 use arrayvec::ArrayVec;
 use chrono::{Local, Timelike};
-use crate::runner::RunnerMsg;
-use crate::runner;
 use futures::StreamExt;
-use crate::app::Msg::LogMsg;
 
 #[derive(Debug)]
 pub enum Msg {
@@ -78,7 +78,7 @@ impl MainApp {
             config: Default::default(),
             fw_configs: vec![],
             log: vec![Self::say_greeting()],
-            process_active: false
+            process_active: false,
         }
     }
 
@@ -266,24 +266,27 @@ impl App for MainApp {
                 match msg {
                     RunnerMsg::Info(msg) => self.log.push(format!("[INFO] {}", msg)),
                     RunnerMsg::Warn(msg) => self.log.push(format!("[WARN] {}", msg)),
-                    RunnerMsg::Error(msg) =>  self.log.push(format!("[ERROR] {}", msg)),
+                    RunnerMsg::Error(msg) => self.log.push(format!("[ERROR] {}", msg)),
                     RunnerMsg::Failure(msg) => {
                         self.log.push(format!("[FAIL] {}", msg));
                         self.process_active = false;
-                    },
+                    }
                     RunnerMsg::Success(msg) => {
                         self.log.push(format!("[SUCCESS] {}", msg));
                         self.process_active = false;
-                    },
+                    }
                 }
                 Updated::yes()
             }
             Msg::GenerateScript => {
                 if self.config_path.trim().is_empty() {
-                    return self.update(LogMsg(RunnerMsg::Failure("No config file specified!".to_string())), ctx);
+                    return self.update(
+                        LogMsg(RunnerMsg::Failure("No config file specified!".to_string())),
+                        ctx,
+                    );
                 }
                 if self.process_active {
-                    return Updated::no()
+                    return Updated::no();
                 }
                 self.process_active = true;
                 let path = Path::new(&self.config_path);
@@ -293,10 +296,13 @@ impl App for MainApp {
             }
             Msg::Merge => {
                 if self.config_path.trim().is_empty() {
-                    return self.update(LogMsg(RunnerMsg::Failure("No config file specified!".to_string())), ctx);
+                    return self.update(
+                        LogMsg(RunnerMsg::Failure("No config file specified!".to_string())),
+                        ctx,
+                    );
                 }
                 if self.process_active {
-                    return Updated::no()
+                    return Updated::no();
                 }
                 self.process_active = true;
                 let path = Path::new(&self.config_path);
@@ -305,10 +311,13 @@ impl App for MainApp {
             }
             Msg::Release => {
                 if self.config_path.trim().is_empty() {
-                    return self.update(LogMsg(RunnerMsg::Failure("No config file specified!".to_string())), ctx);
+                    return self.update(
+                        LogMsg(RunnerMsg::Failure("No config file specified!".to_string())),
+                        ctx,
+                    );
                 }
                 if self.process_active {
-                    return Updated::no()
+                    return Updated::no();
                 }
                 self.process_active = true;
                 let path = Path::new(&self.config_path);
