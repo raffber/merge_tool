@@ -6,6 +6,7 @@ use greenhorn::html;
 use greenhorn::prelude::*;
 use merge_tool::config::{FwConfig, HexFileFormat};
 use std::str::FromStr;
+use crate::selection_box::{SelectionBoxMsg, SelectionBox};
 
 #[derive(Debug)]
 pub enum FwMsg {
@@ -27,7 +28,7 @@ pub enum FwMsg {
     TimeSendDoneMsg(TextFieldMsg),
     TimeLeaveMsg(TextFieldMsg),
     TimeEraseMsg(TextFieldMsg),
-    HexSelectChanged(JsonValue),
+    HexSelectMsg(SelectionBoxMsg),
     HeaderOffsetMsg(TextFieldMsg),
 }
 
@@ -48,10 +49,12 @@ pub struct FwPane {
     time_send_done: TextField<u32>,
     time_leave: TextField<u32>,
     time_erase: TextField<u32>,
+    hex_file_type: SelectionBox,
 }
 
 impl Default for FwPane {
     fn default() -> Self {
+        let hex_file_types = vec!["Intel Hex *.hex".to_string(), "S-Record *.s37".to_string()];
         Self {
             config: Default::default(),
             updated: Default::default(),
@@ -72,6 +75,7 @@ impl Default for FwPane {
             time_leave: Self::make_time_field(),
             page_size: TextField::new(|x| u64::from_str_radix(x, 16).ok(), |x| format!("{:X}", x)),
             time_erase: Self::make_time_field(),
+            hex_file_type: SelectionBox::new(hex_file_types, 0)
         }
     }
 }
@@ -106,6 +110,14 @@ impl FwPane {
         self.time_send_done.set(config.timings.data_send_done);
         self.time_erase.set(config.timings.erase_time);
         self.time_leave.set(config.timings.leave_btl);
+        match config.hex_file_format {
+            HexFileFormat::IntelHex => {
+                self.hex_file_type.set(0);
+            },
+            HexFileFormat::SRecord => {
+                self.hex_file_type.set(1);
+            },
+        }
     }
 
     fn open_hex_file(&self) -> FileOpenDialog {
@@ -243,18 +255,17 @@ impl App for FwPane {
                 self.prop(&ctx, ret)
             }
 
-            FwMsg::HexSelectChanged(value) => {
-                let idx: u32 = serde_json::from_value(value).unwrap();
-                if idx == 0 {
-                    self.config.hex_file_format = HexFileFormat::IntelHex;
-                } else if idx == 1 {
-                    self.config.hex_file_format = HexFileFormat::SRecord;
-                } else {
-                    panic!();
-                }
+            FwMsg::HexSelectMsg(msg) => {
+                let kind = self.hex_file_type.update(msg);
+                self.config.hex_file_format = match kind {
+                    0 => HexFileFormat::IntelHex,
+                    1 => HexFileFormat::SRecord,
+                    _ => panic!()
+                };
                 self.emit(&ctx);
                 Updated::no()
             }
+
             FwMsg::HeaderOffsetMsg(msg) => {
                 let ret = self
                     .header_offset
@@ -315,12 +326,7 @@ impl Render for FwPane {
                 </div>
                 <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-4">{"Hex Format"}</>
-                    <select class="form-control"
-                        $change="app.send(event.target, event.target.selectedIndex)"
-                        @rpc={FwMsg::HexSelectChanged}>
-                      <option>{"Intel Hex *.hex"}</option>
-                      <option>{"S-Record *.s37"}</option>
-                    </select>
+                    {self.hex_file_type.render().class("form-control").build().map(FwMsg::HexSelectMsg)}
                 </>
                 <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-4">{"Header Offset"}</>

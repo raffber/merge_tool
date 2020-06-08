@@ -12,6 +12,7 @@ mod app;
 mod fw_config;
 mod text_field;
 mod runner;
+mod selection_box;
 
 use crate::app::MainApp;
 use backtrace::Backtrace;
