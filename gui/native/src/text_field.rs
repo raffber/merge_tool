@@ -38,6 +38,8 @@ impl<T: 'static + Clone + Default> TextField<T> {
     pub fn set(&mut self, value: T) {
         self.value = value;
         self.version = Id::new();
+        let text = (*self.to_string)(&self.value);
+        self.valid = (*self.validator)(&text).is_some();
     }
 
     pub fn update(&mut self, value: &mut T, msg: TextFieldMsg) -> (bool, Updated) {
@@ -47,7 +49,7 @@ impl<T: 'static + Clone + Default> TextField<T> {
                 let old_valid = self.valid;
                 if let Some(v) = (*self.validator)(&text) {
                     *value = v.clone();
-                    self.set(v);
+                    self.value = v.clone();
                     self.valid = true;
                 } else {
                     self.valid = false;

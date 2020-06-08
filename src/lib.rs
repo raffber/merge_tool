@@ -1,5 +1,8 @@
 #![allow(dead_code)]
 
+#[macro_use]
+extern crate lazy_static;
+
 use serde_json::Error as JsonError;
 use std::fmt;
 
@@ -24,6 +27,7 @@ pub enum Error {
     InvalidConfig(String),
     CannotParseConfig(JsonError),
     CannotFindGitRepo,
+    InvalidProductName,
 }
 
 impl fmt::Display for Error {

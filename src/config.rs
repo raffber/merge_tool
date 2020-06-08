@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fs::{canonicalize, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use regex::Regex;
 
 pub const EXT_CMD_CODE: u8 = 0x11;
 
@@ -201,6 +202,17 @@ pub struct Config {
 }
 
 impl Config {
+    pub fn validate_product_name(name: &str) -> Result<(), Error> {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"^\w+[\w-]*\w+$").unwrap();
+        }
+        if !RE.is_match(name) {
+            Err(Error::InvalidProductName)
+        } else {
+            Ok(())
+        }
+    }
+
     pub fn get_config_dir(config_path: &Path) -> Result<PathBuf, Error> {
         let config_path = canonicalize(config_path).map_err(Error::Io)?;
         Ok(config_path
@@ -255,6 +267,7 @@ impl Config {
 
     pub fn load_from_string(data: &str) -> Result<Config, Error> {
         let config: Config = serde_json::from_str(data).map_err(Error::CannotParseConfig)?;
+        Self::validate_product_name(&config.product_name)?;
         Ok(config)
     }
 }

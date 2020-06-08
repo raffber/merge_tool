@@ -130,7 +130,6 @@ impl Script {
 mod tests {
     use super::*;
     use assert_matches::assert_matches;
-    use git2::FileMode::Commit;
 
     fn to_progress(ms_count: u32) -> u8 {
         ((ms_count as f64) / 101.0 * 256.0).round() as u8

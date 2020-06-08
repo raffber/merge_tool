@@ -53,8 +53,10 @@ pub struct MainApp {
 }
 
 mod validate {
+    use merge_tool::config::Config;
+
     pub fn product_name(value: &str) -> Option<String> {
-        // TODO: improve validation
+        Config::validate_product_name(value).ok()?;
         Some(value.to_string())
     }
 
@@ -119,9 +121,7 @@ impl MainApp {
                 self.auto_save = true;
             }
             Err(err) => {
-                println!("{:?}", err);
-                // TODO: ...
-                println!("TODO: error, print to log")
+                self.log.push(format!("ERROR: {}", err));
             }
         }
     }

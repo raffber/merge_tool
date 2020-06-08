@@ -816,6 +816,8 @@ dependencies = [
  "git2",
  "hex",
  "itertools",
+ "lazy_static",
+ "regex",
  "serde",
  "serde_json",
  "sha2",
