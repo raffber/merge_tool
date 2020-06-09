@@ -107,13 +107,18 @@ impl MainApp {
         self.state_transition.set(config.time_state_transition);
         self.config = config;
         for fw_config in &self.config.images {
-            let comp = Component::new(FwPane::with_config(fw_config));
+            let mut fw_pane = FwPane::with_config(fw_config);
+            if self.config_path != "" {
+                let path = Path::new(&self.config_path);
+                fw_pane.set_config_path(path);
+            }
+            let comp = Component::new(fw_pane);
             self.fw_configs.push(comp);
         }
     }
 
-    pub fn load_config(&mut self, path: String) {
-        let path = Path::new(&path);
+    pub fn load_config(&mut self) {
+        let path = Path::new(&self.config_path);
         self.fw_configs.clear();
         match Config::load_from_file(path) {
             Ok(config) => {
@@ -181,6 +186,14 @@ impl MainApp {
             .attr("readonly", "")
             .js_event("render", JS)
     }
+
+    fn setup_config_path(&mut self, config_path: &str) {
+        self.config_path = config_path.to_string();
+        let config_path = Path::new(&self.config_path);
+        for fw_config in &self.fw_configs {
+            fw_config.lock().set_config_path(config_path);
+        }
+    }
 }
 
 impl App for MainApp {
@@ -195,8 +208,8 @@ impl App for MainApp {
             }
             Msg::ConfigOpened(msg) => {
                 if let FileOpenMsg::Selected(path) = msg {
-                    self.config_path = path.clone();
-                    self.load_config(path);
+                    self.setup_config_path(&path);
+                    self.load_config();
                 }
                 Updated::yes()
             }
@@ -209,7 +222,7 @@ impl App for MainApp {
             }
             Msg::ConfigSavedAs(msg) => {
                 if let FileSaveMsg::SaveTo(path) = msg {
-                    self.config_path = path.clone();
+                    self.setup_config_path(&path);
                     self.save_config();
                 }
                 Updated::yes()
@@ -258,7 +271,11 @@ impl App for MainApp {
             }
             Msg::FwPaneAdd => {
                 self.config.images.push(Default::default());
-                self.fw_configs.push(Component::new(FwPane::new()));
+                let mut fw_pane = FwPane::new();
+                if self.config_path != "" {
+                    fw_pane.set_config_path(Path::new(&self.config_path));
+                }
+                self.fw_configs.push(Component::new(fw_pane));
                 self.config_changed();
                 Updated::yes()
             }

@@ -5,8 +5,9 @@ use greenhorn::components::checkbox;
 use greenhorn::dialog::{FileFilter, FileOpenDialog, FileOpenMsg};
 use greenhorn::html;
 use greenhorn::prelude::*;
-use merge_tool::config::{FwConfig, HexFileFormat};
+use merge_tool::config::{FwConfig, HexFileFormat, Config};
 use std::str::FromStr;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub enum FwMsg {
@@ -50,6 +51,7 @@ pub struct FwPane {
     time_leave: TextField<u32>,
     time_erase: TextField<u32>,
     hex_file_type: SelectionBox,
+    config_path: Option<PathBuf>,
 }
 
 impl Default for FwPane {
@@ -76,6 +78,7 @@ impl Default for FwPane {
             page_size: TextField::new(|x| u64::from_str_radix(x, 16).ok(), |x| format!("{:X}", x)),
             time_erase: Self::make_time_field(),
             hex_file_type: SelectionBox::new(hex_file_types, 0),
+            config_path: None
         }
     }
 }
@@ -85,6 +88,10 @@ impl FwPane {
         let mut ret: FwPane = Default::default();
         ret.config.device_config.page_size = 2;
         ret
+    }
+
+    pub fn set_config_path(&mut self, config_path: &Path) {
+        self.config_path = Some(config_path.to_path_buf());
     }
 
     fn make_time_field() -> TextField<u32> {
@@ -126,8 +133,17 @@ impl FwPane {
     }
 
     fn make_path_relative(&self, path: &str) -> String {
-        // TODO: ...
-        path.into()
+        if let Some(config_path) = &self.config_path {
+            if let Ok(config_dir) = Config::get_config_dir(&config_path) {
+                let path = Path::new(path);
+                if let Some(path) = pathdiff::diff_paths(path, config_dir) {
+                    if let Some(path) = path.to_str() {
+                        return path.to_string()
+                    }
+                }
+            }
+        }
+        path.to_string()
     }
 
     fn emit(&self, ctx: &Context<FwMsg>) {

@@ -836,6 +836,7 @@ dependencies = [
  "merge_tool",
  "neon",
  "neon-build",
+ "pathdiff",
  "serde_json",
 ]
 
@@ -1081,6 +1082,12 @@ dependencies = [
  "smallvec",
  "winapi 0.3.8",
 ]
+
+[[package]]
+name = "pathdiff"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "877630b3de15c0b64cc52f659345724fbf6bdad9bd9566699fc53688f3c34a34"
 
 [[package]]
 name = "percent-encoding"
