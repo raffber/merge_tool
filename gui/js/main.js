@@ -9,7 +9,7 @@ process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = true;
 function createWindow () {
   const port = addon.run();
   global.port = port;
-  let width = 980;
+  let width = 1100;
   if (process.env.NODE_ENV === "development") {
     width = 1900;
   }

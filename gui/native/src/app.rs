@@ -354,9 +354,7 @@ impl Render for MainApp {
                 <div class="d-flex flex-row align-items-center my-2">
                     <span class="col-3">{"Product ID"}</>
                     <div class="input-group col-3" #product-id-div>
-                        <div class="input-group-prepend">
-                            <span class="input-group-text">{"0x"}</span>
-                        </>
+                        <div class="input-group-prepend"> <span class="input-group-text">{"0x"}</span> </>
                         {self.product_id.render().class("form-control")
                             .attr("placeholder", "e.g. 0xABCD").build().map(Msg::ProductIdMsg)}
                     </>

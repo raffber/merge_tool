@@ -283,7 +283,10 @@ impl Render for FwPane {
         html!(<div #fw-config>
                 <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-4">{"Firmware ID"}</>
-                    {self.fw_id.render().class("form-control flex-fill").build().map(FwMsg::FwIdMsg)}
+                    <div class="input-group flex-fill">
+                        <div class="input-group-prepend"> <span class="input-group-text">{"0x"}</span> </>
+                        {self.fw_id.render().class("form-control").build().map(FwMsg::FwIdMsg)}
+                    </>
                     <div class="custom-control custom-switch include-script-checkbox ml-2">
                         {checkbox(self.config.include_in_script, || FwMsg::IncludeToggle)
                             .class("custom-control-input").id(self.include_id.clone())}
@@ -314,8 +317,12 @@ impl Render for FwPane {
                 </div>
                 <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-4">{"Page Size"}</>
-                    {self.page_size.render().class("form-control flex-fill")
-                        .attr("placeholder", "in hex").build().map(FwMsg::PageSizeMsg)}
+
+                    <div class="input-group flex-fill">
+                        <div class="input-group-prepend"> <span class="input-group-text">{"0x"}</span> </>
+                        {self.page_size.render().class("form-control")
+                            .attr("placeholder", "in hex").build().map(FwMsg::PageSizeMsg)}
+                    </>
                     <div class="custom-control custom-checkbox mx-2 word-addressing-checkbox">
                         {checkbox(self.config.device_config.word_addressing, || FwMsg::WordAddressingToggle)
                             .class("custom-control-input").id(self.word_addressing_id.clone())}
@@ -330,8 +337,11 @@ impl Render for FwPane {
                 </>
                 <div class="d-flex flex-row align-items-center my-1">
                     <span class="col-4">{"Header Offset"}</>
-                    {self.header_offset.render().class("form-control flex-fill")
-                        .attr("placeholder", "in hex").build().map(FwMsg::HeaderOffsetMsg)}
+                    <div class="input-group flex-fill">
+                        <div class="input-group-prepend"> <span class="input-group-text">{"0x"}</span> </>
+                        {self.header_offset.render().class("form-control flex-fill")
+                            .attr("placeholder", "in hex").build().map(FwMsg::HeaderOffsetMsg)}
+                    </>
                 </div>
 
                 // timings

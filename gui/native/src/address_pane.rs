@@ -57,11 +57,17 @@ impl Render for AddressPane {
     fn render(&self) -> Node<Self::Message> {
         html!(
             <div class="d-flex flex-row align-items-center flex-fill">
-                {self.begin_field.render().class("form-control flex-fill")
-                    .attr("placeholder", "in hex").build().map(AddressPaneMsg::BeginMsg)}
+                <div class="input-group flex-fill">
+                    <div class="input-group-prepend"> <span class="input-group-text">{"0x"}</span> </>
+                    {self.begin_field.render().class("form-control")
+                        .attr("placeholder", "in hex").build().map(AddressPaneMsg::BeginMsg)}
+                </>
                 <span class="mx-2">{"to"}</>
-                {self.end_field.render() .class("form-control flex-fill")
-                    .attr("placeholder", "in hex").build().map(AddressPaneMsg::EndMsg)}
+                <div class="input-group flex-fill">
+                    <div class="input-group-prepend"> <span class="input-group-text">{"0x"}</span> </>
+                    {self.end_field.render() .class("form-control")
+                        .attr("placeholder", "in hex").build().map(AddressPaneMsg::EndMsg)}
+                </>
             </>
         )
         .into()
