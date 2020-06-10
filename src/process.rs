@@ -9,6 +9,7 @@ use crate::Error;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use git2::Repository;
 
 pub fn merge_firmware(
     config: &mut Config,
@@ -85,7 +86,9 @@ pub fn write_fws(config: &Config, fws: &[Firmware], target_folder: &Path) -> Res
 }
 
 pub fn release(config: &mut Config, config_dir: &Path, _output_dir: &Path) -> Result<(), Error> {
-    let _repo_path = config.get_repo_path(config_dir)?;
+    let repo_path = config.get_repo_path(config_dir)?;
+    let _repo = Repository::open(&repo_path).map_err(Error::GitError)?;
+
     // TODO: ....
     Ok(())
 }

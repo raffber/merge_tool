@@ -28,6 +28,7 @@ pub enum Error {
     CannotParseConfig(JsonError),
     CannotFindGitRepo,
     InvalidProductName,
+    GitError(git2::Error),
 }
 
 impl fmt::Display for Error {
