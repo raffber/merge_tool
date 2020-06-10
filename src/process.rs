@@ -104,6 +104,10 @@ fn format_release_message(config: &Config) -> String {
     todo!()
 }
 
+fn format_branch_name(config: &Config) -> String {
+    todo!()
+}
+
 pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
     let repo_path = config.get_repo_path(config_dir)?;
     let output_dir = repo_path.join("release");
@@ -129,33 +133,42 @@ pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
     let mut new_config = config.clone();
     let script_path = create_script(&mut new_config, config_dir, &output_dir)?;
     output_files.push(script_path);
-    let mut new_config = config.clone();
 
     // merge firmwares
-    let fws = merge_all(&mut new_config, config_dir)?;
-    let merged_files = write_fws(&config, &fws, &output_dir)?;
+    let fws = merge_all(config, config_dir)?;
+    let merged_files = write_fws(config, &fws, &output_dir)?;
     output_files.extend(merged_files);
 
+    // retrieve some basic information about the current state
+    let parent = find_last_commit(&repo).map_err(Error::GitError)?;
+    let signature = repo.signature().map_err(Error::GitError)?;
+
     // create a branch
-    todo!();
+    let branch_name = format_branch_name(config);
+    repo.branch(&branch_name, &parent, false).map_err(Error::GitError)?;
+    repo.set_head(&branch_name).map_err(Error::GitError)?;
 
     // create a commit
     let mut index = repo.index().map_err(Error::GitError)?;
     index.add_all(output_files, IndexAddOption::DEFAULT, None);
     let oid = index.write_tree().map_err(Error::GitError)?;
 
-    let signature = repo.signature().map_err(Error::GitError)?;
     let tree = repo.find_tree(oid).map_err(Error::GitError)?;
-    let parent = find_last_commit(&repo).map_err(Error::GitError)?;
 
     let message = format_release_message(&config);
     repo.commit(Some("HEAD"), &signature, &signature,
                 &message, &tree, &[&parent]).map_err(Error::GitError)?;
 
     // create tag
-    todo!();
+    let obj = repo.head()
+        .and_then(|x| x.resolve())
+        .and_then(|x| x.peel(ObjectType::Commit))
+        .map_err(Error::GitError)?;
+    let tag_oid = repo.tag(&branch_name, &obj, &signature, &message, false)
+        .map_err(Error::GitError)?;
 
     // push tag and branch
+    let mut remote = repo.find_remote("origin").map_err(Error::GitError)?;
     todo!();
 
     Ok(())
