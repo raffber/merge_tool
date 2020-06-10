@@ -29,6 +29,9 @@ pub enum Error {
     CannotFindGitRepo,
     InvalidProductName,
     GitError(git2::Error),
+    GitRepoIsNotAWorktree,
+    GitRepoHasUncommitedChanges,
+    GitRepoInDetachedHead,
 }
 
 impl fmt::Display for Error {

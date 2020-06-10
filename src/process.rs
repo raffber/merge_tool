@@ -8,8 +8,8 @@ use crate::xcmd::ExtCmdProtocol;
 use crate::Error;
 use std::fs::File;
 use std::io::Write;
-use std::path::Path;
-use git2::Repository;
+use std::path::{Path, PathBuf};
+use git2::{Repository, Status, IndexEntry, IndexAddOption, Commit, ObjectType};
 
 pub fn merge_firmware(
     config: &mut Config,
@@ -42,7 +42,7 @@ pub fn create_script(
     config: &mut Config,
     config_dir: &Path,
     output_dir: &Path,
-) -> Result<(), Error> {
+) -> Result<PathBuf, Error> {
     let protocol = ExtCmdProtocol::new(EXT_CMD_CODE);
     let mut fws = Vec::new();
     for idx in 0..config.images.len() {
@@ -53,9 +53,10 @@ pub fn create_script(
 
     let script = Script::new(cmds);
     let path = output_dir.join(&filename);
-    let mut file = File::create(path).map_err(Error::Io)?;
+    let mut file = File::create(&path).map_err(Error::Io)?;
     file.write_all(script.serialize().as_bytes())
-        .map_err(Error::Io)
+        .map_err(Error::Io)?;
+    Ok(path)
 }
 
 pub fn write_crc(fw: &mut Firmware) {
@@ -72,7 +73,8 @@ pub fn merge_all(config: &mut Config, config_dir: &Path) -> Result<Vec<Firmware>
     Ok(ret)
 }
 
-pub fn write_fws(config: &Config, fws: &[Firmware], target_folder: &Path) -> Result<(), Error> {
+pub fn write_fws(config: &Config, fws: &[Firmware], target_folder: &Path) -> Result<Vec<PathBuf>, Error> {
+    let mut ret = Vec::new();
     for (fw, fw_config) in fws.iter().zip(config.images.iter()) {
         let file_name = format!(
             "{}.{}",
@@ -81,15 +83,81 @@ pub fn write_fws(config: &Config, fws: &[Firmware], target_folder: &Path) -> Res
         );
         let fpath = target_folder.join(file_name);
         fw.write_to_file(&fpath, &fw_config.hex_file_format)?;
+        ret.push(fpath);
     }
-    Ok(())
+    Ok(ret)
 }
 
-pub fn release(config: &mut Config, config_dir: &Path, _output_dir: &Path) -> Result<(), Error> {
-    let repo_path = config.get_repo_path(config_dir)?;
-    let _repo = Repository::open(&repo_path).map_err(Error::GitError)?;
 
-    // TODO: ....
+pub fn is_git_repo_dirty(status: Status) -> bool {
+    status.is_index_modified() || status.is_index_deleted() || status.is_index_renamed()
+        || status.is_index_typechange() || status.is_wt_deleted() || status.is_wt_typechange()
+        || status.is_wt_renamed() || status.is_ignored() || status.is_conflicted()
+}
+
+fn find_last_commit(repo: &Repository) -> Result<Commit, git2::Error> {
+    let obj = repo.head()?.resolve()?.peel(ObjectType::Commit)?;
+    obj.into_commit().map_err(|_| git2::Error::from_str("Couldn't find commit"))
+}
+
+fn format_release_message(config: &Config) -> String {
+    todo!()
+}
+
+pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
+    let repo_path = config.get_repo_path(config_dir)?;
+    let output_dir = repo_path.join("release");
+
+    // start by checking git repository
+    let repo = Repository::open(&repo_path).map_err(Error::GitError)?;
+    if !repo.is_worktree() {
+        return Err(Error::GitRepoIsNotAWorktree);
+    }
+    let statuses = repo.statuses(None).map_err(Error::GitError)?;
+    for status in statuses.iter() {
+        let status = status.status();
+        if is_git_repo_dirty(status) {
+            return Err(Error::GitRepoHasUncommitedChanges);
+        }
+    }
+    if repo.head_detached().map_err(Error::GitError)? {
+        return Err(Error::GitRepoInDetachedHead);
+    }
+
+    let mut output_files = Vec::new();
+    // create script
+    let mut new_config = config.clone();
+    let script_path = create_script(&mut new_config, config_dir, &output_dir)?;
+    output_files.push(script_path);
+    let mut new_config = config.clone();
+
+    // merge firmwares
+    let fws = merge_all(&mut new_config, config_dir)?;
+    let merged_files = write_fws(&config, &fws, &output_dir)?;
+    output_files.extend(merged_files);
+
+    // create a branch
+    todo!();
+
+    // create a commit
+    let mut index = repo.index().map_err(Error::GitError)?;
+    index.add_all(output_files, IndexAddOption::DEFAULT, None);
+    let oid = index.write_tree().map_err(Error::GitError)?;
+
+    let signature = repo.signature().map_err(Error::GitError)?;
+    let tree = repo.find_tree(oid).map_err(Error::GitError)?;
+    let parent = find_last_commit(&repo).map_err(Error::GitError)?;
+
+    let message = format_release_message(&config);
+    repo.commit(Some("HEAD"), &signature, &signature,
+                &message, &tree, &[&parent]).map_err(Error::GitError)?;
+
+    // create tag
+    todo!();
+
+    // push tag and branch
+    todo!();
+
     Ok(())
 }
 
