@@ -7,7 +7,7 @@ use regex::Regex;
 
 pub const EXT_CMD_CODE: u8 = 0x11;
 
-mod default {
+pub mod default {
     pub fn fw_id() -> u8 {
         0
     }
@@ -35,11 +35,14 @@ mod default {
     pub fn use_backdoor() -> bool {
         false
     }
+    pub fn product_id() -> u16 { 0 }
 }
 
 fn skip_if_ff(value: &u8) -> bool {
     *value == 0xFF
 }
+
+fn skip_if_ffff(value: &u16) -> bool { *value == 0xFFFF }
 
 fn skip_if_zero(value: &u8) -> bool {
     *value == 0
@@ -181,6 +184,7 @@ impl FwConfig {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Config {
+    #[serde(default = "default::product_id", skip_serializing_if = "skip_if_ffff")]
     pub product_id: u16,
     pub product_name: String,
     #[serde(default = "default::major_version", skip_serializing_if = "skip_if_ff")]

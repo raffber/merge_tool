@@ -32,6 +32,8 @@ pub enum Error {
     GitRepoIsNotAWorktree,
     GitRepoHasUncommitedChanges,
     GitRepoInDetachedHead,
+    GitRepoHasNoOrigin(git2::Error),
+    GitCannotPush(git2::Error),
 }
 
 impl fmt::Display for Error {

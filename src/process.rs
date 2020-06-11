@@ -9,7 +9,8 @@ use crate::Error;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use git2::{Repository, Status, IndexEntry, IndexAddOption, Commit, ObjectType};
+use git2::{Repository, Status, IndexEntry, IndexAddOption, Commit, ObjectType, Direction};
+use crate::config::default;
 
 pub fn merge_firmware(
     config: &mut Config,
@@ -92,7 +93,7 @@ pub fn write_fws(config: &Config, fws: &[Firmware], target_folder: &Path) -> Res
 pub fn is_git_repo_dirty(status: Status) -> bool {
     status.is_index_modified() || status.is_index_deleted() || status.is_index_renamed()
         || status.is_index_typechange() || status.is_wt_deleted() || status.is_wt_typechange()
-        || status.is_wt_renamed() || status.is_ignored() || status.is_conflicted()
+        || status.is_wt_renamed() || status.is_ignored() || status.is_conflicted() || status.is_wt_new()
 }
 
 fn find_last_commit(repo: &Repository) -> Result<Commit, git2::Error> {
@@ -101,11 +102,19 @@ fn find_last_commit(repo: &Repository) -> Result<Commit, git2::Error> {
 }
 
 fn format_release_message(config: &Config) -> String {
-    todo!()
+    let mut parts = vec![format!("Firmware release for `{}` ", config.product_name)];
+    for img in &config.images {
+        parts.push(format!("F{}={}.{}.{}", img.fw_id, config.major_version, img.version.minor, img.version.build));
+    }
+    parts.join("")
 }
 
 fn format_branch_name(config: &Config) -> String {
-    todo!()
+    let mut parts = vec![format!("release/{}_{}_", config.product_name, config.major_version)];
+    for img in &config.images {
+        parts.push(format!("{}.{}", img.version.minor, img.version.build));
+    }
+    parts.join("")
 }
 
 pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
@@ -168,8 +177,11 @@ pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
         .map_err(Error::GitError)?;
 
     // push tag and branch
-    let mut remote = repo.find_remote("origin").map_err(Error::GitError)?;
-    todo!();
+    let mut remote = repo.find_remote("origin").map_err(Error::GitRepoHasNoOrigin)?;
+    let branch_ref = format!("refs/heads/{}:refs/heads/{}", &branch_name, &branch_name);
+    let tag_ref = format!("refs/tags/{}:refs/tags/{}", &branch_name, &branch_name);
+    remote.connect(Direction::Push).map_err(Error::GitCannotPush)?;
+    remote.push(&[&branch_ref, &tag_ref], None).map_err(Error::GitCannotPush)?;
 
     Ok(())
 }
@@ -184,7 +196,7 @@ pub fn load_app(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Fi
     )?;
     write_crc(&mut fw);
     let mut header = Header::new(&mut fw, config.images[idx].header_offset);
-    if config.product_id != 0 && config.product_id != header.product_id() {
+    if config.product_id != default::product_id() && config.product_id != header.product_id() {
         return Err(Error::InvalidConfig(format!(
             "Product ID in firmware and config does not match: {} vs. {}",
             config.product_id,
@@ -193,54 +205,54 @@ pub fn load_app(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Fi
     } else if config.product_id == 0 {
         config.product_id = header.product_id();
     }
-    if config.major_version != 0xFF && config.major_version != header.major_version() {
+    if config.major_version != default::major_version() && config.major_version != header.major_version() {
         return Err(Error::InvalidConfig(format!(
             "Major version in firmware and config does not match: {} vs. {}",
             config.major_version,
             header.major_version()
         )));
-    } else if config.major_version == 0xFF {
+    } else if config.major_version == default::major_version() {
         config.major_version = header.major_version();
-    } else if header.major_version() == 0xFF {
+    } else if header.major_version() == default::major_version() {
         header.set_major_version(config.major_version);
     }
 
     let minor = config.images[idx].version.minor;
-    if minor != 0xFF && minor != header.minor_version() {
+    if minor != default::minor_version() && minor != header.minor_version() {
         return Err(Error::InvalidConfig(format!(
             "Minor version in firmware and config does not match: {} vs. {}",
             minor,
             header.minor_version()
         )));
-    } else if minor == 0xFF {
+    } else if minor == default::minor_version() {
         config.images[idx].version.minor = header.minor_version();
-    } else if header.minor_version() == 0xFF {
+    } else if header.minor_version() == default::minor_version() {
         header.set_minor_version(minor);
     }
 
     let build = config.images[idx].version.build;
-    if build != 0xFF && build != header.build_version() {
+    if build != default::build_version() && build != header.build_version() {
         return Err(Error::InvalidConfig(format!(
             "Build version in firmware and config does not match: {} vs. {}",
             build,
             header.build_version()
         )));
-    } else if build == 0xFF {
+    } else if build == default::build_version() {
         config.images[idx].version.build = header.build_version();
-    } else if header.build_version() == 0xFF {
+    } else if header.build_version() == default::build_version() {
         header.set_build_version(build);
     }
 
     let fw_id = config.images[idx].fw_id;
-    if fw_id != 0 && fw_id != header.fw_id() {
+    if fw_id != default::fw_id() && fw_id != header.fw_id() {
         return Err(Error::InvalidConfig(format!(
             "Firmware ID in firmware and config does not match: {} vs. {}",
             build,
             header.fw_id()
         )));
-    } else if fw_id == 0 {
+    } else if fw_id == default::fw_id() {
         config.images[idx].fw_id = header.fw_id();
-    } else if header.fw_id() == 0 {
+    } else if header.fw_id() == default::fw_id() {
         header.set_fw_id(fw_id);
     }
 
