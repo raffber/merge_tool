@@ -194,7 +194,6 @@ pub fn load_app(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Fi
         &config.images[idx].device_config,
         &config.images[idx].app_address,
     )?;
-    write_crc(&mut fw);
     let mut header = Header::new(&mut fw, config.images[idx].header_offset);
     if config.product_id != default::product_id() && config.product_id != header.product_id() {
         return Err(Error::InvalidConfig(format!(
@@ -255,6 +254,7 @@ pub fn load_app(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Fi
     } else if header.fw_id() == default::fw_id() {
         header.set_fw_id(fw_id);
     }
+    write_crc(&mut fw);
 
     Ok(fw)
 }

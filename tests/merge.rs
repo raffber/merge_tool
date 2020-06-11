@@ -56,11 +56,10 @@ fn merge() {
     data[4 + 6] = 5; // minor
     data[4 + 8] = 4; // build
 
-    // TODO: ....
     // // compute and compare CRC
-    // let ref_crc = crc32(&data[4..]);
-    // let crc = ((fw.read_u16(256 + 2) as u32) << 16) | (fw.read_u16(256 + 0) as u32);
-    // assert_eq!(ref_crc, crc);
+    let ref_crc = crc32(&data[4..128]);
+    let crc = fw.read_u32(256);
+    assert_eq!(ref_crc, crc);
 
     let output_dir = config_dir.join("out");
     create_dir_all(&output_dir).unwrap();

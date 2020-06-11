@@ -76,6 +76,15 @@ impl Firmware {
         }
     }
 
+    pub fn read_u32(&self, idx: usize) -> u32 {
+        let a = self.read_u16(idx) as u32;
+        let b = self.read_u16(idx+2) as u32;
+        match self.config.endianness {
+            Endianness::Big => b | (a << 16),
+            Endianness::Little => a | (b << 16),
+        }
+    }
+
     pub fn write_u16(&mut self, idx: usize, data: u16) {
         let lsb = (data & 0xFF) as u8;
         let msb = ((data >> 8) & 0xFF) as u8;
@@ -95,11 +104,11 @@ impl Firmware {
         match self.config.endianness {
             Endianness::Big => {
                 self.write_u16(idx, ((data >> 16) & 0xFFFF) as u16);
-                self.write_u16(idx + 1, (data & 0xFFFF) as u16);
+                self.write_u16(idx + 2, (data & 0xFFFF) as u16);
             }
             Endianness::Little => {
                 self.write_u16(idx, (data & 0xFFFF) as u16);
-                self.write_u16(idx + 1, ((data >> 16) & 0xFFFF) as u16);
+                self.write_u16(idx + 2, ((data >> 16) & 0xFFFF) as u16);
             }
         }
     }
