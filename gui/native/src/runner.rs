@@ -67,22 +67,9 @@ pub fn release(config: Config, config_path: &Path) -> impl Stream<Item = RunnerM
                 return;
             }
         };
-        let target_dir = config_dir.join("out");
-        if let Err(_) = create_dir_all(&target_dir) {
-            tx.unbounded_send(RunnerMsg::Failure(
-                "Cannot create output directory!".to_string(),
-            ))
-            .unwrap();
-            return;
-        }
         let mut config = config;
-        match process::release(&mut config, &config_dir, &target_dir) {
+        match process::release(&mut config, &config_dir) {
             Ok(_) => {
-                tx.unbounded_send(RunnerMsg::Info(format!(
-                    "Files written to `{}`",
-                    target_dir.to_str().unwrap()
-                )))
-                .unwrap();
                 tx.unbounded_send(RunnerMsg::Success(
                     "Successfully released firmware!".to_string(),
                 ))

@@ -9,7 +9,7 @@ use crate::Error;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use git2::{Repository, Status, IndexEntry, IndexAddOption, Commit, ObjectType, Direction};
+use git2::{Repository, Status, IndexAddOption, Commit, ObjectType, Direction};
 use crate::config::default;
 
 pub fn merge_firmware(
@@ -159,7 +159,7 @@ pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
 
     // create a commit
     let mut index = repo.index().map_err(Error::GitError)?;
-    index.add_all(output_files, IndexAddOption::DEFAULT, None);
+    index.add_all(output_files, IndexAddOption::DEFAULT, None).map_err(Error::GitError)?;
     let oid = index.write_tree().map_err(Error::GitError)?;
 
     let tree = repo.find_tree(oid).map_err(Error::GitError)?;
@@ -173,7 +173,7 @@ pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
         .and_then(|x| x.resolve())
         .and_then(|x| x.peel(ObjectType::Commit))
         .map_err(Error::GitError)?;
-    let tag_oid = repo.tag(&branch_name, &obj, &signature, &message, false)
+    repo.tag(&branch_name, &obj, &signature, &message, false)
         .map_err(Error::GitError)?;
 
     // push tag and branch
