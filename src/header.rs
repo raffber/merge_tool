@@ -1,10 +1,10 @@
 use crate::firmware::Firmware;
 
 const PRODUCT_ID_OFFSET: usize = 0;
-const MAJOR_VERSION_OFFSET: usize = 2;
-const MINOR_VERSION_OFFSET: usize = 4;
-const BUILD_VERSION_OFFSET: usize = 6;
-const FW_ID_OFFSET: usize = 8;
+const FW_ID_OFFSET: usize = 2;
+const MAJOR_VERSION_OFFSET: usize = 4;
+const MINOR_VERSION_OFFSET: usize = 6;
+const BUILD_VERSION_OFFSET: usize = 8;
 
 pub struct Header<'a> {
     fw: &'a mut Firmware,

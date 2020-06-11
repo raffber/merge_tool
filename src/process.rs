@@ -202,7 +202,7 @@ pub fn load_app(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Fi
             config.product_id,
             header.product_id()
         )));
-    } else if config.product_id == 0 {
+    } else if config.product_id == default::product_id() {
         config.product_id = header.product_id();
     }
     if config.major_version != default::major_version() && config.major_version != header.major_version() {

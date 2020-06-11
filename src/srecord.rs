@@ -80,14 +80,18 @@ fn parse_line(line: String) -> Result<Line, Error> {
 
 const WRITE_DATA_PER_LINE: usize = 16;
 
-pub fn serialize(word_addressing: bool, range: &AddressRange, data: &Vec<u8>) -> String {
-    let mut data = data.clone();
+pub fn serialize(word_addressing: bool, range: &AddressRange, data: &[u8]) -> String {
+    let mut data = data.to_vec();
     if word_addressing {
         swap_bytearray(&mut data);
     }
     let mut lines = Vec::new();
     for k in (0..data.len()).step_by(WRITE_DATA_PER_LINE) {
         let endidx = min(k + WRITE_DATA_PER_LINE, data.len());
+        let endidx = min(endidx, (range.end - range.begin) as usize);
+        if k > endidx {
+            break;
+        }
         let len = endidx - k + 5;
         let mut address = (k as u64) + range.begin;
         if word_addressing {
