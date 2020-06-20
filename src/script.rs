@@ -83,7 +83,7 @@ impl Script {
             commands: cmds,
             time_model: Box::new(model),
         };
-        ret.compute_progres();
+        ret.compute_progress();
         ret
     }
 
@@ -92,11 +92,11 @@ impl Script {
             commands: cmds,
             time_model: Box::new(SimpleTimeModel::new(0.0, 0.0)),
         };
-        ret.compute_progres();
+        ret.compute_progress();
         ret
     }
 
-    fn compute_progres(&mut self) {
+    fn compute_progress(&mut self) {
         let mut new_cmds = Vec::new();
         let time = self.time_model.compute(&self.commands);
         let total: f64 = time[time.len() - 1];
@@ -151,7 +151,7 @@ mod tests {
             Command::Write(vec![]),
             Command::Write(vec![]),
         ];
-        let mut script = Script::new(cmds);
+        let script = Script::new(cmds);
         let mut iter = script.commands.iter();
         assert_matches!(iter.next(), Some(Command::SetTimeOut(_)));
         assert_matches!(iter.next(), Some(Command::Write(_)));

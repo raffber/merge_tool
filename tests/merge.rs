@@ -1,11 +1,12 @@
-use merge_tool::config::{AddressRange, Config, FwConfig, DeviceConfig};
-use merge_tool::intel_hex;
-use merge_tool::process;
 use std::fs::{create_dir_all, File};
 use std::io::Write;
-use std::path::Path;
-use merge_tool::crc::crc32;
 use std::iter::repeat;
+use std::path::Path;
+
+use merge_tool::config::{AddressRange, Config};
+use merge_tool::crc::crc32;
+use merge_tool::intel_hex;
+use merge_tool::process;
 
 fn save_hex(path: &str, data: &[u8], range: &AddressRange) {
     let serialized = intel_hex::serialize(false, range, data);
