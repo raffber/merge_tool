@@ -53,7 +53,7 @@ impl Protocol for ExtCmdProtocol {
             self.write(vec![self.xcmd_code, fw_id, CMD_RESET]),
             Command::SetTimeOut(0),
             self.query(
-                vec![self.xcmd_code | 0x80, fw_id],
+                vec![self.xcmd_code | 0x80, fw_id, CMD_NONE],
                 vec![COM_OK, fw_id, STATE_IDLE, STATUS_SUCCESS],
             ),
         ]
@@ -74,7 +74,7 @@ impl Protocol for ExtCmdProtocol {
             self.write(tx_data),
             Command::SetTimeOut(0),
             self.query(
-                vec![self.xcmd_code | 0x80, fw_id],
+                vec![self.xcmd_code | 0x80, fw_id, CMD_NONE],
                 vec![COM_OK, fw_id, STATE_VALIDATED, STATUS_SUCCESS],
             ),
         ]
@@ -86,7 +86,7 @@ impl Protocol for ExtCmdProtocol {
             self.write(vec![self.xcmd_code, fw_id, CMD_START_TRANSMIT]),
             Command::SetTimeOut(0),
             self.query(
-                vec![self.xcmd_code | 0x80, fw_id],
+                vec![self.xcmd_code | 0x80, fw_id, CMD_NONE],
                 vec![COM_OK, fw_id, STATE_RX_DATA, STATUS_SUCCESS],
             ),
         ]
@@ -101,16 +101,16 @@ impl Protocol for ExtCmdProtocol {
         LittleEndian::write_u32(&mut buf, address as u32);
         tx.extend(buf.iter());
         tx.extend(data);
-        Some(Command::Write(tx))
+        Some(self.write(tx))
     }
 
     fn finish(&self, fw_id: u8, wait_time: u32) -> Vec<Command> {
         vec![
             Command::SetTimeOut(wait_time),
-            self.write(vec![self.xcmd_code, fw_id, CMD_RESET]),
+            self.write(vec![self.xcmd_code, fw_id, CMD_FINISH]),
             Command::SetTimeOut(0),
             self.query(
-                vec![self.xcmd_code | 0x80, fw_id],
+                vec![self.xcmd_code | 0x80, fw_id, CMD_NONE],
                 vec![COM_OK, fw_id, STATE_DONE, STATUS_SUCCESS],
             ),
         ]
