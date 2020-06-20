@@ -61,8 +61,12 @@ fn merge() {
     data[4 + 4] = 3; // major
     data[4 + 6] = 5; // minor
     data[4 + 8] = 4; // build
+    data[4+12] = 128; // length
+    data[4+13] = 0;
+    data[4+14] = 0;
+    data[4+15] = 0;
 
-    // // compute and compare CRC
+    // compute and compare CRC
     let ref_crc = crc32(&data[4..128]);
     let crc = fw.read_u32(256);
     assert_eq!(ref_crc, crc);
@@ -70,4 +74,15 @@ fn merge() {
     let output_dir = config_dir.join("out");
     create_dir_all(&output_dir).unwrap();
     process::write_fws(&config, &fws, &output_dir).unwrap();
+}
+
+#[test]
+fn script() {
+    create_test_data();
+    let config_path = Path::new("tests/test.gctmrg");
+    let config_dir = Config::get_config_dir(config_path).unwrap();
+    let mut config = Config::load_from_file(config_path).unwrap();
+    let output_dir = config_dir.join("out");
+    let ret = process::create_script(&mut config, &config_dir, &output_dir);
+    assert!(ret.is_ok());
 }

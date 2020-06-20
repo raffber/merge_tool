@@ -60,11 +60,6 @@ pub fn create_script(
     Ok(path)
 }
 
-pub fn write_crc(fw: &mut Firmware) {
-    let crc = crc32(&fw.data[4..fw.image_length()]);
-    fw.write_u32(0, crc);
-}
-
 pub fn merge_all(config: &mut Config, config_dir: &Path) -> Result<Vec<Firmware>, Error> {
     let mut ret = Vec::new();
     for idx in 0..config.images.len() {
@@ -186,14 +181,8 @@ pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn load_app(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Firmware, Error> {
-    let path = Config::normalize_path(&config.images[idx].app_path, config_dir)?;
-    let mut fw = Firmware::load_from_file(
-        &path,
-        &config.images[idx].hex_file_format,
-        &config.images[idx].device_config,
-        &config.images[idx].app_address,
-    )?;
+fn configure_header(mut fw: Firmware, config: &mut Config, idx: usize) -> Result<Firmware, Error> {
+    let image_length = fw.image_length();
     let mut header = Header::new(&mut fw, config.images[idx].header_offset);
     if config.product_id != default::product_id() && config.product_id != header.product_id() {
         return Err(Error::InvalidConfig(format!(
@@ -254,7 +243,22 @@ pub fn load_app(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Fi
     } else if header.fw_id() == default::fw_id() {
         header.set_fw_id(fw_id);
     }
-    write_crc(&mut fw);
+    header.set_length(image_length as u32);
+    Ok(fw)
+}
+
+pub fn load_app(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Firmware, Error> {
+    let path = Config::normalize_path(&config.images[idx].app_path, config_dir)?;
+    let fw = Firmware::load_from_file(
+        &path,
+        &config.images[idx].hex_file_format,
+        &config.images[idx].device_config,
+        &config.images[idx].app_address,
+    )?;
+
+    let mut fw = configure_header(fw, config, idx)?;
+    let crc = crc32(&fw.data[4..fw.image_length()]);
+    fw.write_u32(0, crc);
 
     Ok(fw)
 }

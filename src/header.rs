@@ -5,6 +5,7 @@ const FW_ID_OFFSET: usize = 2;
 const MAJOR_VERSION_OFFSET: usize = 4;
 const MINOR_VERSION_OFFSET: usize = 6;
 const BUILD_VERSION_OFFSET: usize = 8;
+const LENGTH_OFFSET: usize = 12;
 
 pub struct Header<'a> {
     fw: &'a mut Firmware,
@@ -57,5 +58,13 @@ impl<'a> Header<'a> {
 
     pub fn set_fw_id(&mut self, value: u8) {
         self.fw.data[self.offset + FW_ID_OFFSET] = value;
+    }
+
+    pub fn length(&self) -> u32 {
+        self.fw.read_u32(self.offset + LENGTH_OFFSET)
+    }
+
+    pub fn set_length(&mut self, value: u32) {
+        self.fw.write_u32(self.offset + LENGTH_OFFSET, value);
     }
 }
