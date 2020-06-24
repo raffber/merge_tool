@@ -254,12 +254,12 @@ impl Config {
             let mut path = config_dir;
             let git_path = path.join(".git");
             if git_path.exists() {
-                return Ok(git_path);
+                return Ok(path.to_path_buf());
             }
             while let Some(parent) = path.parent() {
                 let git_path = parent.join(".git");
                 if git_path.exists() {
-                    return Ok(git_path);
+                    return Ok(parent.to_path_buf());
                 }
                 path = parent;
             }

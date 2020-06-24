@@ -114,13 +114,11 @@ fn format_branch_name(config: &Config) -> String {
 
 pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
     let repo_path = config.get_repo_path(config_dir)?;
+    println!("{:?}", repo_path);
     let output_dir = repo_path.join("release");
 
     // start by checking git repository
     let repo = Repository::open(&repo_path).map_err(Error::GitError)?;
-    if !repo.is_worktree() {
-        return Err(Error::GitRepoIsNotAWorktree);
-    }
     let statuses = repo.statuses(None).map_err(Error::GitError)?;
     for status in statuses.iter() {
         let status = status.status();
