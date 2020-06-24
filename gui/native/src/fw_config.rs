@@ -343,7 +343,7 @@ impl Render for FwPane {
                         {checkbox(self.config.device_config.word_addressing, || FwMsg::WordAddressingToggle)
                             .class("custom-control-input").id(self.word_addressing_id.clone())}
                         <label class="custom-control-label" for={self.word_addressing_id.clone()}>
-                            {"Word Addresssing"}
+                            {"Word Addressing"}
                         </>
                     </div>
                 </div>
