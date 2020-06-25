@@ -92,7 +92,7 @@ fn main() {
     }
 
     if let Some(_) = matches.subcommand_matches("release") {
-        if let Err(err) = process::release(&mut config, &config_dir, &output_dir) {
+        if let Err(err) = process::release(&mut config, &config_dir) {
             println!("Error: Could not release firmware: {}", err);
         }
     }
