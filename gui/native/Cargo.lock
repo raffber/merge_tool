@@ -817,6 +817,7 @@ dependencies = [
  "hex",
  "itertools",
  "lazy_static",
+ "pathdiff",
  "regex",
  "serde",
  "serde_json",

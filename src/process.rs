@@ -87,7 +87,6 @@ pub fn write_fws(config: &Config, fws: &[Firmware], target_folder: &Path) -> Res
 
 
 pub fn is_git_repo_dirty(status: Status) -> bool {
-    println!("Status: {:?}", status);
     status.is_index_modified() || status.is_index_deleted() || status.is_index_renamed()
         || status.is_index_typechange() || status.is_wt_deleted() || status.is_wt_typechange()
         || status.is_wt_renamed() || status.is_conflicted() || status.is_wt_new()
@@ -100,11 +99,11 @@ fn find_last_commit(repo: &Repository) -> Result<Commit, git2::Error> {
 }
 
 fn format_release_message(config: &Config) -> String {
-    let mut parts = vec![format!("Firmware release for `{}` ", config.product_name)];
+    let mut parts = vec![format!("Firmware release for `{}`", config.product_name)];
     for img in &config.images {
         parts.push(format!("F{}={}.{}.{}", img.fw_id, config.major_version, img.version.minor, img.version.build));
     }
-    parts.join("")
+    parts.join(" ")
 }
 
 fn format_branch_name(config: &Config) -> String {
@@ -117,7 +116,6 @@ fn format_branch_name(config: &Config) -> String {
 
 pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
     let repo_path = config.get_repo_path(config_dir)?;
-    println!("{:?}", repo_path);
     let output_dir = repo_path.join("release");
     fs::create_dir_all(&output_dir).map_err(Error::Io)?;
 
@@ -127,14 +125,12 @@ pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
     for status in statuses.iter() {
         let status = status.status();
         if is_git_repo_dirty(status) {
-            // return Err(Error::GitRepoHasUncommitedChanges);
+            return Err(Error::GitRepoHasUncommitedChanges);
         }
     }
     if repo.head_detached().map_err(Error::GitError)? {
         return Err(Error::GitRepoInDetachedHead);
     }
-
-    println!("a");
 
     let mut output_files = Vec::new();
     // create script
@@ -142,20 +138,14 @@ pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
     let script_path = create_script(&mut new_config, config_dir, &output_dir)?;
     output_files.push(script_path);
 
-    println!("b");
-
     // merge firmwares
     let fws = merge_all(config, config_dir)?;
     let merged_files = write_fws(config, &fws, &output_dir)?;
     output_files.extend(merged_files);
 
-    println!("c");
-
     // retrieve some basic information about the current state
     let parent = find_last_commit(&repo).map_err(Error::GitError)?;
     let signature = repo.signature().map_err(Error::GitError)?;
-
-    println!("d");
 
     // create a branch
     let branch_name = format_branch_name(config);
@@ -163,17 +153,17 @@ pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
         return Err(Error::GitBranchAlreadyExists(branch_name));
     }
     let branch = repo.branch(&branch_name, &parent, false).map_err(Error::GitError)?;
-    println!("dd");
-    println!("{}", branch.get().name().unwrap());
     repo.set_head(branch.get().name().unwrap()).map_err(Error::GitError)?;
-
-    println!("e");
 
     // create a commit
     let mut index = repo.index().map_err(Error::GitError)?;
-    index.add_all(output_files, IndexAddOption::DEFAULT, None).map_err(Error::GitError)?;
+    for file in &output_files {
+        // unwrap is fine because we created the files relative to the
+        // current directory
+        let file = pathdiff::diff_paths(file, &repo_path).unwrap();
+        index.add_path(&file).map_err(Error::GitError)?;
+    }
     let oid = index.write_tree().map_err(Error::GitError)?;
-
     let tree = repo.find_tree(oid).map_err(Error::GitError)?;
 
     let message = format_release_message(&config);
@@ -188,12 +178,15 @@ pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
     repo.tag(&branch_name, &obj, &signature, &message, false)
         .map_err(Error::GitError)?;
 
+    // TODO: push is difficult since we don't know the authentication method
+    // push this to user?
+
     // push tag and branch
-    let mut remote = repo.find_remote("origin").map_err(Error::GitRepoHasNoOrigin)?;
-    let branch_ref = format!("refs/heads/{}:refs/heads/{}", &branch_name, &branch_name);
-    let tag_ref = format!("refs/tags/{}:refs/tags/{}", &branch_name, &branch_name);
-    remote.connect(Direction::Push).map_err(Error::GitCannotPush)?;
-    remote.push(&[&branch_ref, &tag_ref], None).map_err(Error::GitCannotPush)?;
+    // let mut remote = repo.find_remote("origin").map_err(Error::GitRepoHasNoOrigin)?;
+    // let branch_ref = format!("refs/heads/{}:refs/heads/{}", &branch_name, &branch_name);
+    // let tag_ref = format!("refs/tags/{}:refs/tags/{}", &branch_name, &branch_name);
+    // remote.connect(Direction::Push).map_err(Error::GitCannotPush)?;
+    // remote.push(&[&branch_ref, &tag_ref], None).map_err(Error::GitCannotPush)?;
 
     Ok(())
 }
