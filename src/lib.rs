@@ -34,6 +34,7 @@ pub enum Error {
     GitRepoInDetachedHead,
     GitRepoHasNoOrigin(git2::Error),
     GitCannotPush(git2::Error),
+    GitBranchAlreadyExists(String),
 }
 
 impl fmt::Display for Error {
