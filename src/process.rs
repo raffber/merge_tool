@@ -9,8 +9,9 @@ use crate::Error;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use git2::{Repository, Status, IndexAddOption, Commit, ObjectType, Direction};
+use git2::{Repository, Status, IndexAddOption, Commit, ObjectType, Direction, BranchType};
 use crate::config::default;
+use std::fs;
 
 pub fn merge_firmware(
     config: &mut Config,
@@ -86,9 +87,11 @@ pub fn write_fws(config: &Config, fws: &[Firmware], target_folder: &Path) -> Res
 
 
 pub fn is_git_repo_dirty(status: Status) -> bool {
+    println!("Status: {:?}", status);
     status.is_index_modified() || status.is_index_deleted() || status.is_index_renamed()
         || status.is_index_typechange() || status.is_wt_deleted() || status.is_wt_typechange()
-        || status.is_wt_renamed() || status.is_ignored() || status.is_conflicted() || status.is_wt_new()
+        || status.is_wt_renamed() || status.is_conflicted() || status.is_wt_new()
+        || status.is_wt_modified()
 }
 
 fn find_last_commit(repo: &Repository) -> Result<Commit, git2::Error> {
@@ -116,6 +119,7 @@ pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
     let repo_path = config.get_repo_path(config_dir)?;
     println!("{:?}", repo_path);
     let output_dir = repo_path.join("release");
+    fs::create_dir_all(&output_dir).map_err(Error::Io)?;
 
     // start by checking git repository
     let repo = Repository::open(&repo_path).map_err(Error::GitError)?;
@@ -123,12 +127,14 @@ pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
     for status in statuses.iter() {
         let status = status.status();
         if is_git_repo_dirty(status) {
-            return Err(Error::GitRepoHasUncommitedChanges);
+            // return Err(Error::GitRepoHasUncommitedChanges);
         }
     }
     if repo.head_detached().map_err(Error::GitError)? {
         return Err(Error::GitRepoInDetachedHead);
     }
+
+    println!("a");
 
     let mut output_files = Vec::new();
     // create script
@@ -136,19 +142,32 @@ pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
     let script_path = create_script(&mut new_config, config_dir, &output_dir)?;
     output_files.push(script_path);
 
+    println!("b");
+
     // merge firmwares
     let fws = merge_all(config, config_dir)?;
     let merged_files = write_fws(config, &fws, &output_dir)?;
     output_files.extend(merged_files);
 
+    println!("c");
+
     // retrieve some basic information about the current state
     let parent = find_last_commit(&repo).map_err(Error::GitError)?;
     let signature = repo.signature().map_err(Error::GitError)?;
 
+    println!("d");
+
     // create a branch
     let branch_name = format_branch_name(config);
-    repo.branch(&branch_name, &parent, false).map_err(Error::GitError)?;
-    repo.set_head(&branch_name).map_err(Error::GitError)?;
+    if let Ok(_) = repo.find_branch(&branch_name, BranchType::Local) {
+        return Err(Error::GitBranchAlreadyExists(branch_name));
+    }
+    let branch = repo.branch(&branch_name, &parent, false).map_err(Error::GitError)?;
+    println!("dd");
+    println!("{}", branch.get().name().unwrap());
+    repo.set_head(branch.get().name().unwrap()).map_err(Error::GitError)?;
+
+    println!("e");
 
     // create a commit
     let mut index = repo.index().map_err(Error::GitError)?;

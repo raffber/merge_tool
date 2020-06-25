@@ -76,7 +76,7 @@ pub fn release(config: Config, config_path: &Path) -> impl Stream<Item = RunnerM
                 .unwrap();
             }
             Err(err) => {
-                tx.unbounded_send(RunnerMsg::Success(format!(
+                tx.unbounded_send(RunnerMsg::Failure(format!(
                     "Error releaseing firmware: {}",
                     err
                 )))
