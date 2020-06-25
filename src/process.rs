@@ -1,17 +1,19 @@
+use std::fs;
+use std::fs::File;
+use std::io::Write;
+use std::path::{Path, PathBuf};
+
+use git2::{BranchType, Commit, ObjectType, Repository, Status};
+
 use crate::config::{Config, EXT_CMD_CODE};
+use crate::config::default;
 use crate::crc::crc32;
+use crate::Error;
 use crate::firmware::Firmware;
 use crate::header::Header;
 use crate::protocol::generate_script;
 use crate::script::Script;
 use crate::xcmd::ExtCmdProtocol;
-use crate::Error;
-use std::fs::File;
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use git2::{Repository, Status, IndexAddOption, Commit, ObjectType, Direction, BranchType};
-use crate::config::default;
-use std::fs;
 
 pub fn merge_firmware(
     config: &mut Config,
