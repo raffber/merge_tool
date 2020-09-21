@@ -5,8 +5,11 @@ use clap::{App, Arg, SubCommand};
 
 use merge_tool::config::Config;
 use merge_tool::process;
+use std::str::FromStr;
 
 fn main() {
+    env_logger::init();
+
     let matches = App::new("Merge Tool")
         .version("1.0")
         .author("Raphael Bernhard <beraphae@gmail.com>")
@@ -22,6 +25,7 @@ fn main() {
             Arg::with_name("output-dir")
                 .short("o")
                 .long("output-dir")
+                .value_name("FILE")
                 .help("Output folder for generated files. Defaults to `<config-file-dir>/out`"),
         )
         .arg(
@@ -42,6 +46,7 @@ fn main() {
         println!("Config file does not exist.");
         return;
     }
+    log::debug!("Fetching Config from: {:?}", config_path);
     let config_dir = match Config::get_config_dir(config_path) {
         Ok(ret) => ret,
         Err(err) => {
@@ -49,10 +54,12 @@ fn main() {
             return;
         }
     };
+
     let output_dir = matches
         .value_of("output-dir")
-        .map(PathBuf::from)
+        .and_then(|x| PathBuf::from_str(x).ok())
         .unwrap_or(config_dir.join("out"));
+    log::debug!("Output directory: {:?}", output_dir);
     let mut config = match Config::load_from_file(&config_path) {
         Ok(config) => config,
         Err(err) => {

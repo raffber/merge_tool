@@ -244,6 +244,7 @@ dependencies = [
  "hex",
  "itertools",
  "lazy_static",
+ "log",
  "pathdiff",
  "regex",
  "serde",
