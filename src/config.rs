@@ -5,7 +5,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use regex::Regex;
 
-pub const EXT_CMD_CODE: u8 = 0x11;
+pub const EXT_CMD_CODE: u8 = 0x10;
 
 pub mod default {
     pub fn fw_id() -> u8 {
