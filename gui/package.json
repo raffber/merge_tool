@@ -16,7 +16,7 @@
     "neon-cli": "^0.4.0",
     "node-loader": "^0.6.0",
     "node-sass": "^4.13.0",
-    "rust-greenhorn": "git@github.com:raffber/greenhorn.git#3ba560f4284065f3c1e74a2005f2b86fbc8d607b",
+    "rust-greenhorn": "https://github.com/raffber/greenhorn.git#3ba560f4284065f3c1e74a2005f2b86fbc8d607b",
     "sass-loader": "^8.0.0",
     "style-loader": "^0.23.1",
     "terser-webpack-plugin": "^2.2.2",
@@ -26,8 +26,10 @@
   "scripts": {
     "build-dev": "electron-build-env neon build && webpack --config webpack.renderer.config.js --mode=development && webpack --config webpack.main.config.js --mode=development",
     "build-prod": "electron-build-env neon build --release && webpack --config webpack.renderer.config.js --mode=production && webpack --config webpack.main.config.js --mode=production",
-    "package": "yarn build-prod && electron-builder",
-    "start": "yarn build-dev && electron dist/main.js"
+    "package": "npm run build-prod && electron-builder",
+    "start": "npm run build-dev && electron dist/main.js",
+    "build-dev-windows": "electron-build-env neon build --release && webpack --config webpack.renderer.config.js --mode=development && webpack --config webpack.main.config.js --mode=development",
+    "start-windows": "npm run build-dev-windows && electron dist/main.js"
   },
   "build": {
     "directories": {
