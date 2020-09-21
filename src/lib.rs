@@ -5,6 +5,9 @@ extern crate lazy_static;
 
 use serde_json::Error as JsonError;
 use std::fmt;
+use std::path::Path;
+use std::fs::File;
+use std::io::{BufReader, BufRead};
 
 pub mod command;
 pub mod config;
@@ -21,6 +24,8 @@ pub mod xcmd;
 #[derive(Debug)]
 pub enum Error {
     AddressRangeNotAlignedToPage,
+    ImageTooShortForHeader,
+    InvalidDataLength,
     InvalidAddress,
     Io(std::io::Error),
     InvalidHexFile,
@@ -50,6 +55,21 @@ pub fn swap_bytearray(data: &mut Vec<u8>) {
         data.swap(k, k + 1)
     }
 }
+
+pub fn load_lines(path: &Path) -> Result<Vec<String>, Error> {
+    let file = File::open(path).map_err(Error::Io)?;
+    let lines = BufReader::new(file)
+        .lines();
+    let mut ret = Vec::new();
+    for line in lines {
+        let x = line.map_err(Error::Io)?.trim().to_string();
+        if !x.is_empty() {
+            ret.push(x);
+        }
+    }
+    Ok(ret)
+}
+
 
 #[cfg(test)]
 mod tests {

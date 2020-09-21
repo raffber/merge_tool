@@ -1,4 +1,5 @@
 use crate::firmware::Firmware;
+use crate::Error;
 
 const PRODUCT_ID_OFFSET: usize = 0;
 const FW_ID_OFFSET: usize = 2;
@@ -7,16 +8,22 @@ const MINOR_VERSION_OFFSET: usize = 6;
 const BUILD_VERSION_OFFSET: usize = 8;
 const LENGTH_OFFSET: usize = 12;
 
+const HEADER_LENGTH: usize = 32;
+
 pub struct Header<'a> {
     fw: &'a mut Firmware,
     offset: usize,
 }
 
 impl<'a> Header<'a> {
-    pub fn new(fw: &'a mut Firmware, offset: u64) -> Self {
-        Self {
-            fw,
-            offset: offset as usize,
+    pub fn new(fw: &'a mut Firmware, offset: u64) -> Result<Self, Error> {
+        if fw.data.len() < offset as usize + HEADER_LENGTH {
+            Err(Error::ImageTooShortForHeader)
+        } else {
+            Ok(Self {
+                fw,
+                offset: offset as usize,
+            })
         }
     }
 

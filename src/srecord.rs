@@ -1,11 +1,12 @@
 use crate::config::AddressRange;
-use crate::{swap_bytearray, Error};
+use crate::{swap_bytearray, Error, load_lines};
 use hex;
 use std::cmp::min;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Write};
+use std::io::Write;
 use std::path::Path;
 use std::str::from_utf8;
+use itertools::zip;
 
 struct Line {
     data: Vec<u8>,
@@ -14,33 +15,31 @@ struct Line {
 }
 
 pub fn load(path: &Path, word_addressing: bool, range: &AddressRange) -> Result<Vec<u8>, Error> {
-    let file = File::open(path).map_err(Error::Io)?;
-    let lines = BufReader::new(file)
-        .lines()
-        // TODO: below unwrap causes crashes => return with IO error
-        .map(|x| x.unwrap().trim().to_string())
-        .filter(|x| !x.is_empty());
-    parse(word_addressing, range, lines)
+    let lines = load_lines(path)?;
+    parse(word_addressing, range, lines.into_iter())
 }
 
-pub fn parse<T: Iterator<Item = String>>(
+pub fn parse<T: Iterator<Item=String>>(
     word_addressing: bool,
     range: &AddressRange,
     lines: T,
 ) -> Result<Vec<u8>, Error> {
     let lines: Result<Vec<_>, _> = lines.map(parse_line).collect();
     let lines = lines?;
-    let address_multiplier = if word_addressing { 2 } else { 1 };
-    let mut ret = Vec::new();
+    let multiplier = if word_addressing { 2 } else { 1 };
+    let mut ret = vec![0xFF; range.len() as usize * multiplier];
     for line in lines {
         match line.kind.as_str() {
-            "S0" => break,
+            "S0" => continue,
             "S3" => {
-                let addr = line.addr * address_multiplier;
+                let addr = line.addr;
                 if addr < range.begin || addr > range.end {
                     continue;
                 }
-                ret.extend(line.data);
+                for k in 0..line.data.len() {
+                    let idx = k + (addr as usize) - (range.begin as usize);
+                    ret[idx] = line.data[k];
+                }
             }
             "S7" => {
                 break;
@@ -49,6 +48,9 @@ pub fn parse<T: Iterator<Item = String>>(
                 return Err(Error::InvalidHexFile);
             }
         }
+    }
+    if word_addressing {
+        swap_bytearray(&mut ret);
     }
     Ok(ret)
 }

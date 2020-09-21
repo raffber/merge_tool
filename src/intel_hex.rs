@@ -1,9 +1,9 @@
 use crate::config::AddressRange;
-use crate::{swap_bytearray, Error};
+use crate::{swap_bytearray, Error, load_lines};
 use hex;
 use std::cmp::min;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Write};
+use std::io::Write;
 use std::iter::repeat;
 use std::path::Path;
 
@@ -14,24 +14,20 @@ struct Line {
 }
 
 pub fn load(path: &Path, word_addressing: bool, range: &AddressRange) -> Result<Vec<u8>, Error> {
-    let file = File::open(path).map_err(Error::Io)?;
-    let lines = BufReader::new(file)
-        .lines()
-        .map(|x| x.unwrap().trim().to_string())
-        .filter(|x| !x.is_empty());
-    parse(word_addressing, range, lines)
+    let lines = load_lines(path)?;
+    parse(word_addressing, range, lines.into_iter())
 }
 
-pub fn parse<T: Iterator<Item = String>>(
+pub fn parse<T: Iterator<Item=String>>(
     word_addressing: bool,
     range: &AddressRange,
     lines: T,
 ) -> Result<Vec<u8>, Error> {
     let lines: Result<Vec<_>, _> = lines.map(parse_line).collect();
     let lines = lines?;
-    let address_multiplier = if word_addressing { 2 } else { 1 };
     let mut extend_line_address = 0_u64;
-    let mut ret: Vec<_> = repeat(0xFF_u8).take(range.len() as usize).collect();
+    let multiplier = if word_addressing { 2 } else { 1 };
+    let mut ret = vec![0xFF; range.len() as usize * multiplier];
     for line in &lines {
         match line.kind {
             0x04 => {
@@ -43,7 +39,7 @@ pub fn parse<T: Iterator<Item = String>>(
                 }
             }
             0x00 => {
-                let addr = ((extend_line_address << 16) | line.address) * address_multiplier;
+                let addr = (extend_line_address << 16) | line.address;
                 if addr < range.begin || addr > range.end {
                     continue;
                 }

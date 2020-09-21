@@ -195,7 +195,7 @@ pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
 
 fn configure_header(mut fw: Firmware, config: &mut Config, idx: usize) -> Result<Firmware, Error> {
     let image_length = fw.image_length();
-    let mut header = Header::new(&mut fw, config.images[idx].header_offset);
+    let mut header = Header::new(&mut fw, config.images[idx].header_offset)?;
     if config.product_id != default::product_id() && config.product_id != header.product_id() {
         return Err(Error::InvalidConfig(format!(
             "Product ID in firmware and config does not match: {} vs. {}",

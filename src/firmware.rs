@@ -17,6 +17,9 @@ impl Firmware {
         if (range.end + 1) % config.page_size != 0 {
             return Err(Error::AddressRangeNotAlignedToPage);
         }
+        if data.len() != (range.len()*config.byte_address_multiplier()) as usize {
+            return Err(Error::InvalidDataLength);
+        }
         Ok(Self {
             data,
             range,
@@ -36,19 +39,11 @@ impl Firmware {
         config: &DeviceConfig,
         range: &AddressRange,
     ) -> Result<Firmware, Error> {
-        let range = if config.word_addressing {
-            AddressRange {
-                begin: 2 * range.begin,
-                end: 2 * range.end + 1,
-            }
-        } else {
-            range.clone()
-        };
         let ret = match file_format {
             HexFileFormat::IntelHex => intel_hex::load(path, config.word_addressing, &range),
             HexFileFormat::SRecord => srecord::load(path, config.word_addressing, &range),
         };
-        ret.and_then(|data| Firmware::new(range, config.clone(), data))
+        ret.and_then(|data| Firmware::new(range.clone(), config.clone(), data))
     }
 
     pub fn write_to_file(&self, path: &Path, file_format: &HexFileFormat) -> Result<(), Error> {

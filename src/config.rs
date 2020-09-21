@@ -123,6 +123,16 @@ pub struct DeviceConfig {
     pub page_size: u64,
 }
 
+impl DeviceConfig {
+    pub fn byte_address_multiplier(&self) -> u64 {
+        if self.word_addressing {
+            2
+        } else {
+            1
+        }
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ImageVersion {
     #[serde(default = "default::minor_version", skip_serializing_if = "skip_if_ff")]
