@@ -17,6 +17,7 @@ pub fn load(path: &Path, word_addressing: bool, range: &AddressRange) -> Result<
     let file = File::open(path).map_err(Error::Io)?;
     let lines = BufReader::new(file)
         .lines()
+        // TODO: below unwrap causes crashes => return with IO error
         .map(|x| x.unwrap().trim().to_string())
         .filter(|x| !x.is_empty());
     parse(word_addressing, range, lines)

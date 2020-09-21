@@ -1,6 +1,9 @@
 use std::path::Path;
 use std::thread;
 
+use arrayvec::ArrayVec;
+use chrono::{Local, Timelike};
+use futures::StreamExt;
 use greenhorn::components::checkbox;
 use greenhorn::dialog::{FileFilter, FileOpenDialog, FileOpenMsg, FileSaveDialog, FileSaveMsg};
 use greenhorn::prelude::*;
@@ -12,9 +15,6 @@ use crate::fw_config::{FwMsg, FwPane};
 use crate::runner;
 use crate::runner::RunnerMsg;
 use crate::text_field::{TextField, TextFieldMsg};
-use arrayvec::ArrayVec;
-use chrono::{Local, Timelike};
-use futures::StreamExt;
 
 #[derive(Debug)]
 pub enum Msg {
@@ -65,7 +65,7 @@ mod validate {
     }
 
     pub fn state_transition(value: &str) -> Option<u32> {
-        u32::from_str_radix(&value, 16).ok()
+        u32::from_str_radix(&value, 10).ok()
     }
 }
 
@@ -98,7 +98,7 @@ impl MainApp {
         } else {
             "You are early... couldn't sleep?"
         }
-        .to_string()
+            .to_string()
     }
 
     pub fn apply_config(&mut self, config: Config) {
@@ -413,6 +413,6 @@ impl Render for MainApp {
                 </>
             </>
         )
-        .into()
+            .into()
     }
 }

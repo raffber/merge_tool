@@ -186,6 +186,7 @@ impl App for FwPane {
                 if let FileOpenMsg::Selected(path) = msg {
                     let path = self.make_path_relative(&path);
                     self.app_path.set(path);
+                    self.emit(&ctx);
                     Updated::yes()
                 } else {
                     Updated::no()
@@ -195,6 +196,7 @@ impl App for FwPane {
                 if let FileOpenMsg::Selected(path) = msg {
                     let path = self.make_path_relative(&path);
                     self.btl_path.set(path);
+                    self.emit(&ctx);
                     Updated::yes()
                 } else {
                     Updated::no()
