@@ -47,6 +47,7 @@ pub fn create_script(
     config_dir: &Path,
     output_dir: &Path,
 ) -> Result<PathBuf, Error> {
+    config.transform_to_byte_addrs();
     let protocol = ExtCmdProtocol::new(EXT_CMD_CODE);
     let mut fws = Vec::new();
     for idx in 0..config.images.len() {
@@ -65,6 +66,7 @@ pub fn create_script(
 
 pub fn merge_all(config: &mut Config, config_dir: &Path) -> Result<Vec<Firmware>, Error> {
     let mut ret = Vec::new();
+    config.transform_to_byte_addrs();
     for idx in 0..config.images.len() {
         let fw = merge_firmware(config, idx, config_dir)?;
         ret.push(fw);
@@ -117,6 +119,7 @@ fn format_branch_name(config: &Config) -> String {
 }
 
 pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
+    config.transform_to_byte_addrs();
     let repo_path = config.get_repo_path(config_dir)?;
     let output_dir = repo_path.join("release");
     fs::create_dir_all(&output_dir).map_err(Error::Io)?;

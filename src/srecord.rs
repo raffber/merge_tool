@@ -27,12 +27,12 @@ pub fn parse<T: Iterator<Item=String>>(
     let lines: Result<Vec<_>, _> = lines.map(parse_line).collect();
     let lines = lines?;
     let multiplier = if word_addressing { 2 } else { 1 };
-    let mut ret = vec![0xFF; range.len() as usize * multiplier];
+    let mut ret = vec![0xFF; range.len() as usize];
     for line in lines {
         match line.kind.as_str() {
             "S0" => continue,
             "S3" => {
-                let addr = line.addr;
+                let addr = line.addr * multiplier;
                 if addr < range.begin || addr > range.end {
                     continue;
                 }

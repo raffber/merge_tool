@@ -213,6 +213,9 @@ pub struct Config {
         skip_serializing_if = "String::is_empty"
     )]
     pub repo_path: String,
+
+    #[serde(skip_serializing, skip_deserializing)]
+    byte_addr_transformed: bool,
 }
 
 impl Config {
@@ -253,7 +256,9 @@ impl Config {
     }
 
     pub fn save(&self, path: &Path) -> Result<(), Error> {
-        let data = serde_json::to_string_pretty(self).unwrap();
+        let mut to_serialize = self.clone();
+        to_serialize.transform_to_word_addrs();
+        let data = serde_json::to_string_pretty(&to_serialize).unwrap();
         let mut file = File::create(path).map_err(Error::Io)?;
         file.write_all(data.as_bytes()).map_err(Error::Io)
     }
@@ -284,6 +289,40 @@ impl Config {
         Self::validate_product_name(&config.product_name)?;
         Ok(config)
     }
+
+    pub fn transform_to_byte_addrs(&mut self) {
+        if self.byte_addr_transformed {
+            return;
+        }
+        for fwconfig in &mut self.images {
+            if fwconfig.device_config.word_addressing {
+                fwconfig.app_address.begin *= 2;
+                fwconfig.app_address.end = 2*fwconfig.app_address.end + 1;
+                fwconfig.btl_address.begin *= 2;
+                fwconfig.btl_address.end = 2*fwconfig.btl_address.end + 1;
+                fwconfig.header_offset *= 2;
+                fwconfig.device_config.page_size *= 2;
+            }
+        }
+        self.byte_addr_transformed = true;
+    }
+
+    pub fn transform_to_word_addrs(&mut self) {
+        if !self.byte_addr_transformed {
+            return;
+        }
+        for fwconfig in &mut self.images {
+            if fwconfig.device_config.word_addressing {
+                fwconfig.app_address.begin /= 2;
+                fwconfig.app_address.end /= 2;
+                fwconfig.btl_address.begin /= 2;
+                fwconfig.btl_address.end /= 2;
+                fwconfig.header_offset /= 2;
+                fwconfig.device_config.page_size /= 2;
+            }
+        }
+        self.byte_addr_transformed = true;
+    }
 }
 
 impl Default for Config {
@@ -297,6 +336,7 @@ impl Default for Config {
             images: vec![],
             time_state_transition: 0,
             repo_path: "".to_string(),
+            byte_addr_transformed: false
         }
     }
 }
