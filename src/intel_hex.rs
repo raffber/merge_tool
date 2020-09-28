@@ -4,7 +4,6 @@ use hex;
 use std::cmp::min;
 use std::fs::File;
 use std::io::Write;
-use std::iter::repeat;
 use std::path::Path;
 
 struct Line {

@@ -1,4 +1,4 @@
-use crate::command::Command;
+use crate::script_cmd::Command;
 use itertools::Itertools;
 use sha2::{Digest, Sha256};
 use std::iter::once;
@@ -26,7 +26,7 @@ pub trait TimeModel {
                 Command::Log(_) => {
                     ret.push(now);
                 }
-                Command::SetError(_) => {
+                Command::SetErrorMessage(_) => {
                     ret.push(now);
                 }
                 Command::Header(_) => {

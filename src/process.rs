@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use git2::{BranchType, Commit, ObjectType, Repository, Status};
 
-use crate::config::{Config, EXT_CMD_CODE};
+use crate::config::{Config, DDP_CMD_CODE};
 use crate::config::default;
 use crate::crc::crc32;
 use crate::Error;
@@ -13,7 +13,7 @@ use crate::firmware::Firmware;
 use crate::header::Header;
 use crate::protocol::generate_script;
 use crate::script::Script;
-use crate::xcmd::ExtCmdProtocol;
+use crate::ddp::DdpProtocol;
 
 pub fn merge_firmware(
     config: &mut Config,
@@ -48,7 +48,7 @@ pub fn create_script(
     output_dir: &Path,
 ) -> Result<PathBuf, Error> {
     config.transform_to_byte_addrs();
-    let protocol = ExtCmdProtocol::new(EXT_CMD_CODE);
+    let protocol = DdpProtocol::new(DDP_CMD_CODE);
     let mut fws = Vec::new();
     for idx in 0..config.images.len() {
         fws.push(load_app(config, idx, config_dir)?);

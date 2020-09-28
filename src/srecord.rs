@@ -6,7 +6,6 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::str::from_utf8;
-use itertools::zip;
 
 struct Line {
     data: Vec<u8>,

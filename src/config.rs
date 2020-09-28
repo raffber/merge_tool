@@ -5,20 +5,20 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use regex::Regex;
 
-pub const EXT_CMD_CODE: u8 = 0x10;
+pub const DDP_CMD_CODE: u8 = 0x10;
 
 pub mod default {
     pub fn fw_id() -> u8 {
         0
     }
-    pub fn major_version() -> u8 {
-        0xFF
+    pub fn major_version() -> u16 {
+        0xFFFF
     }
-    pub fn minor_version() -> u8 {
-        0xFF
+    pub fn minor_version() -> u16 {
+        0xFFFF
     }
-    pub fn build_version() -> u8 {
-        0xFF
+    pub fn build_version() -> u32 {
+        0xFFFFFFFF
     }
     pub fn header_offset() -> u64 {
         4
@@ -43,6 +43,8 @@ fn skip_if_ff(value: &u8) -> bool {
 }
 
 fn skip_if_ffff(value: &u16) -> bool { *value == 0xFFFF }
+
+fn skip_if_ffffffff(value: &u32) -> bool { *value == 0xFFFFFFFF }
 
 fn skip_if_zero(value: &u8) -> bool {
     *value == 0
@@ -135,10 +137,10 @@ impl DeviceConfig {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ImageVersion {
-    #[serde(default = "default::minor_version", skip_serializing_if = "skip_if_ff")]
-    pub minor: u8,
-    #[serde(default = "default::build_version", skip_serializing_if = "skip_if_ff")]
-    pub build: u8,
+    #[serde(default = "default::minor_version", skip_serializing_if = "skip_if_ffff")]
+    pub minor: u16,
+    #[serde(default = "default::build_version", skip_serializing_if = "skip_if_ffffffff")]
+    pub build: u32,
 }
 
 impl Default for ImageVersion {
@@ -197,8 +199,8 @@ pub struct Config {
     #[serde(default = "default::product_id", skip_serializing_if = "skip_if_ffff")]
     pub product_id: u16,
     pub product_name: String,
-    #[serde(default = "default::major_version", skip_serializing_if = "skip_if_ff")]
-    pub major_version: u8,
+    #[serde(default = "default::major_version", skip_serializing_if = "skip_if_ffff")]
+    pub major_version: u16,
     #[serde(default = "default::btl_version", skip_serializing_if = "skip_if_one")]
     pub btl_version: u8,
     #[serde(

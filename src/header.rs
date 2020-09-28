@@ -35,28 +35,28 @@ impl<'a> Header<'a> {
         self.fw.write_u16(self.offset + PRODUCT_ID_OFFSET, value);
     }
 
-    pub fn major_version(&self) -> u8 {
-        self.fw.data[self.offset + MAJOR_VERSION_OFFSET]
+    pub fn major_version(&self) -> u16 {
+        self.fw.read_u16(self.offset + MAJOR_VERSION_OFFSET)
     }
 
-    pub fn set_major_version(&mut self, value: u8) {
-        self.fw.data[self.offset + MAJOR_VERSION_OFFSET] = value;
+    pub fn set_major_version(&mut self, value: u16) {
+        self.fw.write_u16(self.offset + MAJOR_VERSION_OFFSET, value);
     }
 
-    pub fn minor_version(&self) -> u8 {
-        self.fw.data[self.offset + MINOR_VERSION_OFFSET]
+    pub fn minor_version(&self) -> u16 {
+        self.fw.read_u16(self.offset + MINOR_VERSION_OFFSET)
     }
 
-    pub fn set_minor_version(&mut self, value: u8) {
-        self.fw.data[self.offset + MINOR_VERSION_OFFSET] = value;
+    pub fn set_minor_version(&mut self, value: u16) {
+        self.fw.write_u16(self.offset + MINOR_VERSION_OFFSET, value);
     }
 
-    pub fn build_version(&self) -> u8 {
-        self.fw.data[self.offset + BUILD_VERSION_OFFSET]
+    pub fn build_version(&self) -> u32 {
+        self.fw.read_u32(self.offset + BUILD_VERSION_OFFSET)
     }
 
-    pub fn set_build_version(&mut self, value: u8) {
-        self.fw.data[self.offset + BUILD_VERSION_OFFSET] = value;
+    pub fn set_build_version(&mut self, value: u32) {
+        self.fw.write_u32(self.offset + BUILD_VERSION_OFFSET, value);
     }
 
     pub fn fw_id(&self) -> u8 {

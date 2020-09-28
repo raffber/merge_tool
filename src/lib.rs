@@ -9,7 +9,7 @@ use std::path::Path;
 use std::fs::File;
 use std::io::{BufReader, BufRead};
 
-pub mod command;
+pub mod script_cmd;
 pub mod config;
 pub mod crc;
 pub mod firmware;
@@ -19,7 +19,7 @@ pub mod process;
 pub mod protocol;
 pub mod script;
 pub mod srecord;
-pub mod xcmd;
+pub mod ddp;
 
 #[derive(Debug)]
 pub enum Error {

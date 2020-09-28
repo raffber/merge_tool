@@ -5,7 +5,7 @@ pub enum Command {
     Write(Vec<u8>),
     Query(Vec<u8>, Vec<u8>),
     Log(String),
-    SetError(String),
+    SetErrorMessage(String),
     Header(Vec<(String, String)>),
     SetTimeOut(u32),
     Progress(u8),
@@ -28,7 +28,7 @@ impl Command {
             Command::Log(x) => {
                 ret.extend(x.as_bytes());
             }
-            Command::SetError(x) => {
+            Command::SetErrorMessage(x) => {
                 ret.extend(x.as_bytes());
             }
             Command::Header(kv) => {
@@ -63,7 +63,7 @@ impl Command {
             Command::Query(_, _) => 0x03,
             Command::SetTimeOut(_) => 0x10,
             Command::Log(_) => 0x20,
-            Command::SetError(_) => 0x21,
+            Command::SetErrorMessage(_) => 0x21,
             Command::Progress(_) => 0x22,
             Command::Checksum(_) => 0x30,
         }
@@ -95,7 +95,7 @@ mod tests {
             ("more".to_string(), "stuff".to_string()),
         ]);
         assert_eq!(cmd.script_line(), ":01666F6F3D6261727C6D6F72653D7374756666");
-        let cmd = Command::SetError("foobar".to_string());
+        let cmd = Command::SetErrorMessage("foobar".to_string());
         assert_eq!(cmd.script_line(), ":21666F6F626172");
         let cmd = Command::Progress(0xAB);
         assert_eq!(cmd.script_line(), ":22AB");
