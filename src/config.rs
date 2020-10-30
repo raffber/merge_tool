@@ -233,7 +233,6 @@ impl Config {
     }
 
     pub fn get_config_dir(config_path: &Path) -> Result<PathBuf, Error> {
-        let config_path = canonicalize(config_path).map_err(Error::Io)?;
         Ok(config_path
             .parent()
             .map(|x| x.to_path_buf())
