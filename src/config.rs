@@ -59,7 +59,7 @@ fn skip_if_false(value: &bool) -> bool {
 }
 
 fn skip_if_version(value: &ImageVersion) -> bool {
-    value.build == 0xFF && value.minor == 0xFF
+    value.build == default::build_version() && value.minor == default::minor_version()
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
@@ -146,8 +146,8 @@ pub struct ImageVersion {
 impl Default for ImageVersion {
     fn default() -> Self {
         Self {
-            minor: 0xFF,
-            build: 0xFF,
+            minor: default::minor_version(),
+            build: default::build_version(),
         }
     }
 }
