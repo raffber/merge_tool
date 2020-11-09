@@ -65,6 +65,7 @@ fn skip_if_version(value: &ImageVersion) -> bool {
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct Timings {
     pub data_send: u32,
+    pub crc_check: u32,
     pub data_send_done: u32,
     pub leave_btl: u32,
     pub erase_time: u32,

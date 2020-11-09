@@ -104,9 +104,14 @@ impl Protocol for DdpProtocol {
         Some(self.write(tx))
     }
 
-    fn finish(&self, fw_id: u8, wait_time: u32) -> Vec<Command> {
+    fn finish(&self, fw_id: u8, send_done: u32, crc_check: u32) -> Vec<Command> {
         vec![
-            Command::SetTimeOut(wait_time),
+            Command::SetTimeOut(send_done),
+            self.query(
+                vec![self.ddp_code | 0x80, fw_id, CMD_NONE],
+                vec![COM_OK, fw_id, STATE_RX_DATA, STATUS_SUCCESS],
+            ),
+            Command::SetTimeOut(crc_check),
             self.write(vec![self.ddp_code, fw_id, CMD_FINISH]),
             Command::SetTimeOut(0),
             self.query(

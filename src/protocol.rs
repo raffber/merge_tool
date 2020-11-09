@@ -10,7 +10,7 @@ pub trait Protocol {
     fn validate(&self, fw_id: u8, data: &[u8], wait_time: u32) -> Vec<Command>;
     fn start_transmit(&self, fw_id: u8, erase_time: u32) -> Vec<Command>;
     fn send_data(&self, fw_id: u8, address: u64, data: &[u8]) -> Option<Command>;
-    fn finish(&self, fw_id: u8, wait_time: u32) -> Vec<Command>;
+    fn finish(&self, fw_id: u8, send_done: u32, crc_check: u32) -> Vec<Command>;
 }
 
 fn make_header(config: &Config) -> Command {
@@ -93,7 +93,7 @@ pub fn generate_script<P: Protocol>(
         ret.push(Command::Log("done".to_string()));
 
         ret.push(Command::Log("Checking CRC...".to_string()));
-        ret.extend(protocol.finish(id, fw_config.timings.data_send_done));
+        ret.extend(protocol.finish(id, fw_config.timings.data_send_done, fw_config.timings.crc_check));
         ret.push(Command::SetErrorMessage("failed".to_string()));
         ret.push(Command::Log("done".to_string()));
 
