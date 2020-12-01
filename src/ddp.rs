@@ -1,8 +1,8 @@
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::script_cmd::Command;
-use crate::crc::crc8;
 use crate::protocol::Protocol;
+use crate::crc::crc16;
 
 const CMD_NONE: u8 = 0x00;
 const CMD_RESET: u8 = 0x01;
@@ -35,13 +35,21 @@ impl DdpProtocol {
     }
 
     pub fn write(&self, mut data: Vec<u8>) -> Command {
-        data.push(crc8(&data));
+        let crc = crc16(&data);
+        data.push((crc >> 8) as u8);
+        data.push((crc & 0xFF) as u8);
         Command::Write(data)
     }
 
     pub fn query(&self, mut tx: Vec<u8>, mut rx: Vec<u8>) -> Command {
-        tx.push(crc8(&tx));
-        rx.push(crc8(&rx));
+        let crc = crc16(&tx);
+        tx.push((crc >> 8) as u8);
+        tx.push((crc & 0xFF) as u8);
+
+        let crc = crc16(&rx);
+        rx.push((crc >> 8) as u8);
+        rx.push((crc & 0xFF) as u8);
+
         Command::Query(tx, rx)
     }
 }
