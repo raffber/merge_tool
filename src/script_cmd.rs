@@ -17,8 +17,11 @@ impl Command {
         let mut ret = Vec::new();
         match self {
             Command::Query(write, read) => {
-                ret.push(write.len() as u8);
-                ret.push(read.len() as u8);
+                let mut buf = [0_u8; 2];
+                LittleEndian::write_u16(&mut buf, write.len() as u16);
+                ret.extend(&buf);
+                LittleEndian::write_u16(&mut buf, read.len() as u16);
+                ret.extend(&buf);
                 ret.extend(write);
                 ret.extend(read);
             }
