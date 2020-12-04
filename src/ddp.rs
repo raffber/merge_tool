@@ -104,12 +104,12 @@ impl Protocol for DdpProtocol {
         if data.iter().all(|x| *x == 0xFF) {
             return None;
         }
-        let mut tx = vec![self.ddp_code, fw_id, CMD_DATA];
+        let mut tx = vec![self.ddp_code | 0x80, fw_id, CMD_DATA];
         let mut buf = [0_u8; 4];
         LittleEndian::write_u32(&mut buf, address as u32);
         tx.extend(buf.iter());
         tx.extend(data);
-        Some(self.write(tx))
+        Some(self.query(tx, vec![COM_OK, fw_id, STATE_RX_DATA, STATUS_SUCCESS]))
     }
 
     fn finish(&self, fw_id: u8, send_done: u32, crc_check: u32) -> Vec<Command> {
