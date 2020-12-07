@@ -2,6 +2,7 @@
   "name": "merge_tool",
   "version": "0.1.0",
   "description": "Merge firmwares and generate bootload scripts",
+  "productName": "Merge and Release Tool",
   "main": "dist/main.js",
   "author": "Raphael Bernhard <beraphae@gmail.com>",
   "license": "MIT",
