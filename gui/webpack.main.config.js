@@ -16,7 +16,7 @@ module.exports = {
     rules: [
       {
         test: /\.node$/,
-        use: 'node-loader'
+        use: 'native-ext-loader'
       }
     ],
   },

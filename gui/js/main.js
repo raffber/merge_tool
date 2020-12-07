@@ -1,4 +1,4 @@
-import addon from 'node-loader!../native/index.node';
+import addon from '../native/index.node';
 
 import showDialog from 'rust-greenhorn/js/electron_dialogs';
 
