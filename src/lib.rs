@@ -33,6 +33,8 @@ pub enum Error {
     CannotParseConfig(JsonError),
     CannotFindGitRepo,
     InvalidProductName,
+    // "Firmware data length is invalid: Not a multiple of the data length per package"
+    NotAMultipleOfPackageLength,
     GitError(git2::Error),
     GitRepoIsNotAWorktree,
     GitRepoHasUncommitedChanges,

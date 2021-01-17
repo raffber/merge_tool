@@ -81,7 +81,7 @@ pub struct Timings {
     pub leave_btl: u32,
     pub erase_time: u32,
     #[serde(default = "default::zero_u32", skip_serializing_if = "skip::if_zero_u32")]
-    pub junk_write_time: u32,
+    pub chunk_commit: u32,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
@@ -181,6 +181,8 @@ pub struct FwConfig {
     pub header_offset: u64,
     pub hex_file_format: HexFileFormat,
     pub device_config: DeviceConfig,
+    #[serde(default = "default::zero_u32", skip_serializing_if = "skip::if_zero_u32")]
+    pub write_chunk_size: u32,
     pub timings: Timings,
 }
 
@@ -197,6 +199,7 @@ impl Default for FwConfig {
             header_offset: default::header_offset(),
             hex_file_format: Default::default(),
             device_config: Default::default(),
+            write_chunk_size: 0,
             timings: Default::default(),
         }
     }

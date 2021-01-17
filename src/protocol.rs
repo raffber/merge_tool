@@ -1,6 +1,7 @@
 use crate::script_cmd::Command;
-use crate::config::Config;
+use crate::config::{Config, FwConfig};
 use crate::firmware::Firmware;
+use crate::Error;
 
 const DATA_LEN_PER_PACKAGE: usize = 16;
 
@@ -11,6 +12,7 @@ pub trait Protocol {
     fn start_transmit(&self, fw_id: u8, erase_time: u32) -> Vec<Command>;
     fn send_data(&self, fw_id: u8, address: u64, data: &[u8]) -> Option<Command>;
     fn finish(&self, fw_id: u8, send_done: u32, crc_check: u32) -> Vec<Command>;
+    fn commit_chunk(&self, fw_id: u8, chunk_commit: u32) -> Vec<Command>;
 }
 
 fn make_header(config: &Config) -> Command {
@@ -40,7 +42,7 @@ pub fn generate_script<P: Protocol>(
     protocol: &P,
     fws: &[Firmware],
     config: &Config,
-) -> Vec<Command> {
+) -> Result<Vec<Command>, Error> {
     assert_eq!(fws.len(), config.images.len());
     let mut ret = Vec::new();
 
@@ -81,15 +83,21 @@ pub fn generate_script<P: Protocol>(
         ret.extend(protocol.start_transmit(id, fw_config.timings.erase_time));
         ret.push(Command::Log("done".to_string()));
 
-        ret.push(Command::SetTimeOut(fw_config.timings.data_send));
         ret.push(Command::Log("Programming...".to_string()));
-        assert_eq!(fw.data.len() % DATA_LEN_PER_PACKAGE, 0);
-        for k in (0..fw.data.len()).step_by(DATA_LEN_PER_PACKAGE) {
-            let cmd = protocol.send_data(id, k as u64, &fw.data[k..k + DATA_LEN_PER_PACKAGE]);
-            if let Some(cmd) = cmd {
-                ret.push(cmd);
-            }
+
+        if fw.data.len() % DATA_LEN_PER_PACKAGE != 0 {
+            return Err(Error::NotAMultipleOfPackageLength);
         }
+
+        if fw_config.write_chunk_size != 0 {
+            if (fw_config.write_chunk_size as usize) % DATA_LEN_PER_PACKAGE != 0 {
+                return Err(Error::NotAMultipleOfPackageLength);
+            }
+            send_junked(protocol, fw_config, fw, &mut ret);
+        } else {
+            send_all(protocol, fw_config, fw, &mut ret);
+        }
+
         ret.push(Command::Log("done".to_string()));
 
         ret.push(Command::Log("Checking CRC...".to_string()));
@@ -104,5 +112,35 @@ pub fn generate_script<P: Protocol>(
     }
 
     ret.push(Command::Log("Bootload successful!".to_string()));
-    ret
+    Ok(ret)
+}
+
+pub fn send_all<P: Protocol>(protocol: &P, config: &FwConfig, fw: &Firmware, cmds: &mut Vec<Command>) {
+    cmds.push(Command::SetTimeOut(config.timings.data_send));
+    let id = config.fw_id;
+    for k in (0..fw.data.len()).step_by(DATA_LEN_PER_PACKAGE) {
+        let cmd = protocol.send_data(id, k as u64, &fw.data[k..k + DATA_LEN_PER_PACKAGE]);
+        if let Some(cmd) = cmd {
+            cmds.push(cmd);
+        }
+    }
+}
+
+pub fn send_junked<P: Protocol>(protocol: &P, config: &FwConfig, fw: &Firmware, cmds: &mut Vec<Command>) {
+    let id = config.fw_id;
+
+    for k_chunk in (0..fw.data.len()).step_by(config.write_chunk_size as usize) {
+        cmds.push(Command::SetTimeOut(config.timings.data_send));
+        for k_pkg in (0 .. config.write_chunk_size as usize).step_by(DATA_LEN_PER_PACKAGE) {
+            let k = k_chunk + k_pkg;
+            if k >= fw.data.len() {
+                return;
+            }
+            let cmd = protocol.send_data(id, k as u64, &fw.data[k..k + DATA_LEN_PER_PACKAGE]);
+            if let Some(cmd) = cmd {
+                cmds.push(cmd);
+            }
+        }
+        cmds.extend(protocol.commit_chunk(id, config.timings.chunk_commit));
+    }
 }

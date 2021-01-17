@@ -53,7 +53,7 @@ pub fn create_script(
     for idx in 0..config.images.len() {
         fws.push(load_app(config, idx, config_dir)?);
     }
-    let cmds = generate_script(&protocol, &fws, config);
+    let cmds = generate_script(&protocol, &fws, config)?;
     let filename = generate_script_filename(config);
 
     let script = Script::new(cmds);

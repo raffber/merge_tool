@@ -1,7 +1,5 @@
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::script_cmd::Command;
-use crate::protocol::Protocol;
 use crate::crc::crc16;
 
 const CMD_NONE: u8 = 0x00;
@@ -11,6 +9,7 @@ const CMD_START_TRANSMIT: u8 = 0x03;
 const CMD_DATA: u8 = 0x04;
 const CMD_FINISH: u8 = 0x05;
 const CMD_LEAVE: u8 = 0x06;
+const CMD_COMMIT: u8 = 0x07;
 
 const COM_OK: u8 = 0x00;
 
@@ -125,6 +124,16 @@ impl Protocol for DdpProtocol {
             self.query(
                 vec![self.ddp_code | 0x80, fw_id, CMD_NONE],
                 vec![COM_OK, fw_id, STATE_DONE, STATUS_SUCCESS],
+            ),
+        ]
+    }
+
+    fn commit_chunk(&self, fw_id: u8, chunk_commit: u32) -> Vec<Command> {
+        vec![
+            Command::SetTimeOut(chunk_commit),
+            self.query(
+                vec![self.ddp_code | 0x80, fw_id, CMD_COMMIT],
+                vec![COM_OK, fw_id, STATE_RX_DATA, STATUS_SUCCESS],
             ),
         ]
     }
