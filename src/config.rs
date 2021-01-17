@@ -36,31 +36,42 @@ pub mod default {
         false
     }
     pub fn product_id() -> u16 { 0 }
+    pub fn zero_u32() -> u32 { 0 }
 }
 
-fn skip_if_ff(value: &u8) -> bool {
-    *value == 0xFF
+pub mod skip {
+    use crate::config::ImageVersion;
+
+    pub fn if_ff(value: &u8) -> bool {
+        *value == 0xFF
+    }
+
+    pub fn if_ffff(value: &u16) -> bool { *value == 0xFFFF }
+
+    pub fn if_ffffffff(value: &u32) -> bool { *value == 0xFFFFFFFF }
+
+    pub fn if_zero_u8(value: &u8) -> bool {
+        *value == 0
+    }
+
+    pub fn if_zero_u32(value: &u32) -> bool {
+        *value == 0
+    }
+
+    pub fn if_one_u8(value: &u8) -> bool {
+        *value == 1
+    }
+
+    pub fn if_false(value: &bool) -> bool {
+        !*value
+    }
+    pub fn if_version(value: &ImageVersion) -> bool {
+        value.build == crate::config::default::build_version()
+            && value.minor == crate::config::default::minor_version()
+    }
+
 }
 
-fn skip_if_ffff(value: &u16) -> bool { *value == 0xFFFF }
-
-fn skip_if_ffffffff(value: &u32) -> bool { *value == 0xFFFFFFFF }
-
-fn skip_if_zero(value: &u8) -> bool {
-    *value == 0
-}
-
-fn skip_if_one(value: &u8) -> bool {
-    *value == 1
-}
-
-fn skip_if_false(value: &bool) -> bool {
-    !*value
-}
-
-fn skip_if_version(value: &ImageVersion) -> bool {
-    value.build == default::build_version() && value.minor == default::minor_version()
-}
 
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct Timings {
@@ -69,6 +80,8 @@ pub struct Timings {
     pub data_send_done: u32,
     pub leave_btl: u32,
     pub erase_time: u32,
+    #[serde(default = "default::zero_u32", skip_serializing_if = "skip::if_zero_u32")]
+    pub junk_write_time: u32,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
@@ -138,9 +151,9 @@ impl DeviceConfig {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ImageVersion {
-    #[serde(default = "default::minor_version", skip_serializing_if = "skip_if_ffff")]
+    #[serde(default = "default::minor_version", skip_serializing_if = "skip::if_ffff")]
     pub minor: u16,
-    #[serde(default = "default::build_version", skip_serializing_if = "skip_if_ffffffff")]
+    #[serde(default = "default::build_version", skip_serializing_if = "skip::if_ffffffff")]
     pub build: u32,
 }
 
@@ -155,11 +168,11 @@ impl Default for ImageVersion {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct FwConfig {
-    #[serde(default = "default::fw_id", skip_serializing_if = "skip_if_zero")]
+    #[serde(default = "default::fw_id", skip_serializing_if = "skip::if_zero_u8")]
     pub fw_id: u8,
     pub btl_path: String,
     pub app_path: String,
-    #[serde(default = "Default::default", skip_serializing_if = "skip_if_version")]
+    #[serde(default = "Default::default", skip_serializing_if = "skip::if_version")]
     pub version: ImageVersion,
     pub app_address: AddressRange,
     pub btl_address: AddressRange,
@@ -197,16 +210,16 @@ impl FwConfig {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Config {
-    #[serde(default = "default::product_id", skip_serializing_if = "skip_if_ffff")]
+    #[serde(default = "default::product_id", skip_serializing_if = "skip::if_ffff")]
     pub product_id: u16,
     pub product_name: String,
-    #[serde(default = "default::major_version", skip_serializing_if = "skip_if_ffff")]
+    #[serde(default = "default::major_version", skip_serializing_if = "skip::if_ffff")]
     pub major_version: u16,
-    #[serde(default = "default::btl_version", skip_serializing_if = "skip_if_one")]
+    #[serde(default = "default::btl_version", skip_serializing_if = "skip::if_one_u8")]
     pub btl_version: u8,
     #[serde(
         default = "default::use_backdoor",
-        skip_serializing_if = "skip_if_false"
+        skip_serializing_if = "skip::if_false"
     )]
     pub use_backdoor: bool,
     pub images: Vec<FwConfig>,
