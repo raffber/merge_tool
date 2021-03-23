@@ -4,7 +4,7 @@
 extern crate lazy_static;
 
 use serde_json::Error as JsonError;
-use std::fmt;
+use std::{fmt, io};
 use std::path::Path;
 use std::fs::File;
 use std::io::{BufReader, BufRead};
@@ -33,13 +33,12 @@ pub enum Error {
     CannotParseConfig(JsonError),
     CannotFindGitRepo,
     InvalidProductName,
-    GitError(git2::Error),
-    GitRepoIsNotAWorktree,
-    GitRepoHasUncommitedChanges,
-    GitRepoInDetachedHead,
-    GitRepoHasNoOrigin(git2::Error),
-    GitCannotPush(git2::Error),
-    GitBranchAlreadyExists(String),
+}
+
+impl From<io::Error> for Error {
+    fn from(x: io::Error) -> Self {
+        Error::Io(x)
+    }
 }
 
 impl fmt::Display for Error {

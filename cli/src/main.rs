@@ -35,10 +35,7 @@ fn main() {
         )
         .subcommand(SubCommand::with_name("script").about("Create a bootload script"))
         .subcommand(SubCommand::with_name("merge").about("Merge firmware files"))
-        .subcommand(
-            SubCommand::with_name("release")
-                .about("Create a bootload script, merge files and release to git."),
-        )
+        .subcommand(SubCommand::with_name("info").about("Write a .info.json file"))
         .get_matches();
     let config = matches.value_of("config").unwrap_or("config.gctmrg");
     let config_path = Path::new(config);
@@ -97,9 +94,10 @@ fn main() {
         }
     }
 
-    if let Some(_) = matches.subcommand_matches("release") {
-        if let Err(err) = process::release(&mut config, &config_dir) {
-            println!("Error: Could not release firmware: {}", err);
+    if let Some(_) = matches.subcommand_matches("info") {
+        if let Err(err) = process::info(&mut config, &config_dir, &output_dir) {
+            println!("Error: Could not extract firmware info: {}", err);
+            return;
         }
     }
 }

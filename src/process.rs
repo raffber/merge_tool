@@ -1,11 +1,8 @@
-use std::fs;
-use std::fs::File;
+use std::fs::{File, canonicalize};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use git2::{BranchType, Commit, ObjectType, Repository, Status};
-
-use crate::config::{Config, DDP_CMD_CODE};
+use crate::config::{Config, DDP_CMD_CODE, FwConfig};
 use crate::config::default;
 use crate::crc::crc32;
 use crate::Error;
@@ -14,6 +11,8 @@ use crate::header::Header;
 use crate::protocol::generate_script;
 use crate::script::Script;
 use crate::ddp::DdpProtocol;
+
+use serde::{Serialize, Deserialize};
 
 pub fn merge_firmware(
     config: &mut Config,
@@ -74,126 +73,19 @@ pub fn merge_all(config: &mut Config, config_dir: &Path) -> Result<Vec<Firmware>
     Ok(ret)
 }
 
+fn get_fw_hex_filename(fw_config: &FwConfig) -> String {
+    format!("{}.{}", fw_config.designator(), fw_config.hex_file_format.file_extension())
+}
+
 pub fn write_fws(config: &Config, fws: &[Firmware], target_folder: &Path) -> Result<Vec<PathBuf>, Error> {
     let mut ret = Vec::new();
     for (fw, fw_config) in fws.iter().zip(config.images.iter()) {
-        let file_name = format!(
-            "{}.{}",
-            fw_config.designator(),
-            fw_config.hex_file_format.file_extension()
-        );
+        let file_name = get_fw_hex_filename(fw_config);
         let fpath = target_folder.join(file_name);
         fw.write_to_file(&fpath, &fw_config.hex_file_format)?;
         ret.push(fpath);
     }
     Ok(ret)
-}
-
-
-pub fn is_git_repo_dirty(status: Status) -> bool {
-    status.is_index_modified() || status.is_index_deleted() || status.is_index_renamed()
-        || status.is_index_typechange() || status.is_wt_deleted() || status.is_wt_typechange()
-        || status.is_wt_renamed() || status.is_conflicted() || status.is_wt_new()
-        || status.is_wt_modified()
-}
-
-fn find_last_commit(repo: &Repository) -> Result<Commit, git2::Error> {
-    let obj = repo.head()?.resolve()?.peel(ObjectType::Commit)?;
-    obj.into_commit().map_err(|_| git2::Error::from_str("Couldn't find commit"))
-}
-
-fn format_release_message(config: &Config) -> String {
-    let mut parts = vec![format!("Firmware release for `{}`", config.product_name)];
-    for img in &config.images {
-        parts.push(format!("F{}={}.{}.{}", img.fw_id, config.major_version, img.version.minor, img.version.build));
-    }
-    parts.join(" ")
-}
-
-fn format_branch_name(config: &Config) -> String {
-    let mut parts = vec![format!("release/{}_{}_", config.product_name, config.major_version)];
-    for img in &config.images {
-        parts.push(format!("{}.{}", img.version.minor, img.version.build));
-    }
-    parts.join("")
-}
-
-pub fn release(config: &mut Config, config_dir: &Path) -> Result<(), Error> {
-    config.transform_to_byte_addrs();
-    let repo_path = config.get_repo_path(config_dir)?;
-    let output_dir = repo_path.join("release");
-    fs::create_dir_all(&output_dir).map_err(Error::Io)?;
-
-    // start by checking git repository
-    let repo = Repository::open(&repo_path).map_err(Error::GitError)?;
-    let statuses = repo.statuses(None).map_err(Error::GitError)?;
-    for status in statuses.iter() {
-        let status = status.status();
-        if is_git_repo_dirty(status) {
-            return Err(Error::GitRepoHasUncommitedChanges);
-        }
-    }
-    if repo.head_detached().map_err(Error::GitError)? {
-        return Err(Error::GitRepoInDetachedHead);
-    }
-
-    let mut output_files = Vec::new();
-    // create script
-    let mut new_config = config.clone();
-    let script_path = create_script(&mut new_config, config_dir, &output_dir)?;
-    output_files.push(script_path);
-
-    // merge firmwares
-    let fws = merge_all(config, config_dir)?;
-    let merged_files = write_fws(config, &fws, &output_dir)?;
-    output_files.extend(merged_files);
-
-    // retrieve some basic information about the current state
-    let parent = find_last_commit(&repo).map_err(Error::GitError)?;
-    let signature = repo.signature().map_err(Error::GitError)?;
-
-    // create a branch
-    let branch_name = format_branch_name(config);
-    if let Ok(_) = repo.find_branch(&branch_name, BranchType::Local) {
-        return Err(Error::GitBranchAlreadyExists(branch_name));
-    }
-    let branch = repo.branch(&branch_name, &parent, false).map_err(Error::GitError)?;
-    repo.set_head(branch.get().name().unwrap()).map_err(Error::GitError)?;
-
-    // create a commit
-    let mut index = repo.index().map_err(Error::GitError)?;
-    for file in &output_files {
-        // unwrap is fine because we created the files relative to the
-        // current directory
-        let file = pathdiff::diff_paths(file, &repo_path).unwrap();
-        index.add_path(&file).map_err(Error::GitError)?;
-    }
-    let oid = index.write_tree().map_err(Error::GitError)?;
-    let tree = repo.find_tree(oid).map_err(Error::GitError)?;
-
-    let message = format_release_message(&config);
-    repo.commit(Some("HEAD"), &signature, &signature,
-                &message, &tree, &[&parent]).map_err(Error::GitError)?;
-
-    // create tag
-    let obj = repo.head()
-        .and_then(|x| x.resolve())
-        .and_then(|x| x.peel(ObjectType::Commit))
-        .map_err(Error::GitError)?;
-    repo.tag(&branch_name, &obj, &signature, &message, false)
-        .map_err(Error::GitError)?;
-
-    // TODO: push is difficult since we don't know the authentication method
-    // push this to user?
-
-    // push tag and branch
-    // let mut remote = repo.find_remote("origin").map_err(Error::GitRepoHasNoOrigin)?;
-    // let branch_ref = format!("refs/heads/{}:refs/heads/{}", &branch_name, &branch_name);
-    // let tag_ref = format!("refs/tags/{}:refs/tags/{}", &branch_name, &branch_name);
-    // remote.connect(Direction::Push).map_err(Error::GitCannotPush)?;
-    // remote.push(&[&branch_ref, &tag_ref], None).map_err(Error::GitCannotPush)?;
-
-    Ok(())
 }
 
 fn configure_header(mut fw: Firmware, config: &mut Config, idx: usize) -> Result<Firmware, Error> {
@@ -287,4 +179,70 @@ pub fn load_btl(config: &Config, idx: usize, config_dir: &Path) -> Result<Firmwa
         &fw_config.device_config,
         &fw_config.btl_address,
     )
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+struct FwInfo {
+    fw_id: u8,
+    minor: u16,
+    build: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+struct Info {
+    product_id: u16,
+    project_name: String,
+    major_version: u16,
+    images: Vec<FwInfo>,
+    files: Vec<String>,
+}
+
+pub fn info(config: &Config, config_dir: &Path, output_dir: &Path) -> Result<PathBuf, Error> {
+    let mut config = config.clone();
+    config.transform_to_byte_addrs();
+
+    let output_dir = canonicalize(output_dir)?;
+
+    let mut files = Vec::new();
+
+    let mut fws = Vec::new();
+    for idx in 0..config.images.len() {
+        // will modify config
+        load_app(&mut config, idx, config_dir)?;
+
+        let fw_cfg = &config.images[idx];
+        let fw_info = FwInfo {
+            fw_id: fw_cfg.fw_id,
+            minor: fw_cfg.version.minor,
+            build: fw_cfg.version.build,
+        };
+        fws.push(fw_info);
+
+        // add generated files, for possible archival
+        let fw_file = output_dir.join(get_fw_hex_filename(fw_cfg));
+        files.push(fw_file.to_str().unwrap().to_string());
+        let btl_path = Config::normalize_path(&fw_cfg.btl_path, config_dir)?;
+        let app_path = Config::normalize_path(&fw_cfg.app_path, config_dir)?;
+        files.push(btl_path.to_str().unwrap().to_string());
+        files.push(app_path.to_str().unwrap().to_string());
+    }
+
+    let script_file = output_dir.join(generate_script_filename(&config));
+    files.push(script_file.to_str().unwrap().to_string());
+
+    let info = Info {
+        product_id: config.product_id,
+        project_name: config.product_name,
+        major_version: config.major_version,
+        images: fws,
+        files,
+    };
+
+    let data = serde_json::to_string_pretty(&info).unwrap();
+
+    let path = output_dir.join("info.json");
+    let mut file = File::create(&path).map_err(Error::Io)?;
+    file.write_all(data.as_bytes())
+        .map_err(Error::Io)?;
+    Ok(path)
 }
