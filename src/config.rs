@@ -332,7 +332,7 @@ impl Default for Config {
         Config {
             product_id: 0,
             product_name: "".to_string(),
-            major_version: 0xFF,
+            major_version: 0xFFFF,
             btl_version: 1,
             use_backdoor: false,
             images: vec![],

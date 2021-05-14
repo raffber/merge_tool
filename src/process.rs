@@ -102,7 +102,7 @@ fn configure_header(mut fw: Firmware, config: &mut Config, idx: usize) -> Result
     }
     if config.major_version != default::major_version() && config.major_version != header.major_version() {
         return Err(Error::InvalidConfig(format!(
-            "Major version in firmware and config does not match: {} vs. {}",
+            "Major version in config ({}) and firmware ({}) does not match",
             config.major_version,
             header.major_version()
         )));
