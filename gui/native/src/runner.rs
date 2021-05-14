@@ -53,40 +53,6 @@ pub fn generate_script(mut config: Config, config_path: &Path) -> impl Stream<It
     rx
 }
 
-pub fn release(config: Config, config_path: &Path) -> impl Stream<Item = RunnerMsg> {
-    let (tx, rx) = mpsc::unbounded();
-    let config_path = config_path.to_path_buf();
-    thread::spawn(move || {
-        let config_dir = match Config::get_config_dir(&config_path) {
-            Ok(dir) => dir,
-            Err(_) => {
-                tx.unbounded_send(RunnerMsg::Failure(
-                    "Unable to retrieve config directory.".to_string(),
-                ))
-                .unwrap();
-                return;
-            }
-        };
-        let mut config = config;
-        match process::release(&mut config, &config_dir) {
-            Ok(_) => {
-                tx.unbounded_send(RunnerMsg::Success(
-                    "Successfully released firmware!".to_string(),
-                ))
-                .unwrap();
-            }
-            Err(err) => {
-                tx.unbounded_send(RunnerMsg::Failure(format!(
-                    "Error releaseing firmware: {}",
-                    err
-                )))
-                .unwrap();
-            }
-        }
-    });
-    rx
-}
-
 fn do_merge(
     config: &mut Config,
     config_dir: &Path,

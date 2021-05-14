@@ -37,7 +37,6 @@ pub enum Msg {
     LogMsg(RunnerMsg),
     GenerateScript,
     Merge,
-    Release,
 }
 
 pub struct MainApp {
@@ -326,21 +325,6 @@ impl App for MainApp {
                 ctx.subscribe(runner::merge(self.config.clone(), path).map(Msg::LogMsg));
                 Updated::no()
             }
-            Msg::Release => {
-                if self.config_path.trim().is_empty() {
-                    return self.update(
-                        LogMsg(RunnerMsg::Failure("No config file specified!".to_string())),
-                        ctx,
-                    );
-                }
-                if self.process_active {
-                    return Updated::no();
-                }
-                self.process_active = true;
-                let path = Path::new(&self.config_path);
-                ctx.subscribe(runner::release(self.config.clone(), path).map(Msg::LogMsg));
-                Updated::no()
-            }
         }
     }
 }
@@ -408,7 +392,6 @@ impl Render for MainApp {
                 <div class="d-flex flex-row my-2">
                     {self.render_log()}
                     <button type="button" class="btn btn-secondary mx-1 main-btn" @click={|_| Msg::Merge}>{"Merge"}</>
-                    <button type="button" class="btn btn-secondary mx-1 main-btn" @click={|_| Msg::Release}>{"Release"}</>
                     <button type="button" class="btn btn-primary ml-1 main-btn" @click={|_| Msg::GenerateScript}>{"Generate Script"}</>
                 </>
             </>
