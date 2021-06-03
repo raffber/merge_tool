@@ -3,6 +3,7 @@
 curdir=$(dirname "$0")
 rootdir=$(realpath "$curdir"/..)
 
-docker run -v "$rootdir":/root/ws -w /root/ws/cli merge-tool-agent cargo build
+rm -rf "$rootdir"/comsrv/target
 
+docker run -v "$rootdir":/data -w /data/cli -u "$(id -u)":"$(id -g)" merge-tool-agent cargo build --release
 
