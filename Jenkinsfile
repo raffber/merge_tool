@@ -8,6 +8,7 @@ pipeline {
         stage('build-cli') {
             steps {
                 sh 'cd cli && cargo build --release'
+                archiveArtifacts(artifacts: 'cli/target/release/merge_tool_cli')
             }
         }
         stage('test-cli') {
