@@ -186,6 +186,7 @@ struct FwInfo {
     fw_id: u8,
     minor: u16,
     build: u32,
+    crc: u32,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -208,13 +209,14 @@ pub fn info(config: &Config, config_dir: &Path, output_dir: &Path) -> Result<Pat
     let mut fws = Vec::new();
     for idx in 0..config.images.len() {
         // will modify config
-        load_app(&mut config, idx, config_dir)?;
+        let fw = load_app(&mut config, idx, config_dir)?;
 
         let fw_cfg = &config.images[idx];
         let fw_info = FwInfo {
             fw_id: fw_cfg.fw_id,
             minor: fw_cfg.version.minor,
             build: fw_cfg.version.build,
+            crc: fw.read_u32(0),
         };
         fws.push(fw_info);
 
