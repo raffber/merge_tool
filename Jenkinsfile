@@ -17,5 +17,11 @@ pipeline {
                 sh 'cd cli && cargo test'
             }
         }
+        stage('build-artifacts-windows') {
+            steps {
+                sh 'cd cli && cargo build --target x86_64-pc-windows-gnu --release'
+                archiveArtifacts(artifacts: 'cli/target/x86_64-pc-windows-gnu/release/merge_tool_cli.exe')
+            }
+        }
     }
 }
