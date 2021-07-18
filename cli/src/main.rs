@@ -6,6 +6,7 @@ use clap::{App, Arg, SubCommand};
 use merge_tool::config::Config;
 use merge_tool::process;
 use std::str::FromStr;
+use std::process::exit;
 
 fn main() {
     env_logger::init();
@@ -41,14 +42,14 @@ fn main() {
     let config_path = Path::new(config);
     if !config_path.exists() {
         println!("Config file does not exist.");
-        return;
+        exit(1);
     }
     log::debug!("Fetching Config from: {:?}", config_path);
     let config_dir = match Config::get_config_dir(config_path) {
         Ok(ret) => ret,
         Err(err) => {
             println!("Cannot retrieve parent directory of config file: {}", err);
-            return;
+            exit(1);
         }
     };
 
@@ -61,35 +62,36 @@ fn main() {
         Ok(config) => config,
         Err(err) => {
             println!("Cannot load config: {}", err);
-            return;
+            exit(1);
         }
     };
 
     if let Some(_) = matches.subcommand_matches("script") {
         if let Err(err) = create_dir_all(&output_dir) {
             println!("Cannot create output directory: {}", err);
-            return;
+            exit(1);
         }
         if let Err(err) = process::create_script(&mut config, &config_dir, &output_dir) {
             println!("Error: Could not create bootload script: {}", err);
+            exit(1);
         }
     }
 
     if let Some(_) = matches.subcommand_matches("merge") {
         if let Err(err) = create_dir_all(&output_dir) {
             println!("Cannot create output directory: {}", err);
-            return;
+            exit(1);
         }
         match process::merge_all(&mut config, &config_dir) {
             Ok(fws) => {
                 if let Err(err) = process::write_fws(&config, &fws, &output_dir) {
                     println!("Error: Couldn't write merged firmware to disk: {}", err);
-                    return;
+                    exit(1);
                 }
             }
             Err(err) => {
                 println!("Error: Couldn't merge firmware images: {}", err);
-                return;
+                exit(1);
             }
         }
     }
@@ -97,7 +99,7 @@ fn main() {
     if let Some(_) = matches.subcommand_matches("info") {
         if let Err(err) = process::info(&mut config, &config_dir, &output_dir) {
             println!("Error: Could not extract firmware info: {}", err);
-            return;
+            exit(1);
         }
     }
 }
