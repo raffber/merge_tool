@@ -1,18 +1,19 @@
-use std::fs::{File, canonicalize};
+use std::fs::{canonicalize, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use crate::config::{Config, DDP_CMD_CODE, FwConfig};
 use crate::config::default;
+use crate::config::{Config, FwConfig, DDP_CMD_CODE};
 use crate::crc::crc32;
-use crate::Error;
+use crate::ddp::DdpProtocol;
 use crate::firmware::Firmware;
 use crate::header::Header;
 use crate::protocol::generate_script;
 use crate::script::Script;
-use crate::ddp::DdpProtocol;
+use crate::Error;
 
-use serde::{Serialize, Deserialize};
+use crate::blocking_ddp::BlockingDdpProtocol;
+use serde::{Deserialize, Serialize};
 
 pub fn merge_firmware(
     config: &mut Config,
@@ -47,14 +48,20 @@ pub fn create_script(
     output_dir: &Path,
 ) -> Result<PathBuf, Error> {
     config.transform_to_byte_addrs();
-    let protocol = DdpProtocol::new(DDP_CMD_CODE);
     let mut fws = Vec::new();
     for idx in 0..config.images.len() {
         fws.push(load_app(config, idx, config_dir)?);
     }
-    let cmds = generate_script(&protocol, &fws, config);
-    let filename = generate_script_filename(config);
 
+    let cmds = if config.blocking {
+        let protocol = DdpProtocol::new(DDP_CMD_CODE);
+        generate_script(&protocol, &fws, config)
+    } else {
+        let protocol = BlockingDdpProtocol::new(DDP_CMD_CODE);
+        generate_script(&protocol, &fws, config)
+    };
+
+    let filename = generate_script_filename(config);
     let script = Script::new(cmds);
     let path = output_dir.join(&filename);
     let mut file = File::create(&path).map_err(Error::Io)?;
@@ -74,10 +81,18 @@ pub fn merge_all(config: &mut Config, config_dir: &Path) -> Result<Vec<Firmware>
 }
 
 fn get_fw_hex_filename(fw_config: &FwConfig) -> String {
-    format!("{}.{}", fw_config.designator(), fw_config.hex_file_format.file_extension())
+    format!(
+        "{}.{}",
+        fw_config.designator(),
+        fw_config.hex_file_format.file_extension()
+    )
 }
 
-pub fn write_fws(config: &Config, fws: &[Firmware], target_folder: &Path) -> Result<Vec<PathBuf>, Error> {
+pub fn write_fws(
+    config: &Config,
+    fws: &[Firmware],
+    target_folder: &Path,
+) -> Result<Vec<PathBuf>, Error> {
     let mut ret = Vec::new();
     for (fw, fw_config) in fws.iter().zip(config.images.iter()) {
         let file_name = get_fw_hex_filename(fw_config);
@@ -100,7 +115,9 @@ fn configure_header(mut fw: Firmware, config: &mut Config, idx: usize) -> Result
     } else if config.product_id == default::product_id() {
         config.product_id = header.product_id();
     }
-    if config.major_version != default::major_version() && config.major_version != header.major_version() {
+    if config.major_version != default::major_version()
+        && config.major_version != header.major_version()
+    {
         return Err(Error::InvalidConfig(format!(
             "Major version in config ({}) and firmware ({}) does not match",
             config.major_version,
@@ -244,7 +261,6 @@ pub fn info(config: &Config, config_dir: &Path, output_dir: &Path) -> Result<Pat
 
     let path = output_dir.join("info.json");
     let mut file = File::create(&path).map_err(Error::Io)?;
-    file.write_all(data.as_bytes())
-        .map_err(Error::Io)?;
+    file.write_all(data.as_bytes()).map_err(Error::Io)?;
     Ok(path)
 }

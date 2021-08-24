@@ -1,56 +1,56 @@
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::script_cmd::Command;
-use crate::protocol::Protocol;
 use crate::crc::crc16;
+use crate::protocol::Protocol;
+use crate::script_cmd::Command;
 
-const CMD_NONE: u8 = 0x00;
-const CMD_RESET: u8 = 0x01;
-const CMD_VALIDATE: u8 = 0x02;
-const CMD_START_TRANSMIT: u8 = 0x03;
-const CMD_DATA: u8 = 0x04;
-const CMD_FINISH: u8 = 0x05;
-const CMD_LEAVE: u8 = 0x06;
+pub const CMD_NONE: u8 = 0x00;
+pub const CMD_RESET: u8 = 0x01;
+pub const CMD_VALIDATE: u8 = 0x02;
+pub const CMD_START_TRANSMIT: u8 = 0x03;
+pub const CMD_DATA: u8 = 0x04;
+pub const CMD_FINISH: u8 = 0x05;
+pub const CMD_LEAVE: u8 = 0x06;
 
-const COM_OK: u8 = 0x00;
+pub const COM_OK: u8 = 0x00;
 
-const STATE_NOT_IN_BTL: u8 = 0x00;
-const STATE_IDLE: u8 = 0x01;
-const STATE_VALIDATED: u8 = 0x02;
-const STATE_ERASING: u8 = 0x03;
-const STATE_RX_DATA: u8 = 0x04;
-const STATE_CHECKING_CRC: u8 = 0x05;
-const STATE_DONE: u8 = 0x06;
-const STATE_ERR: u8 = 0x07;
+pub const STATE_NOT_IN_BTL: u8 = 0x00;
+pub const STATE_IDLE: u8 = 0x01;
+pub const STATE_VALIDATED: u8 = 0x02;
+pub const STATE_ERASING: u8 = 0x03;
+pub const STATE_RX_DATA: u8 = 0x04;
+pub const STATE_CHECKING_CRC: u8 = 0x05;
+pub const STATE_DONE: u8 = 0x06;
+pub const STATE_ERR: u8 = 0x07;
 
-const STATUS_SUCCESS: u8 = 0x00;
+pub const STATUS_SUCCESS: u8 = 0x00;
 
 pub struct DdpProtocol {
     ddp_code: u8,
 }
 
+pub fn write(mut data: Vec<u8>) -> Command {
+    let crc = crc16(&data);
+    data.push((crc >> 8) as u8);
+    data.push((crc & 0xFF) as u8);
+    Command::Write(data)
+}
+
+pub fn query(mut tx: Vec<u8>, mut rx: Vec<u8>) -> Command {
+    let crc = crc16(&tx);
+    tx.push((crc >> 8) as u8);
+    tx.push((crc & 0xFF) as u8);
+
+    let crc = crc16(&rx);
+    rx.push((crc >> 8) as u8);
+    rx.push((crc & 0xFF) as u8);
+
+    Command::Query(tx, rx)
+}
+
 impl DdpProtocol {
     pub fn new(ddp_code: u8) -> Self {
         Self { ddp_code }
-    }
-
-    pub fn write(&self, mut data: Vec<u8>) -> Command {
-        let crc = crc16(&data);
-        data.push((crc >> 8) as u8);
-        data.push((crc & 0xFF) as u8);
-        Command::Write(data)
-    }
-
-    pub fn query(&self, mut tx: Vec<u8>, mut rx: Vec<u8>) -> Command {
-        let crc = crc16(&tx);
-        tx.push((crc >> 8) as u8);
-        tx.push((crc & 0xFF) as u8);
-
-        let crc = crc16(&rx);
-        rx.push((crc >> 8) as u8);
-        rx.push((crc & 0xFF) as u8);
-
-        Command::Query(tx, rx)
     }
 }
 
@@ -58,9 +58,9 @@ impl Protocol for DdpProtocol {
     fn enter(&self, fw_id: u8, wait_time: u32) -> Vec<Command> {
         vec![
             Command::SetTimeOut(wait_time),
-            self.write(vec![self.ddp_code, fw_id, CMD_RESET]),
+            write(vec![self.ddp_code, fw_id, CMD_RESET]),
             Command::SetTimeOut(0),
-            self.query(
+            query(
                 vec![self.ddp_code | 0x80, fw_id, CMD_NONE],
                 vec![COM_OK, fw_id, STATE_IDLE, STATUS_SUCCESS],
             ),
@@ -70,7 +70,7 @@ impl Protocol for DdpProtocol {
     fn leave(&self, fw_id: u8, wait_time: u32) -> Vec<Command> {
         vec![
             Command::SetTimeOut(wait_time),
-            self.write(vec![self.ddp_code, fw_id, CMD_LEAVE]),
+            write(vec![self.ddp_code, fw_id, CMD_LEAVE]),
         ]
     }
 
@@ -79,9 +79,9 @@ impl Protocol for DdpProtocol {
         tx_data.extend(data);
         vec![
             Command::SetTimeOut(wait_time),
-            self.write(tx_data),
+            write(tx_data),
             Command::SetTimeOut(0),
-            self.query(
+            query(
                 vec![self.ddp_code | 0x80, fw_id, CMD_NONE],
                 vec![COM_OK, fw_id, STATE_VALIDATED, STATUS_SUCCESS],
             ),
@@ -91,9 +91,9 @@ impl Protocol for DdpProtocol {
     fn start_transmit(&self, fw_id: u8, erase_time: u32) -> Vec<Command> {
         vec![
             Command::SetTimeOut(erase_time),
-            self.write(vec![self.ddp_code, fw_id, CMD_START_TRANSMIT]),
+            write(vec![self.ddp_code, fw_id, CMD_START_TRANSMIT]),
             Command::SetTimeOut(0),
-            self.query(
+            query(
                 vec![self.ddp_code | 0x80, fw_id, CMD_NONE],
                 vec![COM_OK, fw_id, STATE_RX_DATA, STATUS_SUCCESS],
             ),
@@ -109,20 +109,23 @@ impl Protocol for DdpProtocol {
         LittleEndian::write_u32(&mut buf, address as u32);
         tx.extend(buf.iter());
         tx.extend(data);
-        Some(self.query(tx, vec![COM_OK, fw_id, STATE_RX_DATA, STATUS_SUCCESS]))
+        Some(query(
+            tx,
+            vec![COM_OK, fw_id, STATE_RX_DATA, STATUS_SUCCESS],
+        ))
     }
 
     fn finish(&self, fw_id: u8, send_done: u32, crc_check: u32) -> Vec<Command> {
         vec![
             Command::SetTimeOut(send_done),
-            self.query(
+            query(
                 vec![self.ddp_code | 0x80, fw_id, CMD_NONE],
                 vec![COM_OK, fw_id, STATE_RX_DATA, STATUS_SUCCESS],
             ),
             Command::SetTimeOut(crc_check),
-            self.write(vec![self.ddp_code, fw_id, CMD_FINISH]),
+            write(vec![self.ddp_code, fw_id, CMD_FINISH]),
             Command::SetTimeOut(0),
-            self.query(
+            query(
                 vec![self.ddp_code | 0x80, fw_id, CMD_NONE],
                 vec![COM_OK, fw_id, STATE_DONE, STATUS_SUCCESS],
             ),

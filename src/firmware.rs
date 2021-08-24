@@ -73,7 +73,7 @@ impl Firmware {
 
     pub fn read_u32(&self, idx: usize) -> u32 {
         let a = self.read_u16(idx) as u32;
-        let b = self.read_u16(idx+2) as u32;
+        let b = self.read_u16(idx + 2) as u32;
         match self.config.endianness {
             Endianness::Big => b | (a << 16),
             Endianness::Little => a | (b << 16),

@@ -1,9 +1,9 @@
 use crate::Error;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fs::{canonicalize, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use regex::Regex;
 
 pub const DDP_CMD_CODE: u8 = 0x10;
 
@@ -35,16 +35,25 @@ pub mod default {
     pub fn use_backdoor() -> bool {
         false
     }
-    pub fn product_id() -> u16 { 0 }
+    pub fn product_id() -> u16 {
+        0
+    }
+    pub fn blocking() -> bool {
+        false
+    }
 }
 
 fn skip_if_ff(value: &u8) -> bool {
     *value == 0xFF
 }
 
-fn skip_if_ffff(value: &u16) -> bool { *value == 0xFFFF }
+fn skip_if_ffff(value: &u16) -> bool {
+    *value == 0xFFFF
+}
 
-fn skip_if_ffffffff(value: &u32) -> bool { *value == 0xFFFFFFFF }
+fn skip_if_ffffffff(value: &u32) -> bool {
+    *value == 0xFFFFFFFF
+}
 
 fn skip_if_zero(value: &u8) -> bool {
     *value == 0
@@ -138,9 +147,15 @@ impl DeviceConfig {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ImageVersion {
-    #[serde(default = "default::minor_version", skip_serializing_if = "skip_if_ffff")]
+    #[serde(
+        default = "default::minor_version",
+        skip_serializing_if = "skip_if_ffff"
+    )]
     pub minor: u16,
-    #[serde(default = "default::build_version", skip_serializing_if = "skip_if_ffffffff")]
+    #[serde(
+        default = "default::build_version",
+        skip_serializing_if = "skip_if_ffffffff"
+    )]
     pub build: u32,
 }
 
@@ -200,7 +215,10 @@ pub struct Config {
     #[serde(default = "default::product_id", skip_serializing_if = "skip_if_ffff")]
     pub product_id: u16,
     pub product_name: String,
-    #[serde(default = "default::major_version", skip_serializing_if = "skip_if_ffff")]
+    #[serde(
+        default = "default::major_version",
+        skip_serializing_if = "skip_if_ffff"
+    )]
     pub major_version: u16,
     #[serde(default = "default::btl_version", skip_serializing_if = "skip_if_one")]
     pub btl_version: u8,
@@ -209,6 +227,8 @@ pub struct Config {
         skip_serializing_if = "skip_if_false"
     )]
     pub use_backdoor: bool,
+    #[serde(default = "default::blocking", skip_serializing_if = "skip_if_false")]
+    pub blocking: bool,
     pub images: Vec<FwConfig>,
     pub time_state_transition: u32,
     #[serde(
@@ -299,9 +319,9 @@ impl Config {
         for fwconfig in &mut self.images {
             if fwconfig.device_config.word_addressing {
                 fwconfig.app_address.begin *= 2;
-                fwconfig.app_address.end = 2*fwconfig.app_address.end + 1;
+                fwconfig.app_address.end = 2 * fwconfig.app_address.end + 1;
                 fwconfig.btl_address.begin *= 2;
-                fwconfig.btl_address.end = 2*fwconfig.btl_address.end + 1;
+                fwconfig.btl_address.end = 2 * fwconfig.btl_address.end + 1;
                 fwconfig.header_offset *= 2;
                 fwconfig.device_config.page_size *= 2;
             }
@@ -335,10 +355,11 @@ impl Default for Config {
             major_version: 0xFFFF,
             btl_version: 1,
             use_backdoor: false,
+            blocking: false,
             images: vec![],
             time_state_transition: 0,
             repo_path: "".to_string(),
-            byte_addr_transformed: false
+            byte_addr_transformed: false,
         }
     }
 }

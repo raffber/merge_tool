@@ -4,22 +4,23 @@
 extern crate lazy_static;
 
 use serde_json::Error as JsonError;
-use std::{fmt, io};
-use std::path::Path;
 use std::fs::File;
-use std::io::{BufReader, BufRead};
+use std::io::{BufRead, BufReader};
+use std::path::Path;
+use std::{fmt, io};
 
-pub mod script_cmd;
+pub mod blocking_ddp;
 pub mod config;
 pub mod crc;
+pub mod ddp;
 pub mod firmware;
 pub mod header;
 pub mod intel_hex;
 pub mod process;
 pub mod protocol;
 pub mod script;
+pub mod script_cmd;
 pub mod srecord;
-pub mod ddp;
 
 #[derive(Debug)]
 pub enum Error {
@@ -57,8 +58,7 @@ pub fn swap_bytearray(data: &mut Vec<u8>) {
 
 pub fn load_lines(path: &Path) -> Result<Vec<String>, Error> {
     let file = File::open(path).map_err(Error::Io)?;
-    let lines = BufReader::new(file)
-        .lines();
+    let lines = BufReader::new(file).lines();
     let mut ret = Vec::new();
     for line in lines {
         let x = line.map_err(Error::Io)?.trim().to_string();
@@ -68,7 +68,6 @@ pub fn load_lines(path: &Path) -> Result<Vec<String>, Error> {
     }
     Ok(ret)
 }
-
 
 #[cfg(test)]
 mod tests {

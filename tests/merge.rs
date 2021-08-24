@@ -10,26 +10,45 @@ use merge_tool::process;
 
 fn save_hex(path: &str, data: &[u8], range: &AddressRange) {
     let serialized = intel_hex::serialize(false, range, data);
-    File::create(path).unwrap().write_all(serialized.as_bytes()).unwrap();
+    File::create(path)
+        .unwrap()
+        .write_all(serialized.as_bytes())
+        .unwrap();
 }
 
 fn create_test_data() {
     let mut data: Vec<_> = (1u8..0x50).collect();
 
-    save_hex("tests/btl_f1.hex", &data.clone(), &AddressRange::new(0xAA00, 0xAAFF));
-    save_hex("tests/btl_f2.hex", &data.clone(), &AddressRange::new(0xAA00, 0xAAFF));
+    save_hex(
+        "tests/btl_f1.hex",
+        &data.clone(),
+        &AddressRange::new(0xAA00, 0xAAFF),
+    );
+    save_hex(
+        "tests/btl_f2.hex",
+        &data.clone(),
+        &AddressRange::new(0xAA00, 0xAAFF),
+    );
 
     data[4 + 2] = 1; // firmware id
     data[4 + 4] = 3; // major
     data[4 + 6] = 5; // minor
     data[4 + 8] = 4; // build
-    save_hex("tests/app_f1.hex", &data.clone(), &AddressRange::new(0xAB00, 0xABFF));
+    save_hex(
+        "tests/app_f1.hex",
+        &data.clone(),
+        &AddressRange::new(0xAB00, 0xABFF),
+    );
 
     data[4 + 2] = 2; // firmware id
     data[4 + 4] = 3; // major
     data[4 + 6] = 8; // minor
     data[4 + 8] = 7; // build
-    save_hex("tests/app_f2.hex", &data.clone(), &AddressRange::new(0xAB00, 0xABFF));
+    save_hex(
+        "tests/app_f2.hex",
+        &data.clone(),
+        &AddressRange::new(0xAB00, 0xABFF),
+    );
 }
 
 #[test]
@@ -61,10 +80,10 @@ fn merge() {
     data[4 + 4] = 3; // major
     data[4 + 6] = 5; // minor
     data[4 + 8] = 4; // build
-    data[4+12] = 128; // length
-    data[4+13] = 0;
-    data[4+14] = 0;
-    data[4+15] = 0;
+    data[4 + 12] = 128; // length
+    data[4 + 13] = 0;
+    data[4 + 14] = 0;
+    data[4 + 15] = 0;
 
     // compute and compare CRC
     let ref_crc = crc32(&data[4..128]);

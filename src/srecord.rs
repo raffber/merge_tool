@@ -1,5 +1,5 @@
 use crate::config::AddressRange;
-use crate::{swap_bytearray, Error, load_lines};
+use crate::{load_lines, swap_bytearray, Error};
 use hex;
 use std::cmp::min;
 use std::fs::File;
@@ -18,7 +18,7 @@ pub fn load(path: &Path, word_addressing: bool, range: &AddressRange) -> Result<
     parse(word_addressing, range, lines.into_iter())
 }
 
-pub fn parse<T: Iterator<Item=String>>(
+pub fn parse<T: Iterator<Item = String>>(
     word_addressing: bool,
     range: &AddressRange,
     lines: T,

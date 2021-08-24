@@ -1,6 +1,6 @@
-use crate::script_cmd::Command;
 use crate::config::Config;
 use crate::firmware::Firmware;
+use crate::script_cmd::Command;
 
 const DATA_LEN_PER_PACKAGE: usize = 16;
 
@@ -18,9 +18,10 @@ fn make_header(config: &Config) -> Command {
         ("product", config.product_name.clone()),
         ("product_id", config.product_id.to_string()),
         ("script_version", 1.to_string()),
-    ].iter()
-        .map(|(x,y)| (x.to_string(), y.to_string()))
-        .collect();
+    ]
+    .iter()
+    .map(|(x, y)| (x.to_string(), y.to_string()))
+    .collect();
     for fw in &config.images {
         header.push((
             format!("version_f{}", fw.fw_id),
@@ -59,7 +60,9 @@ pub fn generate_script<P: Protocol>(
             fw_config.designator()
         )));
         ret.extend(protocol.enter(id, config.time_state_transition));
-        ret.push(Command::SetErrorMessage("Could not enter bootlader!".to_string()));
+        ret.push(Command::SetErrorMessage(
+            "Could not enter bootlader!".to_string(),
+        ));
         ret.push(Command::Log("done".to_string()));
 
         let mut validation_data = [0_u8; 5];
@@ -93,7 +96,11 @@ pub fn generate_script<P: Protocol>(
         ret.push(Command::Log("done".to_string()));
 
         ret.push(Command::Log("Checking CRC...".to_string()));
-        ret.extend(protocol.finish(id, fw_config.timings.data_send_done, fw_config.timings.crc_check));
+        ret.extend(protocol.finish(
+            id,
+            fw_config.timings.data_send_done,
+            fw_config.timings.crc_check,
+        ));
         ret.push(Command::SetErrorMessage("failed".to_string()));
         ret.push(Command::Log("done".to_string()));
 
