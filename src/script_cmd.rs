@@ -1,4 +1,5 @@
 use byteorder::{ByteOrder, LittleEndian};
+use std::num::ParseIntError;
 
 #[derive(Clone, Debug)]
 pub enum Command {
@@ -11,6 +12,15 @@ pub enum Command {
     Progress(u8),
     Checksum(Vec<u8>),
 }
+
+pub const IDN_HEADER: u8 = 0x01;
+pub const IDN_WRITE: u8 = 0x02;
+pub const IDN_QUERY: u8 = 0x03;
+pub const IDN_SET_TIMEOUT: u8 = 0x10;
+pub const IDN_LOG: u8 = 0x20;
+pub const IDN_SET_ERROR_MESSAGE: u8 = 0x21;
+pub const IDN_PROGRESS: u8 = 0x22;
+pub const IDN_CHECKSUM: u8 = 0x30;
 
 impl Command {
     fn data(&self) -> Vec<u8> {
@@ -61,14 +71,14 @@ impl Command {
 
     fn identifier(&self) -> u8 {
         match self {
-            Command::Header(_) => 0x01,
-            Command::Write(_) => 0x02,
-            Command::Query(_, _) => 0x03,
-            Command::SetTimeOut(_) => 0x10,
-            Command::Log(_) => 0x20,
-            Command::SetErrorMessage(_) => 0x21,
-            Command::Progress(_) => 0x22,
-            Command::Checksum(_) => 0x30,
+            Command::Header(_) => IDN_HEADER,
+            Command::Write(_) => IDN_WRITE,
+            Command::Query(_, _) => IDN_QUERY,
+            Command::SetTimeOut(_) => IDN_SET_TIMEOUT,
+            Command::Log(_) => IDN_LOG,
+            Command::SetErrorMessage(_) => IDN_SET_ERROR_MESSAGE,
+            Command::Progress(_) => IDN_PROGRESS,
+            Command::Checksum(_) => IDN_CHECKSUM,
         }
     }
 
@@ -77,6 +87,82 @@ impl Command {
         let identifier = hex::encode_upper(&[self.identifier()]);
         format!(":{}{}", identifier, data)
     }
+
+    pub fn parse_line(&self, line: &str) -> Result<Command, ParseError> {
+        if line.len() < 5 || line.len() % 2 != 1 {
+            return Err(ParseError::InvalidLength);
+        }
+        if line[0] != ':' {
+            return Err(ParseError::DelimiterMissing);
+        }
+        let line = &line[1..];
+        let parsed: Result<Vec<u8>, ParseIntError> = (0..line.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&line[i..i + 2], 16))
+            .collect();
+        let parsed = parsed.map_err(|_| ParseError::InvalidHexCharacter)?;
+        let cmd = parsed[0];
+        let data = &parsed[1..];
+        let ret = match cmd {
+            IDN_HEADER => {
+                let values = String::from_utf8(data.to_vec()).map_err(|_| ParseError::InvalidEncoding)?;
+                let mut header_data = Vec::new();
+                for kv in values.split("|") {
+                    let mut kv: Vec<_> = kv.split("=").map(|x| Some(x.to_string())).collect();
+                    if kv.len() != 2 {
+                        return Err(ParseError::InvalidHeaderFormat);
+                    }
+                    let key = kv[0].take().unwrap();
+                    let value = kv[1].take().unwrap();
+                    header_data.push((key, value));
+                }
+                Command::Header(header_data)
+            }
+            IDN_WRITE => {
+                if data.len() < 2 {
+                    return Err(ParseError::InvalidLength);
+                }
+                let write_len = LittleEndian::read_u16(&data[0..2]);
+                let data = &data[2..];
+                if data.len() != write_len {
+                    return Err(ParseError::InvalidLength);
+                }
+                let write = data.to_vec();
+                Command::Write(write)
+            }
+            IDN_QUERY => {
+                if data.len() < 4 {
+                    return Err(ParseError::InvalidLength);
+                }
+                let write_len = LittleEndian::read_u16(&data[0..2]);
+                let read_len = LittleEndian::read_u16(&data[2..4]);
+                let data = &data[4..];
+                if data.len() != write_len + read_len {
+                    return Err(ParseError::InvalidLength);
+                }
+                let write = data[0..write_len].to_vec();
+                let read = data[write_len..].to_vec();
+                Command::Query(write, read)
+            }
+            IDN_CHECKSUM => {}
+            IDN_PROGRESS => {}
+            IDN_SET_ERROR_MESSAGE => {}
+            IDN_LOG => {}
+            IDN_SET_TIMEOUT => {}
+            _ => return Err(ParseError::InvalidCommand),
+        }
+
+        Ok(Command::Log("foobar".to_string()))
+    }
+}
+
+enum ParseError {
+    DelimiterMissing,
+    InvalidLength,
+    InvalidHexCharacter,
+    InvalidCommand,
+    InvalidEncoding,
+    InvalidHeaderFormat,
 }
 
 #[cfg(test)]
