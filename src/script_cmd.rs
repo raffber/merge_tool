@@ -92,7 +92,7 @@ impl Command {
         if line.len() < 5 || line.len() % 2 != 1 {
             return Err(ParseError::InvalidLength);
         }
-        if line[0] != ':' {
+        if line.chars().nth(0).unwrap() != ':' {
             return Err(ParseError::DelimiterMissing);
         }
         let line = &line[1..];
@@ -105,7 +105,8 @@ impl Command {
         let data = &parsed[1..];
         let ret = match cmd {
             IDN_HEADER => {
-                let values = String::from_utf8(data.to_vec()).map_err(|_| ParseError::InvalidEncoding)?;
+                let values =
+                    String::from_utf8(data.to_vec()).map_err(|_| ParseError::InvalidEncoding)?;
                 let mut header_data = Vec::new();
                 for kv in values.split("|") {
                     let mut kv: Vec<_> = kv.split("=").map(|x| Some(x.to_string())).collect();
@@ -122,7 +123,7 @@ impl Command {
                 if data.len() < 2 {
                     return Err(ParseError::InvalidLength);
                 }
-                let write_len = LittleEndian::read_u16(&data[0..2]);
+                let write_len = LittleEndian::read_u16(&data[0..2]) as usize;
                 let data = &data[2..];
                 if data.len() != write_len {
                     return Err(ParseError::InvalidLength);
@@ -134,8 +135,8 @@ impl Command {
                 if data.len() < 4 {
                     return Err(ParseError::InvalidLength);
                 }
-                let write_len = LittleEndian::read_u16(&data[0..2]);
-                let read_len = LittleEndian::read_u16(&data[2..4]);
+                let write_len = LittleEndian::read_u16(&data[0..2]) as usize;
+                let read_len = LittleEndian::read_u16(&data[2..4]) as usize;
                 let data = &data[4..];
                 if data.len() != write_len + read_len {
                     return Err(ParseError::InvalidLength);
@@ -144,19 +145,36 @@ impl Command {
                 let read = data[write_len..].to_vec();
                 Command::Query(write, read)
             }
-            IDN_CHECKSUM => {}
-            IDN_PROGRESS => {}
-            IDN_SET_ERROR_MESSAGE => {}
-            IDN_LOG => {}
-            IDN_SET_TIMEOUT => {}
+            IDN_CHECKSUM => Command::Checksum(data.to_vec()),
+            IDN_PROGRESS => {
+                if data.len() != 1 {
+                    return Err(ParseError::InvalidLength);
+                }
+                Command::Progress(data[0])
+            }
+            IDN_SET_ERROR_MESSAGE => match String::from_utf8(data.to_vec()) {
+                Ok(x) => Command::SetErrorMessage(x),
+                Err(_) => return Err(ParseError::InvalidEncoding),
+            },
+            IDN_LOG => match String::from_utf8(data.to_vec()) {
+                Ok(x) => Command::SetErrorMessage(x),
+                Err(_) => return Err(ParseError::InvalidEncoding),
+            },
+            IDN_SET_TIMEOUT => {
+                if data.len() != 4 {
+                    return Err(ParseError::InvalidLength);
+                }
+                let timeout = LittleEndian::read_u32(&data);
+                Command::SetTimeOut(timeout)
+            }
             _ => return Err(ParseError::InvalidCommand),
-        }
+        };
 
-        Ok(Command::Log("foobar".to_string()))
+        Ok(ret)
     }
 }
 
-enum ParseError {
+pub enum ParseError {
     DelimiterMissing,
     InvalidLength,
     InvalidHexCharacter,
