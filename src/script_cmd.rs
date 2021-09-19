@@ -147,7 +147,7 @@ impl Command {
                 Err(_) => return Err(ParseError::InvalidEncoding),
             },
             IDN_LOG => match String::from_utf8(data.to_vec()) {
-                Ok(x) => Command::SetErrorMessage(x),
+                Ok(x) => Command::Log(x),
                 Err(_) => return Err(ParseError::InvalidEncoding),
             },
             IDN_SET_TIMEOUT => {
@@ -217,6 +217,67 @@ mod tests {
         } else {
             panic!()
         }
-        ()
+
+
+        let cmd = Command::Checksum(vec![0xA, 0xB, 0xC]);
+        let parsed = Command::parse_line(&cmd.script_line()).unwrap();
+        if let Command::Checksum(a) = parsed {
+            assert_eq!(&a, &[0xA, 0xB, 0xC]);
+        } else {
+            panic!()
+        }
+
+
+        let cmd = Command::SetTimeOut(0xDEADBEEF);
+        let parsed = Command::parse_line(&cmd.script_line()).unwrap();
+        if let Command::SetTimeOut(a) = parsed {
+            assert_eq!(a, 0xDEADBEEF);
+        } else {
+            panic!()
+        }
+
+
+        let cmd = Command::SetErrorMessage("foobar".to_string());
+        let parsed = Command::parse_line(&cmd.script_line()).unwrap();
+        if let Command::SetErrorMessage(x) = parsed {
+            assert_eq!(&x, "foobar");
+        } else {
+            panic!()
+        }
+
+        let cmd = Command::Progress(123);
+        let parsed = Command::parse_line(&cmd.script_line()).unwrap();
+        if let Command::Progress(x) = parsed {
+            assert_eq!(x, 123);
+        } else {
+            panic!()
+        }
+
+        let cmd = Command::Log("foobar".to_string());
+        let parsed = Command::parse_line(&cmd.script_line()).unwrap();
+        if let Command::Log(x) = parsed {
+            assert_eq!(&x, "foobar");
+        } else {
+            panic!()
+        }
+
+
+        let cmd = Command::Header(vec![
+            ("foo".to_string(), "bar".to_string()),
+            ("bar".to_string(), "baz".to_string()),
+            ("hello".to_string(), "world".to_string()),
+        ]);
+        let parsed = Command::parse_line(&cmd.script_line()).unwrap();
+        if let Command::Header(x) = parsed {
+            assert_eq!(x.len(), 3);
+            assert_eq!(&x[0].0, "foo");
+            assert_eq!(&x[0].1, "bar");
+            assert_eq!(&x[1].0, "bar");
+            assert_eq!(&x[1].1, "baz");
+            assert_eq!(&x[2].0, "hello");
+            assert_eq!(&x[2].1, "world");
+        } else {
+            panic!()
+        }
     }
 }
