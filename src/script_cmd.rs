@@ -88,12 +88,13 @@ impl Command {
         format!(":{}{}", identifier, data)
     }
 
-    pub fn parse_line(&self, line: &str) -> Result<Command, ParseError> {
+    pub fn parse_line(line: &str) -> Result<Command, ParseError> {
         if line.len() < 5 || line.len() % 2 != 1 {
             return Err(ParseError::InvalidLength);
         }
-        if line.chars().nth(0).unwrap() != ':' {
-            return Err(ParseError::DelimiterMissing);
+        match line.chars().nth(0) {
+            Some(':') => {}
+            _ => return Err(ParseError::DelimiterMissing)
         }
         let line = &line[1..];
         let parsed: Result<Vec<u8>, ParseIntError> = (0..line.len())
@@ -119,18 +120,7 @@ impl Command {
                 }
                 Command::Header(header_data)
             }
-            IDN_WRITE => {
-                if data.len() < 2 {
-                    return Err(ParseError::InvalidLength);
-                }
-                let write_len = LittleEndian::read_u16(&data[0..2]) as usize;
-                let data = &data[2..];
-                if data.len() != write_len {
-                    return Err(ParseError::InvalidLength);
-                }
-                let write = data.to_vec();
-                Command::Write(write)
-            }
+            IDN_WRITE => Command::Write(data.to_vec()),
             IDN_QUERY => {
                 if data.len() < 4 {
                     return Err(ParseError::InvalidLength);
@@ -174,6 +164,7 @@ impl Command {
     }
 }
 
+#[derive(Debug)]
 pub enum ParseError {
     DelimiterMissing,
     InvalidLength,
@@ -192,7 +183,7 @@ mod tests {
         let cmd = Command::Write(vec![0xA, 0xB, 0xC]);
         assert_eq!(cmd.script_line(), ":020A0B0C");
         let cmd = Command::Query(vec![0xA, 0xB, 0xC], vec![0xD, 0xE]);
-        assert_eq!(cmd.script_line(), ":0303020A0B0C0D0E");
+        assert_eq!(cmd.script_line(), ":03030002000A0B0C0D0E");
         let cmd = Command::SetTimeOut(0xDEADBEEF);
         assert_eq!(cmd.script_line(), ":10EFBEADDE");
         let cmd = Command::Log("foobar".to_string());
@@ -206,5 +197,26 @@ mod tests {
         assert_eq!(cmd.script_line(), ":21666F6F626172");
         let cmd = Command::Progress(0xAB);
         assert_eq!(cmd.script_line(), ":22AB");
+    }
+
+    #[test]
+    fn round_trip_parse() {
+        let cmd = Command::Write(vec![0xAB, 0xCD, 0xEF]);
+        let parsed = Command::parse_line(&cmd.script_line()).unwrap();
+        if let Command::Write(x) = parsed {
+            assert_eq!(&x, &[0xAB, 0xCD, 0xEF])
+        } else {
+            panic!()
+        }
+
+        let cmd = Command::Query(vec![0xA, 0xB, 0xC], vec![0xD, 0xE]);
+        let parsed = Command::parse_line(&cmd.script_line()).unwrap();
+        if let Command::Query(a, b) = parsed {
+            assert_eq!(&a, &[0xA, 0xB, 0xC]);
+            assert_eq!(&b, &[0xD, 0xE]);
+        } else {
+            panic!()
+        }
+        ()
     }
 }
