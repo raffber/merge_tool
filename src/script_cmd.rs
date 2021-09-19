@@ -94,7 +94,7 @@ impl Command {
         }
         match line.chars().nth(0) {
             Some(':') => {}
-            _ => return Err(ParseError::DelimiterMissing)
+            _ => return Err(ParseError::DelimiterMissing),
         }
         let line = &line[1..];
         let parsed: Result<Vec<u8>, ParseIntError> = (0..line.len())
@@ -177,6 +177,7 @@ pub enum ParseError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
 
     #[test]
     fn serialize() {
@@ -218,7 +219,6 @@ mod tests {
             panic!()
         }
 
-
         let cmd = Command::Checksum(vec![0xA, 0xB, 0xC]);
         let parsed = Command::parse_line(&cmd.script_line()).unwrap();
         if let Command::Checksum(a) = parsed {
@@ -227,7 +227,6 @@ mod tests {
             panic!()
         }
 
-
         let cmd = Command::SetTimeOut(0xDEADBEEF);
         let parsed = Command::parse_line(&cmd.script_line()).unwrap();
         if let Command::SetTimeOut(a) = parsed {
@@ -235,7 +234,6 @@ mod tests {
         } else {
             panic!()
         }
-
 
         let cmd = Command::SetErrorMessage("foobar".to_string());
         let parsed = Command::parse_line(&cmd.script_line()).unwrap();
@@ -255,12 +253,9 @@ mod tests {
 
         let cmd = Command::Log("foobar".to_string());
         let parsed = Command::parse_line(&cmd.script_line()).unwrap();
-        if let Command::Log(x) = parsed {
+        assert_matches!(parsed, Command::Log(x) => {
             assert_eq!(&x, "foobar");
-        } else {
-            panic!()
-        }
-
+        });
 
         let cmd = Command::Header(vec![
             ("foo".to_string(), "bar".to_string()),
