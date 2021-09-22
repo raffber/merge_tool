@@ -1,6 +1,5 @@
 use crate::script_cmd::{Command, ParseError};
 use itertools::Itertools;
-use sha2::{Digest, Sha256};
 use std::iter::once;
 
 pub trait TimeModel {
@@ -115,14 +114,15 @@ impl Script {
     }
 
     pub fn serialize(&self) -> String {
-        let lines: Vec<String> = self.commands.iter().map(|x| x.script_line()).collect();
-        let mut sha = Sha256::new();
-        for line in &lines {
-            Digest::input(&mut sha, line.as_bytes());
-        }
-        let cmd = Command::Checksum(sha.result().to_vec());
+        let chksum = Command::compute_checksum(&self.commands);
+        let cmd = Command::Checksum(chksum);
         let checksum = cmd.script_line();
-        lines.iter().chain(once(&checksum)).join("\n")
+        self.commands
+            .iter()
+            .map(|x| x.script_line())
+            .iter()
+            .chain(once(&checksum))
+            .join("\n")
     }
 
     pub fn parse(data: &str) -> Result<Script, ParseError> {
@@ -137,6 +137,27 @@ impl Script {
             cmds.push(cmd);
         }
         Ok(Script::new(cmds))
+    }
+
+    pub fn verify(&self) -> Result<(), ParseError> {
+        if self.commands.len() < 1 {
+            return Err(ParseError::MissingChecksum);
+        }
+        let chksum_cmd = &self.commands[self.commands.len() - 1];
+        let script_chksum = match chksum_cmd {
+            Command::Checksum(x) => x,
+            _ => return Err(ParseError::MissingChecksum),
+        };
+        let ref_chksum = Command::compute_checksum(&self.commands);
+        if script_chksum == &ref_chksum {
+            Ok(())
+        } else {
+            Err(ParseError::InvalidChecksum)
+        }
+    }
+
+    pub fn commands(&self) -> &[Command] {
+        &self.commands
     }
 }
 

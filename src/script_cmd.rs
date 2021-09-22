@@ -1,4 +1,5 @@
 use byteorder::{ByteOrder, LittleEndian};
+use sha2::{Digest, Sha256};
 use std::num::ParseIntError;
 
 #[derive(Clone, Debug)]
@@ -162,6 +163,15 @@ impl Command {
 
         Ok(ret)
     }
+
+    pub fn compute_checksum(cmds: &[Command]) -> Vec<u8> {
+        let lines: Vec<String> = cmds.iter().map(|x| x.script_line()).collect();
+        let mut sha = Sha256::new();
+        for line in &lines {
+            Digest::input(&mut sha, line.as_bytes());
+        }
+        sha.result().to_vec()
+    }
 }
 
 #[derive(Debug)]
@@ -172,6 +182,8 @@ pub enum ParseError {
     InvalidCommand,
     InvalidEncoding,
     InvalidHeaderFormat,
+    MissingChecksum,
+    InvalidChecksum,
 }
 
 #[cfg(test)]
