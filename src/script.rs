@@ -1,4 +1,4 @@
-use crate::script_cmd::Command;
+use crate::script_cmd::{Command, ParseError};
 use itertools::Itertools;
 use sha2::{Digest, Sha256};
 use std::iter::once;
@@ -124,6 +124,20 @@ impl Script {
         let checksum = cmd.script_line();
         lines.iter().chain(once(&checksum)).join("\n")
     }
+
+    pub fn parse(data: &str) -> Result<Script, ParseError> {
+        let mut cmds = Vec::new();
+        for line in data.split(":") {
+            let line = line.trim();
+            if line.len() == 0 {
+                continue;
+            }
+            let line = ":".to_string() + line;
+            let cmd = Command::parse_line(&line)?;
+            cmds.push(cmd);
+        }
+        Ok(Script::new(cmds))
+    }
 }
 
 #[cfg(test)]
@@ -189,7 +203,7 @@ mod tests {
         let mut splits = result.split("\n");
         assert_eq!(splits.next(), Some(":01666F6F3D626172"));
         assert_eq!(splits.next(), Some(":02ABCDEF"));
-        assert_eq!(splits.next(), Some(":030302ABCDEF1234"));
+        assert_eq!(splits.next(), Some(":0303000200ABCDEF1234"));
         assert_eq!(splits.next(), Some(":22FF"));
         // now comes the SHA-256
         if let Some(x) = splits.next() {

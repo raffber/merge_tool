@@ -32,8 +32,13 @@ fn create_test_data() {
 
     data[4 + 2] = 1; // firmware id
     data[4 + 4] = 3; // major
+    data[4 + 5] = 0; // major msb
     data[4 + 6] = 5; // minor
+    data[4 + 7] = 0; // minor msb
     data[4 + 8] = 4; // build
+    data[4 + 9] = 0; // build
+    data[4 + 10] = 0; // build
+    data[4 + 11] = 0; // build
     save_hex(
         "tests/app_f1.hex",
         &data.clone(),
@@ -78,8 +83,13 @@ fn merge() {
     assert_eq!(data.len(), 128);
     data[4 + 2] = 1; // firmware id
     data[4 + 4] = 3; // major
+    data[4 + 5] = 0;
     data[4 + 6] = 5; // minor
+    data[4 + 7] = 0;
     data[4 + 8] = 4; // build
+    data[4 + 9] = 0;
+    data[4 + 10] = 0;
+    data[4 + 11] = 0;
     data[4 + 12] = 128; // length
     data[4 + 13] = 0;
     data[4 + 14] = 0;

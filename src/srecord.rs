@@ -167,6 +167,6 @@ mod tests {
             .map(|x| x.to_string());
         let parsed = parse(false, &range, lines).unwrap();
         let data: Vec<_> = (1u8..21).collect();
-        assert_eq!(&parsed, &data);
+        assert_eq!(&parsed[0..20], &data);
     }
 }
