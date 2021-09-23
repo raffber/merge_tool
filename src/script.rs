@@ -120,8 +120,7 @@ impl Script {
         self.commands
             .iter()
             .map(|x| x.script_line())
-            .iter()
-            .chain(once(&checksum))
+            .chain(once(checksum))
             .join("\n")
     }
 
