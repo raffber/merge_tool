@@ -1,6 +1,7 @@
 use byteorder::{ByteOrder, LittleEndian};
 use sha2::{Digest, Sha256};
 use std::num::ParseIntError;
+use thiserror::Error;
 
 #[derive(Clone, Debug)]
 pub enum Command {
@@ -174,15 +175,23 @@ impl Command {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ParseError {
+    #[error("Delimiter `:` is missing")]
     DelimiterMissing,
+    #[error("Invalid Length")]
     InvalidLength,
+    #[error("Cannot decode hex character")]
     InvalidHexCharacter,
+    #[error("Unknown command")]
     InvalidCommand,
+    #[error("Cannot decode string, invalid char")]
     InvalidEncoding,
+    #[error("Invalid header format")]
     InvalidHeaderFormat,
+    #[error("Checksum is missing from script")]
     MissingChecksum,
+    #[error("The provided checksum does not match the computed one")]
     InvalidChecksum,
 }
 
