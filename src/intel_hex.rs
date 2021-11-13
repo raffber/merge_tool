@@ -17,7 +17,7 @@ pub fn load(path: &Path, word_addressing: bool, range: &AddressRange) -> Result<
     parse(word_addressing, range, lines.into_iter())
 }
 
-pub fn parse<T: Iterator<Item = String>>(
+pub fn parse<T: Iterator<Item=String>>(
     word_addressing: bool,
     range: &AddressRange,
     lines: T,
@@ -88,12 +88,17 @@ fn checksum(data: &[u8]) -> u8 {
 
 const WRITE_DATA_PER_LINE: usize = 16;
 
+fn get_extended_addr(addr: u64) -> u64 {
+    (addr >> 16) & 0xFFFF
+}
+
 pub fn serialize(word_addressing: bool, range: &AddressRange, data: &[u8]) -> String {
     let mut data = data.to_vec();
     if word_addressing {
         swap_bytearray(&mut data);
     }
     let mut lines = Vec::new();
+    let mut extended_addr = 0;
     for k in (0..data.len()).step_by(WRITE_DATA_PER_LINE) {
         let endidx = min(k + WRITE_DATA_PER_LINE, data.len());
         let endidx = min(endidx, (range.end - range.begin) as usize);
@@ -104,6 +109,10 @@ pub fn serialize(word_addressing: bool, range: &AddressRange, data: &[u8]) -> St
         let mut address = (k as u64) + range.begin;
         if word_addressing {
             address >>= 1;
+        }
+        if get_extended_addr(address) != extended_addr {
+            extended_addr = get_extended_addr(address);
+            lines.push(write_extended_addr(address));
         }
         let mut out = Vec::new();
         out.extend(&[
@@ -127,6 +136,14 @@ pub fn serialize(word_addressing: bool, range: &AddressRange, data: &[u8]) -> St
         .map(|x| format!(":{}", hex::encode_upper(x)))
         .collect();
     lines.join("\n")
+}
+
+fn write_extended_addr(addr: u64) -> Vec<u8> {
+    let mut out = vec![0x02 as u8, 0x00, 0x00, 0x04];
+    out.push(((addr >> 24) & 0xFF) as u8);
+    out.push(((addr >> 16) & 0xFF) as u8);
+    out.push(checksum(&out));
+    out
 }
 
 pub fn save(
