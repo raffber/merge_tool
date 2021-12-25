@@ -33,12 +33,22 @@ pub fn parse<T: Iterator<Item=String>>(
                 if line.address == 0 {
                     extend_line_address = (line.data[0] as u64) << 8;
                     extend_line_address += line.data[1] as u64;
+                    extend_line_address <<= 16;
+                } else {
+                    return Err(Error::InvalidHexFile);
+                }
+            }
+            0x02 => {
+                if line.address == 0 {
+                    extend_line_address = (line.data[0] as u64) << 8;
+                    extend_line_address += line.data[1] as u64;
+                    extend_line_address *= 16;
                 } else {
                     return Err(Error::InvalidHexFile);
                 }
             }
             0x00 => {
-                let addr = (extend_line_address << 16) | line.address;
+                let addr = extend_line_address + line.address;
                 if addr < range.begin || addr > range.end {
                     continue;
                 }
