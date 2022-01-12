@@ -2,7 +2,7 @@ use crate::script_cmd::{Command, ParseError};
 use itertools::Itertools;
 use std::iter::once;
 
-pub trait TimeModel {
+pub trait TimeModel: Send {
     fn compute_write_time(&self, num_write: usize) -> f64;
     fn compute_read_time(&self, num_write: usize, num_read: usize) -> f64;
 
