@@ -18,6 +18,7 @@ fn make_header(config: &Config) -> Command {
         ("product", config.product_name.clone()),
         ("product_id", config.product_id.to_string()),
         ("script_version", 1.to_string()),
+        ("btl_version", config.btl_version.to_string()),
     ]
     .iter()
     .map(|(x, y)| (x.to_string(), y.to_string()))
