@@ -89,7 +89,7 @@ impl Script {
     pub fn new(cmds: Vec<Command>) -> Self {
         let mut ret = Self {
             commands: cmds,
-            time_model: Box::new(SimpleTimeModel::new(0.0, 0.0)),
+            time_model: Box::new(SimpleTimeModel::new(0.01, 0.01)),
         };
         ret.compute_progress();
         ret
