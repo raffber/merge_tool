@@ -17,7 +17,7 @@
     "html-webpack-plugin": "^3.2.0",
     "neon-cli": "^0.4.0",
     "native-ext-loader": "2.3.0",
-    "node-sass": "^4.13.0",
+    "node-sass": "^7.0.0",
     "rust-greenhorn": "https://github.com/raffber/greenhorn.git#3ba560f4284065f3c1e74a2005f2b86fbc8d607b",
     "sass-loader": "^8.0.0",
     "style-loader": "^0.23.1",
