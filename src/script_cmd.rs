@@ -91,7 +91,7 @@ impl Command {
     }
 
     pub fn parse_line(line: &str) -> Result<Command, ParseError> {
-        if line.len() < 5 || line.len() % 2 != 1 {
+        if line.len() < 3 || line.len() % 2 != 1 {
             return Err(ParseError::InvalidLength);
         }
         match line.chars().nth(0) {
@@ -112,6 +112,9 @@ impl Command {
                     String::from_utf8(data.to_vec()).map_err(|_| ParseError::InvalidEncoding)?;
                 let mut header_data = Vec::new();
                 for kv in values.split("|") {
+                    if kv.is_empty() {
+                        continue;
+                    }
                     let mut kv: Vec<_> = kv.split("=").map(|x| Some(x.to_string())).collect();
                     if kv.len() != 2 {
                         return Err(ParseError::InvalidHeaderFormat);
