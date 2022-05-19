@@ -53,7 +53,7 @@ pub fn create_script(
         fws.push(load_app(config, idx, config_dir)?);
     }
 
-    let cmds = if config.blocking {
+    let cmds = if !config.blocking {
         let protocol = DdpProtocol::new(DDP_CMD_CODE);
         generate_script(&protocol, &fws, config)
     } else {
