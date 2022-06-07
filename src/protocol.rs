@@ -1,8 +1,7 @@
+use crate::Error;
 use crate::config::Config;
 use crate::firmware::Firmware;
 use crate::script_cmd::Command;
-
-const DATA_LEN_PER_PACKAGE: usize = 16;
 
 pub trait Protocol {
     fn enter(&self, fw_id: u8, wait_time: u32) -> Vec<Command>;
@@ -42,12 +41,17 @@ pub fn generate_script<P: Protocol>(
     protocol: &P,
     fws: &[Firmware],
     config: &Config,
-) -> Vec<Command> {
+) -> Result<Vec<Command>, Error> {
     assert_eq!(fws.len(), config.images.len());
     let mut ret = Vec::new();
 
+
     ret.push(make_header(&config));
     for (fw, fw_config) in fws.iter().zip(&config.images) {
+
+        if fw.data.len() % fw_config.write_data_size != 0 {
+            return Err(Error::InvalidConfig("The length of the firmware image must be a multiple of the data write size.".to_string()));
+        }
         let id = fw_config.fw_id;
         if !fw_config.include_in_script {
             ret.push(Command::Log(format!(
@@ -87,9 +91,9 @@ pub fn generate_script<P: Protocol>(
 
         ret.push(Command::SetTimeOut(fw_config.timings.data_send));
         ret.push(Command::Log("Programming...".to_string()));
-        assert_eq!(fw.data.len() % DATA_LEN_PER_PACKAGE, 0);
-        for k in (0..fw.data.len()).step_by(DATA_LEN_PER_PACKAGE) {
-            let cmd = protocol.send_data(id, k as u64, &fw.data[k..k + DATA_LEN_PER_PACKAGE]);
+        assert_eq!(fw.data.len() % fw_config.write_data_size, 0);
+        for k in (0..fw.data.len()).step_by(fw_config.write_data_size) {
+            let cmd = protocol.send_data(id, k as u64, &fw.data[k..k + fw_config.write_data_size]);
             if let Some(cmd) = cmd {
                 ret.push(cmd);
             }
@@ -112,5 +116,5 @@ pub fn generate_script<P: Protocol>(
     }
 
     ret.push(Command::Log("Bootload successful!".to_string()));
-    ret
+    Ok(ret)
 }

@@ -41,6 +41,10 @@ pub mod default {
     pub fn blocking() -> bool {
         false
     }
+
+    pub fn write_data_size() -> usize {
+        16
+    }
 }
 
 fn skip_if_ff(value: &u8) -> bool {
@@ -69,6 +73,10 @@ fn skip_if_false(value: &bool) -> bool {
 
 fn skip_if_version(value: &ImageVersion) -> bool {
     value.build == default::build_version() && value.minor == default::minor_version()
+}
+
+fn skip_if_default_write_data_size(value: &usize) -> bool {
+    *value == 16
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
@@ -178,6 +186,11 @@ pub struct FwConfig {
     pub version: ImageVersion,
     pub app_address: AddressRange,
     pub btl_address: AddressRange,
+    #[serde(
+        default = "default::write_data_size",
+        skip_serializing_if = "skip_if_default_write_data_size"
+    )]
+    pub write_data_size: usize,
     #[serde(default = "default::include_in_script")]
     pub include_in_script: bool,
     pub header_offset: u64,
@@ -200,6 +213,7 @@ impl Default for FwConfig {
             hex_file_format: Default::default(),
             device_config: Default::default(),
             timings: Default::default(),
+            write_data_size: default::write_data_size(),
         }
     }
 }

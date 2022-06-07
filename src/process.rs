@@ -55,10 +55,10 @@ pub fn create_script(
 
     let cmds = if !config.blocking {
         let protocol = DdpProtocol::new(DDP_CMD_CODE);
-        generate_script(&protocol, &fws, config)
+        generate_script(&protocol, &fws, config)?
     } else {
         let protocol = BlockingDdpProtocol::new(DDP_CMD_CODE);
-        generate_script(&protocol, &fws, config)
+        generate_script(&protocol, &fws, config)?
     };
 
     let filename = generate_script_filename(config);
