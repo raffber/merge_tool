@@ -45,6 +45,10 @@ pub mod default {
     pub fn write_data_size() -> usize {
         16
     }
+
+    pub fn zero_u32() -> u32 {
+        0
+    }
 }
 
 fn skip_if_ff(value: &u8) -> bool {
@@ -59,7 +63,11 @@ fn skip_if_ffffffff(value: &u32) -> bool {
     *value == 0xFFFFFFFF
 }
 
-fn skip_if_zero(value: &u8) -> bool {
+fn skip_if_zero_u8(value: &u8) -> bool {
+    *value == 0
+}
+
+fn skip_if_zero_u32(value: &u32) -> bool {
     *value == 0
 }
 
@@ -178,7 +186,7 @@ impl Default for ImageVersion {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct FwConfig {
-    #[serde(default = "default::fw_id", skip_serializing_if = "skip_if_zero")]
+    #[serde(default = "default::fw_id", skip_serializing_if = "skip_if_zero_u8")]
     pub fw_id: u8,
     pub btl_path: String,
     pub app_path: String,
@@ -244,12 +252,8 @@ pub struct Config {
     #[serde(default = "default::blocking", skip_serializing_if = "skip_if_false")]
     pub blocking: bool,
     pub images: Vec<FwConfig>,
+    #[serde(default = "default::zero_u32", skip_serializing_if = "skip_if_zero_u32")]
     pub time_state_transition: u32,
-    #[serde(
-        default = "default::empty_string",
-        skip_serializing_if = "String::is_empty"
-    )]
-    pub repo_path: String,
 
     #[serde(skip_serializing, skip_deserializing)]
     byte_addr_transformed: bool,
@@ -297,27 +301,6 @@ impl Config {
         let data = serde_json::to_string_pretty(&to_serialize).unwrap();
         let mut file = File::create(path).map_err(Error::Io)?;
         file.write_all(data.as_bytes()).map_err(Error::Io)
-    }
-
-    pub fn get_repo_path(&self, config_dir: &Path) -> Result<PathBuf, Error> {
-        let repo_path = self.repo_path.trim();
-        if repo_path.is_empty() {
-            let mut path = config_dir;
-            let git_path = path.join(".git");
-            if git_path.exists() {
-                return Ok(path.to_path_buf());
-            }
-            while let Some(parent) = path.parent() {
-                let git_path = parent.join(".git");
-                if git_path.exists() {
-                    return Ok(parent.to_path_buf());
-                }
-                path = parent;
-            }
-            Err(Error::CannotFindGitRepo)
-        } else {
-            Ok(repo_path.into())
-        }
     }
 
     pub fn load_from_string(data: &str) -> Result<Config, Error> {
@@ -372,7 +355,6 @@ impl Default for Config {
             blocking: false,
             images: vec![],
             time_state_transition: 0,
-            repo_path: "".to_string(),
             byte_addr_transformed: false,
         }
     }
