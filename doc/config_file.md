@@ -32,7 +32,7 @@ Typically you use your build tool to copy the config file to the build folder an
 * `"product_name": "Nimbus2000"` - The name of your product. This will be inserted into the metadata of the bootload script.
 * `"images": [ .... array of image configs .... ]` - The configuration of the images to be inserted into the bootload script
 * `"images[k].btl_path": "path/to/btl.hex"` - The path to the hex file of the bootloader, relative to the location of the configuration file
-* `"images[k].app_path": "path/to/app.hex` - The path to the hex file of the application, relative to the location of the configuration file
+* `"images[k].app_path": "path/to/app.hex"` - The path to the hex file of the application, relative to the location of the configuration file
 * `"images[k].btl_address": {"begin": 0, "end": 1024}` - The address range where the bootloader is located in flash. `end` points 1 past the last byte to be included. Addresses must be page aligned.
 * `"images[k].app_address": {"begin": 0, "end": 1024}` - The address range where the application is located in flash. `end` points 1 past the last byte to be included. Addresses must be page aligned.
 * `"images[k].hex_file_format": "IntelHex"` - Defines the hex file format of the bootloader and application hex file. Either "IntelHex" or "SRecord".
