@@ -5,22 +5,22 @@ pipeline {
         }
     }
     stages {
-        stage('build-cli') {
+        stage('build') {
             steps {
-                sh 'cd cli && cargo build --release'
-                sh 'cd cli/target/release && strip merge_tool_cli'
-                archiveArtifacts(artifacts: 'cli/target/release/merge_tool_cli')
+                sh 'cargo build --release'
+                sh 'cd target/release && strip merge_tool'
+                archiveArtifacts(artifacts: 'target/release/merge_tool')
             }
         }
-        stage('test-cli') {
+        stage('test') {
             steps {
                 sh 'cd cli && cargo test'
             }
         }
-        stage('build-artifacts-windows') {
+        stage('build-windows') {
             steps {
-                sh 'cd cli && cargo build --target x86_64-pc-windows-gnu --release'
-                archiveArtifacts(artifacts: 'cli/target/x86_64-pc-windows-gnu/release/merge_tool_cli.exe')
+                sh 'cargo build --target x86_64-pc-windows-gnu --release'
+                archiveArtifacts(artifacts: 'target/x86_64-pc-windows-gnu/release/merge_tool.exe')
             }
         }
     }
