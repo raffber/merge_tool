@@ -49,7 +49,7 @@ pub fn parse<T: Iterator<Item=String>>(
             }
             0x00 => {
                 let addr = extend_line_address + line.address;
-                if addr < range.begin || addr > range.end {
+                if addr < range.begin || addr >= range.end {
                     continue;
                 }
                 for k in 0..line.data.len() {
@@ -112,7 +112,7 @@ pub fn serialize(word_addressing: bool, range: &AddressRange, data: &[u8]) -> St
     for k in (0..data.len()).step_by(WRITE_DATA_PER_LINE) {
         let endidx = min(k + WRITE_DATA_PER_LINE, data.len());
         let endidx = min(endidx, (range.end - range.begin) as usize);
-        if k > endidx {
+        if k >= endidx {
             break;
         }
         let len = endidx - k;
@@ -179,7 +179,7 @@ mod tests {
 
     #[test]
     fn test_serialize() {
-        let range = AddressRange::new(0xAB00, 0xABFF);
+        let range = AddressRange::new(0xAB00, 0xAC00);
         let data: Vec<_> = (1u8..21).collect();
         let serialized = serialize(false, &range, &data);
         let mut iter = serialized.split("\n");
@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn test_parse() {
-        let range = AddressRange::new(0xAB00, 0xAB13);
+        let range = AddressRange::new(0xAB00, 0xAB14);
         let file = r#"
         :10AB00000102030405060708090A0B0C0D0E0F10BD
         :04AB100011121314F7

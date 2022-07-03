@@ -39,7 +39,7 @@ pub mod default {
         0
     }
     pub fn blocking() -> bool {
-        false
+        true
     }
 
     pub fn write_data_size() -> usize {
@@ -79,6 +79,10 @@ fn skip_if_false(value: &bool) -> bool {
     !*value
 }
 
+fn skip_if_true(value: &bool) -> bool {
+    *value
+}
+
 fn skip_if_version(value: &ImageVersion) -> bool {
     value.build == default::build_version() && value.minor == default::minor_version()
 }
@@ -107,7 +111,7 @@ impl AddressRange {
         Self { begin, end }
     }
     pub fn len(&self) -> u64 {
-        self.end - self.begin + 1
+        self.end - self.begin
     }
 }
 
@@ -204,6 +208,7 @@ pub struct FwConfig {
     pub header_offset: u64,
     pub hex_file_format: HexFileFormat,
     pub device_config: DeviceConfig,
+    #[serde(default = "Default::default")]
     pub timings: Timings,
 }
 
@@ -249,7 +254,7 @@ pub struct Config {
         skip_serializing_if = "skip_if_false"
     )]
     pub use_backdoor: bool,
-    #[serde(default = "default::blocking", skip_serializing_if = "skip_if_false")]
+    #[serde(default = "default::blocking", skip_serializing_if = "skip_if_true")]
     pub blocking: bool,
     pub images: Vec<FwConfig>,
     #[serde(default = "default::zero_u32", skip_serializing_if = "skip_if_zero_u32")]
@@ -316,9 +321,9 @@ impl Config {
         for fwconfig in &mut self.images {
             if fwconfig.device_config.word_addressing {
                 fwconfig.app_address.begin *= 2;
-                fwconfig.app_address.end = 2 * fwconfig.app_address.end + 1;
+                fwconfig.app_address.end = 2 * fwconfig.app_address.end;
                 fwconfig.btl_address.begin *= 2;
-                fwconfig.btl_address.end = 2 * fwconfig.btl_address.end + 1;
+                fwconfig.btl_address.end = 2 * fwconfig.btl_address.end;
                 fwconfig.header_offset *= 2;
                 fwconfig.device_config.page_size *= 2;
             }

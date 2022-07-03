@@ -91,7 +91,7 @@ pub fn serialize(word_addressing: bool, range: &AddressRange, data: &[u8]) -> St
     for k in (0..data.len()).step_by(WRITE_DATA_PER_LINE) {
         let endidx = min(k + WRITE_DATA_PER_LINE, data.len());
         let endidx = min(endidx, (range.end - range.begin) as usize);
-        if k > endidx {
+        if k >= endidx {
             break;
         }
         let len = endidx - k + 5;

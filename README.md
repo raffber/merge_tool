@@ -4,9 +4,9 @@ This tool allows implementing a bare-metal firmware release process.
 
 The tool takes 2 hex files as inputs: An application and a bootloader. Then it allows producing several artifacts out of them:
 
- * A merged hex file
- * A script file for updating the application
- * An JSON info file capturing release information about the image
+* A merged hex file
+* A script file for updating the application
+* An JSON info file capturing release information about the image
 
 As an extension of above features, it supports systems consisting of several "nodes" (i.e. individual MCUs). I.e. it allows processing several pairs of firmwares.
 
@@ -18,19 +18,19 @@ To configure the merge tool, a json config file is used. Let's assume it called 
 
 To run a merge operation, i.e. merge application and booloader hex files into one, use:
 
-```
+```sh
 ./merge_tool -c config.json merge
 ```
 
 To create a script file for running the updating the firmware, use:
 
-```
+```sh
 ./merge_tool -c config.json script
 ```
 
 To create a JSON info file, use:
 
-```
+```sh
 ./merge_tool -c config.json info
 ```
 
@@ -47,23 +47,15 @@ The release process associates meta data to firmware images:
 
 In multi-node system, the major version and the product ID is enforced to be the same across all nodes.
 
-
 ## Application Image Layout
 
 Some firmware meta-information is stored directly inline in the application binary data. You may want to add it directly from your source code. Refer to an example here.
 
-
-
 ## Configuration File Format
-
-
-
 
 ## Things this tool does not do
 
-
- * It does not provide a cyrptographic signature with the image. Just a CRC32.
- * It does not encrypt the software.
+* It does not provide a cyrptographic signature with the image. Just a CRC32.
+* It does not encrypt the software.
 
  Pull requests to implement above features are welcome.
-

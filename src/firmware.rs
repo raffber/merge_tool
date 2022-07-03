@@ -14,7 +14,7 @@ impl Firmware {
         if range.begin % config.page_size != 0 {
             return Err(Error::AddressRangeNotAlignedToPage);
         }
-        if (range.end + 1) % config.page_size != 0 {
+        if range.end % config.page_size != 0 {
             return Err(Error::AddressRangeNotAlignedToPage);
         }
         if data.len() != range.len() as usize {
