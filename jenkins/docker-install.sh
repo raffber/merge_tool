@@ -2,6 +2,8 @@
 
 set -euf -o pipefail
 
+ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 mkdir -p /data /home /rust /cargo
 chmod a+rwx /data /home /rust /cargo
 
