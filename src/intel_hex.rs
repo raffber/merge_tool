@@ -17,7 +17,7 @@ pub fn load(path: &Path, word_addressing: bool, range: &AddressRange) -> Result<
     parse(word_addressing, range, lines.into_iter())
 }
 
-pub fn parse<T: Iterator<Item=String>>(
+pub fn parse<T: Iterator<Item = String>>(
     word_addressing: bool,
     range: &AddressRange,
     lines: T,

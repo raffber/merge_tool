@@ -7,185 +7,34 @@ use std::path::{Path, PathBuf};
 
 pub const DDP_CMD_CODE: u8 = 0x10;
 
-pub mod default {
-    pub fn fw_id() -> u8 {
-        0
-    }
-    pub fn major_version() -> u16 {
-        0xFFFF
-    }
-    pub fn minor_version() -> u16 {
-        0xFFFF
-    }
-    pub fn build_version() -> u32 {
-        0xFFFFFFFF
-    }
-    pub fn header_offset() -> u64 {
-        4
-    }
-    pub fn include_in_script() -> bool {
-        false
-    }
-    pub fn btl_version() -> u8 {
-        1
-    }
-    pub fn empty_string() -> String {
-        "".to_string()
-    }
-    pub fn use_backdoor() -> bool {
-        false
-    }
-    pub fn product_id() -> u16 {
-        0
-    }
-    pub fn blocking() -> bool {
-        true
-    }
-
-    pub fn write_data_size() -> usize {
-        16
-    }
-
-    pub fn zero_u32() -> u32 {
-        0
-    }
-}
-
-fn skip_if_ff(value: &u8) -> bool {
-    *value == 0xFF
-}
-
-fn skip_if_ffff(value: &u16) -> bool {
-    *value == 0xFFFF
-}
-
-fn skip_if_ffffffff(value: &u32) -> bool {
-    *value == 0xFFFFFFFF
-}
-
-fn skip_if_zero_u8(value: &u8) -> bool {
-    *value == 0
-}
-
-fn skip_if_zero_u32(value: &u32) -> bool {
-    *value == 0
-}
-
-fn skip_if_one(value: &u8) -> bool {
-    *value == 1
-}
-
-fn skip_if_false(value: &bool) -> bool {
-    !*value
-}
-
-fn skip_if_true(value: &bool) -> bool {
-    *value
-}
-
-fn skip_if_version(value: &ImageVersion) -> bool {
-    value.build == default::build_version() && value.minor == default::minor_version()
-}
-
-fn skip_if_default_write_data_size(value: &usize) -> bool {
-    *value == 16
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug, Default)]
-pub struct Timings {
-    pub data_send: u32,
-    pub crc_check: u32,
-    pub data_send_done: u32,
-    pub leave_btl: u32,
-    pub erase_time: u32,
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug, Default)]
-pub struct AddressRange {
-    pub begin: u64,
-    pub end: u64,
-}
-
-impl AddressRange {
-    pub fn new(begin: u64, end: u64) -> Self {
-        Self { begin, end }
-    }
-    pub fn len(&self) -> u64 {
-        self.end - self.begin
-    }
-}
-
 #[derive(Clone, Serialize, Deserialize, Debug)]
-pub enum HexFileFormat {
-    IntelHex,
-    SRecord,
-}
-
-impl Default for HexFileFormat {
-    fn default() -> Self {
-        HexFileFormat::IntelHex
-    }
-}
-
-impl HexFileFormat {
-    pub fn file_extension(&self) -> &'static str {
-        match self {
-            HexFileFormat::IntelHex => "hex",
-            HexFileFormat::SRecord => "s37",
-        }
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub enum Endianness {
-    Big,
-    Little,
-}
-
-impl Default for Endianness {
-    fn default() -> Self {
-        Endianness::Little
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug, Default)]
-pub struct DeviceConfig {
-    pub word_addressing: bool,
-    pub endianness: Endianness,
-    pub page_size: u64,
-}
-
-impl DeviceConfig {
-    pub fn byte_address_multiplier(&self) -> u64 {
-        if self.word_addressing {
-            2
-        } else {
-            1
-        }
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct ImageVersion {
+pub struct Config {
+    #[serde(default = "default::product_id", skip_serializing_if = "skip_if_ffff")]
+    pub product_id: u16,
+    pub product_name: String,
     #[serde(
-        default = "default::minor_version",
+        default = "default::major_version",
         skip_serializing_if = "skip_if_ffff"
     )]
-    pub minor: u16,
+    pub major_version: u16,
+    #[serde(default = "default::btl_version", skip_serializing_if = "skip_if_one")]
+    pub btl_version: u8,
     #[serde(
-        default = "default::build_version",
-        skip_serializing_if = "skip_if_ffffffff"
+        default = "default::use_backdoor",
+        skip_serializing_if = "skip_if_false"
     )]
-    pub build: u32,
-}
+    pub use_backdoor: bool,
+    #[serde(default = "default::blocking", skip_serializing_if = "skip_if_true")]
+    pub blocking: bool,
+    pub images: Vec<FwConfig>,
+    #[serde(
+        default = "default::zero_u32",
+        skip_serializing_if = "skip_if_zero_u32"
+    )]
+    pub time_state_transition: u32,
 
-impl Default for ImageVersion {
-    fn default() -> Self {
-        Self {
-            minor: default::minor_version(),
-            build: default::build_version(),
-        }
-    }
+    #[serde(skip_serializing, skip_deserializing)]
+    byte_addr_transformed: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -205,6 +54,7 @@ pub struct FwConfig {
     pub write_data_size: usize,
     #[serde(default = "default::include_in_script")]
     pub include_in_script: bool,
+    #[serde(default = "default::header_offset")]
     pub header_offset: u64,
     pub hex_file_format: HexFileFormat,
     pub device_config: DeviceConfig,
@@ -235,33 +85,6 @@ impl FwConfig {
     pub fn designator(&self) -> String {
         format!("F{}", self.fw_id)
     }
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct Config {
-    #[serde(default = "default::product_id", skip_serializing_if = "skip_if_ffff")]
-    pub product_id: u16,
-    pub product_name: String,
-    #[serde(
-        default = "default::major_version",
-        skip_serializing_if = "skip_if_ffff"
-    )]
-    pub major_version: u16,
-    #[serde(default = "default::btl_version", skip_serializing_if = "skip_if_one")]
-    pub btl_version: u8,
-    #[serde(
-        default = "default::use_backdoor",
-        skip_serializing_if = "skip_if_false"
-    )]
-    pub use_backdoor: bool,
-    #[serde(default = "default::blocking", skip_serializing_if = "skip_if_true")]
-    pub blocking: bool,
-    pub images: Vec<FwConfig>,
-    #[serde(default = "default::zero_u32", skip_serializing_if = "skip_if_zero_u32")]
-    pub time_state_transition: u32,
-
-    #[serde(skip_serializing, skip_deserializing)]
-    byte_addr_transformed: bool,
 }
 
 impl Config {
@@ -363,4 +186,197 @@ impl Default for Config {
             byte_addr_transformed: false,
         }
     }
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
+pub struct Timings {
+    pub data_send: u32,
+    pub crc_check: u32,
+    pub data_send_done: u32,
+    pub leave_btl: u32,
+    pub erase_time: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
+pub struct AddressRange {
+    pub begin: u64,
+    pub end: u64,
+}
+
+impl AddressRange {
+    pub fn new(begin: u64, end: u64) -> Self {
+        Self { begin, end }
+    }
+    pub fn len(&self) -> u64 {
+        self.end - self.begin
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub enum HexFileFormat {
+    IntelHex,
+    SRecord,
+}
+
+impl Default for HexFileFormat {
+    fn default() -> Self {
+        HexFileFormat::IntelHex
+    }
+}
+
+impl HexFileFormat {
+    pub fn file_extension(&self) -> &'static str {
+        match self {
+            HexFileFormat::IntelHex => "hex",
+            HexFileFormat::SRecord => "s37",
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub enum Endianness {
+    Big,
+    Little,
+}
+
+impl Default for Endianness {
+    fn default() -> Self {
+        Endianness::Little
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
+pub struct DeviceConfig {
+    #[serde(default="default::get_false")]
+    pub word_addressing: bool,
+    #[serde(default="default::endianness")]
+    pub endianness: Endianness,
+    pub page_size: u64,
+}
+
+impl DeviceConfig {
+    pub fn byte_address_multiplier(&self) -> u64 {
+        if self.word_addressing {
+            2
+        } else {
+            1
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct ImageVersion {
+    #[serde(
+        default = "default::minor_version",
+        skip_serializing_if = "skip_if_ffff"
+    )]
+    pub minor: u16,
+    #[serde(
+        default = "default::build_version",
+        skip_serializing_if = "skip_if_ffffffff"
+    )]
+    pub build: u32,
+}
+
+impl Default for ImageVersion {
+    fn default() -> Self {
+        Self {
+            minor: default::minor_version(),
+            build: default::build_version(),
+        }
+    }
+}
+
+pub mod default {
+    use super::Endianness;
+
+    pub fn fw_id() -> u8 {
+        0
+    }
+    pub fn major_version() -> u16 {
+        0xFFFF
+    }
+    pub fn minor_version() -> u16 {
+        0xFFFF
+    }
+    pub fn build_version() -> u32 {
+        0xFFFFFFFF
+    }
+    pub fn header_offset() -> u64 {
+        4
+    }
+    pub fn include_in_script() -> bool {
+        false
+    }
+    pub fn btl_version() -> u8 {
+        1
+    }
+    pub fn empty_string() -> String {
+        "".to_string()
+    }
+    pub fn use_backdoor() -> bool {
+        false
+    }
+    pub fn product_id() -> u16 {
+        0
+    }
+    pub fn blocking() -> bool {
+        true
+    }
+
+    pub fn write_data_size() -> usize {
+        16
+    }
+
+    pub fn zero_u32() -> u32 {
+        0
+    }
+
+    pub fn get_false() -> bool {
+        false
+    }
+
+    pub fn endianness() -> Endianness {
+        Endianness::Little
+    }
+}
+
+fn skip_if_ff(value: &u8) -> bool {
+    *value == 0xFF
+}
+
+fn skip_if_ffff(value: &u16) -> bool {
+    *value == 0xFFFF
+}
+
+fn skip_if_ffffffff(value: &u32) -> bool {
+    *value == 0xFFFFFFFF
+}
+
+fn skip_if_zero_u8(value: &u8) -> bool {
+    *value == 0
+}
+
+fn skip_if_zero_u32(value: &u32) -> bool {
+    *value == 0
+}
+
+fn skip_if_one(value: &u8) -> bool {
+    *value == 1
+}
+
+fn skip_if_false(value: &bool) -> bool {
+    !*value
+}
+
+fn skip_if_true(value: &bool) -> bool {
+    *value
+}
+
+fn skip_if_version(value: &ImageVersion) -> bool {
+    value.build == default::build_version() && value.minor == default::minor_version()
+}
+
+fn skip_if_default_write_data_size(value: &usize) -> bool {
+    *value == 16
 }

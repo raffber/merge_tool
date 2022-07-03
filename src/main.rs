@@ -5,8 +5,8 @@ use clap::{App, Arg, SubCommand};
 
 use merge_tool::config::Config;
 use merge_tool::process;
-use std::str::FromStr;
 use std::process::exit;
+use std::str::FromStr;
 
 fn main() {
     env_logger::init();
