@@ -7,11 +7,11 @@
       "app_path": "app_f1.hex",
       "app_address": {
         "begin": 43776,
-        "end": 44031
+        "end": 44032
       },
       "btl_address": {
         "begin": 43520,
-        "end": 43775
+        "end": 43776
       },
       "include_in_script": true,
       "header_offset": 4,
@@ -34,11 +34,11 @@
       "app_path": "app_f2.hex",
       "app_address": {
         "begin": 43776,
-        "end": 44031
+        "end": 44032
       },
       "btl_address": {
         "begin": 43520,
-        "end": 43775
+        "end": 43776
       },
       "include_in_script": true,
       "header_offset": 4,
