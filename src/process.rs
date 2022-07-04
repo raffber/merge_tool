@@ -155,16 +155,16 @@ fn configure_header(mut fw: Firmware, config: &mut Config, idx: usize) -> Result
         header.set_build_version(build);
     }
 
-    let fw_id = config.images[idx].fw_id;
-    if fw_id != default::fw_id() && fw_id != header.fw_id() {
+    let fw_id = config.images[idx].node_id;
+    if fw_id != default::node_id() && fw_id != header.fw_id() {
         return Err(Error::InvalidConfig(format!(
             "Firmware ID in firmware and config does not match: {} vs. {}",
             build,
             header.fw_id()
         )));
-    } else if fw_id == default::fw_id() {
-        config.images[idx].fw_id = header.fw_id();
-    } else if header.fw_id() == default::fw_id() {
+    } else if fw_id == default::node_id() {
+        config.images[idx].node_id = header.fw_id();
+    } else if header.fw_id() == default::node_id() {
         header.set_fw_id(fw_id);
     }
     header.set_length(image_length as u32);
@@ -230,7 +230,7 @@ pub fn info(config: &Config, config_dir: &Path, output_dir: &Path) -> Result<Pat
 
         let fw_cfg = &config.images[idx];
         let fw_info = FwInfo {
-            fw_id: fw_cfg.fw_id,
+            fw_id: fw_cfg.node_id,
             minor: fw_cfg.version.minor,
             build: fw_cfg.version.build,
             crc: fw.read_u32(0),

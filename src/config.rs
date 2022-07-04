@@ -39,8 +39,8 @@ pub struct Config {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct FwConfig {
-    #[serde(default = "default::fw_id", skip_serializing_if = "skip_if_zero_u8")]
-    pub fw_id: u8,
+    #[serde(default = "default::node_id", skip_serializing_if = "skip_if_zero_u8")]
+    pub node_id: u8,
     pub btl_path: String,
     pub app_path: String,
     #[serde(default = "Default::default", skip_serializing_if = "skip_if_version")]
@@ -65,7 +65,7 @@ pub struct FwConfig {
 impl Default for FwConfig {
     fn default() -> Self {
         FwConfig {
-            fw_id: default::fw_id(),
+            node_id: default::node_id(),
             btl_path: "".to_string(),
             app_path: "".to_string(),
             version: Default::default(),
@@ -83,7 +83,7 @@ impl Default for FwConfig {
 
 impl FwConfig {
     pub fn designator(&self) -> String {
-        format!("F{}", self.fw_id)
+        format!("F{}", self.node_id)
     }
 }
 
@@ -290,7 +290,7 @@ impl Default for ImageVersion {
 pub mod default {
     use super::Endianness;
 
-    pub fn fw_id() -> u8 {
+    pub fn node_id() -> u8 {
         0
     }
     pub fn major_version() -> u16 {

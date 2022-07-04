@@ -73,7 +73,7 @@ fn merge() {
     assert_eq!(fw.image_length(), 256 + 128); // full btl and first 128bytes of app (2 pages)
     assert_eq!(config.product_id, 0x605);
     assert_eq!(config.major_version, 3);
-    assert_eq!(config.images[0].fw_id, 1);
+    assert_eq!(config.images[0].node_id, 1);
     assert_eq!(config.images[0].version.minor, 5);
     assert_eq!(config.images[0].version.build, 4);
 

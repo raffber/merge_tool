@@ -42,8 +42,8 @@ The release process associates meta data to firmware images:
 
 * Version numbers: `<major>.<minor>.<build>`
 * A product ID: An arbitrary 16-bit number which is used to uniquely identify the product to which the firmware belongs to.
-* A node-id: Allows specifying an MCU within a system containing multiple MCUs.
-* A 16-bit `bootloader_version` tag. This additional tag may be considered as an arbitrary 16-bit meta data field without pre-defined meaning. But, as the name suggests, it could be used to version the bootloader protocol.
+* An 8-bit node-id: Allows specifying an MCU within a system containing multiple MCUs.
+* An 8-bit `bootloader_version` tag. This additional tag may be considered as an arbitrary 16-bit meta data field without pre-defined meaning. But, as the name suggests, it could be used to version the bootloader protocol.
 
 In multi-node system, the major version and the product ID is enforced to be the same across all nodes.
 

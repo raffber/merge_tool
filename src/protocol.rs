@@ -24,7 +24,7 @@ fn make_header(config: &Config) -> Command {
     .collect();
     for fw in &config.images {
         header.push((
-            format!("version_f{}", fw.fw_id),
+            format!("version_f{}", fw.node_id),
             format!(
                 "{}.{}.{}",
                 config.major_version, fw.version.minor, fw.version.build
@@ -53,7 +53,7 @@ pub fn generate_script<P: Protocol>(
                     .to_string(),
             ));
         }
-        let id = fw_config.fw_id;
+        let id = fw_config.node_id;
         if !fw_config.include_in_script {
             ret.push(Command::Log(format!(
                 "Skip bootload of {}!",
