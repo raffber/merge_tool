@@ -50,5 +50,4 @@ __attribute__((section(".app_header"))) static const uint16_t app_header[] = {
 
 In addition to above fields, the merge tools embeds the image length (aligned to pages) in the header.
 This may be used by the bootloader to dynamically allocate flash space based on image size.
-
-The length is written to the bytes at: 
+The length is written as 32-bit integer to the bytes 12 to 16.
