@@ -28,7 +28,7 @@ jobs:
       run: docker run -v ${{ github.workspace }}:/workspace merge-tool-agent ci/build-ci.sh
 
     - name: Run Test
-      run: docker run -v ${{ github.workspace }}:/workspace merge-tool-agentt ci/test-ci.sh
+      run: docker run -v ${{ github.workspace }}:/workspace merge-tool-agent ci/test-ci.sh
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3
