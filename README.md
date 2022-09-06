@@ -1,5 +1,7 @@
 # Merge And Software Release Tool
 
+[![Rust Stable](https://github.com/raffber/merge_tool/actions/workflows/ci.yml/badge.svg)](https://github.com/raffber/merge_tool/actions/workflows/ci.yml)
+
 This tool allows implementing a bare-metal firmware release process.
 
 The tool takes 2 hex files as inputs: An application and a bootloader. Then it allows producing several artifacts out of them:
@@ -8,14 +10,15 @@ The tool takes 2 hex files as inputs: An application and a bootloader. Then it a
 * A script file for updating the application
 * A JSON file capturing release information about the image
 
-As an extension of above features, it supports systems consisting of several "nodes" (i.e. individual MCUs in a system). I.e. it allows processing several firmwares.
+As an extension of above features, it supports systems consisting of several "nodes" (== individual MCUs in a system) connected to the same communication bus. Thus, several firmware images can be merged into
+one bootload file. The node receiving the images is responsible for distributing the data to the right nodes within the system.
 
 The tool also supports reading or writing meta-data from/to the hex files.
 This may be used to either configure the release process directly from the source code of the application, or, vice-versa include meta information into binary image which could then be used by the application during runtime.
 
 ## Command Line Interface
 
-To configure the merge tool, a json config file is used. Let's assume it called `config.json`.
+To configure the merge tool, a json config file is used. Let's assume it's called `config.json`.
 
 To run a merge operation, i.e. merge application and booloader hex files into one, use:
 
@@ -43,10 +46,10 @@ The release process associates meta data to firmware images:
 
 * Version numbers: `<major>.<minor>.<build>`
 * A product ID: An arbitrary 16-bit number which is used to uniquely identify the product to which the firmware belongs to.
-* An 8-bit `node_id`: Allows specifying an MCU within a system containing multiple MCUs.
+* An 8-bit `node_id`: Allows specifying an MCU within a system containing multiple MCUs. For a system with a single node, this is set to 1.
 * An 8-bit `bootloader_version` tag. This additional tag may be considered as an arbitrary 16-bit meta data field without pre-defined meaning. But, as the name suggests, it could be used to version the bootloader protocol.
 
-In multi-node system, the major version and the product ID is enforced to be the same across all nodes.
+In multi-node system, the major version and the product ID is enforced to be the same across all nodes. This follows semantic versioning.
 
 ## More Documentation
 
@@ -58,10 +61,12 @@ In multi-node system, the major version and the product ID is enforced to be the
 
 ## Things this tool does not do
 
+This tool is only inteded to be used where the distribution process of the firmware can be trusted or an external tool is used to establish trust into distribution process.
+
 * It does not provide a cyrptographic signature with the image. Just a CRC32.
 * It does not encrypt the software.
 
- Pull requests to implement above features are welcome.
+Pull requests to implement above features are welcome.
 
 ## License
 
