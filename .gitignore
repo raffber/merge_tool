@@ -1,9 +1,7 @@
 target
 cli/target
 .idea
-gui/greenhorn/
-
-gui/out/
+out/
 
 Nimbus2000*.gctbtl
 
