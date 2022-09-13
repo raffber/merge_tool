@@ -17,11 +17,10 @@ jobs:
       - name: Version Check
         run: ci/check-version.sh
 
-      - name: Download artifact
-        run:
-          ci/gh-fetch-artifacts.sh $GITHUB_SHA
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: out
 
       - name: Release
         uses: softprops/action-gh-release@v1
