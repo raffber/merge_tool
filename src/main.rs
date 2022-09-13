@@ -65,6 +65,8 @@ fn main() {
             exit(1);
         }
     };
+    let use_backdoor = matches.is_present("use-backdoor");
+    config.use_backdoor = use_backdoor;
 
     if let Some(_) = matches.subcommand_matches("script") {
         if let Err(err) = create_dir_all(&output_dir) {
