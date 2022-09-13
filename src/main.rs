@@ -1,7 +1,7 @@
 use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 
-use clap::{App, Arg, SubCommand};
+use clap::{App, Arg, SubCommand, crate_authors, crate_version};
 
 use merge_tool::config::Config;
 use merge_tool::process;
@@ -12,7 +12,8 @@ fn main() {
     env_logger::init();
 
     let matches = App::new("Merge Tool")
-        .version("1.0")
+        .author(crate_authors!())
+        .version(crate_version!())
         .author("Raphael Bernhard <beraphae@gmail.com>")
         .about("Merge firmwares like in 1999")
         .arg(
