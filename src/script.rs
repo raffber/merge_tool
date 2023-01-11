@@ -158,6 +158,10 @@ impl Script {
     pub fn commands(&self) -> &[Command] {
         &self.commands
     }
+
+    pub fn take(self) -> Vec<Command> {
+        self.commands
+    }
 }
 
 #[cfg(test)]

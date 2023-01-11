@@ -66,8 +66,8 @@ impl Firmware {
         let a = self.data[idx];
         let b = self.data[idx + 1];
         match self.config.endianness {
-            Endianness::Big => (b as u16 + ((a as u16) << 8)),
-            Endianness::Little => (a as u16 + ((b as u16) << 8)),
+            Endianness::Big => b as u16 + ((a as u16) << 8),
+            Endianness::Little => a as u16 + ((b as u16) << 8),
         }
     }
 
