@@ -304,16 +304,8 @@ pub mod default {
     }
 }
 
-fn skip_if_ff(value: &u8) -> bool {
-    *value == 0xFF
-}
-
 fn skip_if_ffff(value: &u16) -> bool {
     *value == 0xFFFF
-}
-
-fn skip_if_ffffffff(value: &u32) -> bool {
-    *value == 0xFFFFFFFF
 }
 
 fn skip_if_zero_u8(value: &u8) -> bool {
