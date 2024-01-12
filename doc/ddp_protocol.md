@@ -1,7 +1,7 @@
 # DDP Protocol
 
 This document defines an application layer protocol which facilitates request-response type of communication between 2 nodes in a network.
-We call this protocol `DDP`, which stands for *Device Diagnostic Protocol*.
+We call this protocol `DDP`, which stands for _Device Diagnostic Protocol_.
 The protocol is intended to be simple enough, such that it is easily implementable on most transport layers, ranging from I2C/SMBus over CAN to TCP.
 
 The DDP protocol establishes a request-response message exchange between any 2 nodes in a network.
@@ -18,23 +18,23 @@ Upon receiving and processing a request, the client node answers with a response
 
 The final CRC16 is calculated over the control byte, followed by all data bytes. The CRC shall be calculated using the polynomial 0x1021 and initialized with value 0xFFFF.
 
-| Byte | Field | Length | Description |
-| --- | --- | --- | --- |
-| `0` | Response Request MSB | 1-bit | Determines whether an answer shall be sent by the client node. |
-|   | Endpoint Code | 7-bits | Code identifying the endpoint protocol  |
-| `1` to `N` | Data | Up to 61 bytes  | |
-| `N + 1` to `N+2` | CRC | 2 bytes | CRC16 over bytes 0 to N encoded in big endian  |
+| Byte             | Field                | Length         | Description                                                    |
+| ---------------- | -------------------- | -------------- | -------------------------------------------------------------- |
+| `0`              | Response Request MSB | 1-bit          | Determines whether an answer shall be sent by the client node. |
+|                  | Endpoint Code        | 7-bits         | Code identifying the endpoint protocol                         |
+| `1` to `N`       | Data                 | Up to 61 bytes |                                                                |
+| `N + 1` to `N+2` | CRC                  | 2 bytes        | CRC16 over bytes 0 to N encoded in big endian                  |
 
 ## Responses
 
-A response starts again with a control byte which carries a status code. It is followed by 0 to 61 data bytes and a final CRC as defined above. 
+A response starts again with a control byte which carries a status code. It is followed by 0 to 61 data bytes and a final CRC as defined above.
 
-| Byte | Field | Length | Description |
-| --- | --- | --- | --- |
-| `0` | Reserved | 4-bit | Reserved for future use |
-|   | Status Code | 4-bits | Status code describing the processing result of the request   |
-| `1` to `N` | Data | Up to 61 bytes  | |
-| `N + 1` to `N+2` | CRC | 2 bytes | CRC16 over bytes 0 to N encoded in big endian  |
+| Byte             | Field       | Length         | Description                                                 |
+| ---------------- | ----------- | -------------- | ----------------------------------------------------------- |
+| `0`              | Reserved    | 4-bit          | Reserved for future use                                     |
+|                  | Status Code | 4-bits         | Status code describing the processing result of the request |
+| `1` to `N`       | Data        | Up to 61 bytes |                                                             |
+| `N + 1` to `N+2` | CRC         | 2 bytes        | CRC16 over bytes 0 to N encoded in big endian               |
 
 ## Additional Notes
 

@@ -8,16 +8,16 @@ The linker files should respect this and reserve the first 4 bytes of the image.
 
 The CRC has the following parameters:
 
-* Init = ~(0)
-* Final XOR = ~(0)
-* Polynomial = 0x4C11DB7
-* reflected = True
-* Test string: [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39]
-* Resulting CRC:  0xCBF43926
+- Init = ~(0)
+- Final XOR = ~(0)
+- Polynomial = 0x4C11DB7
+- reflected = True
+- Test string: [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39]
+- Resulting CRC: 0xCBF43926
 
 ## Firmware Header
 
-Each application should embed a *firmware header* in it image.
+Each application should embed a _firmware header_ in it image.
 This is a section at a defined flash location containing meta-information about the image.
 The merge tool then extracts this meta information when post-processing the bootloader and application images.
 
