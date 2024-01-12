@@ -1,5 +1,6 @@
 use crate::Error;
 use regex::Regex;
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::fs::{canonicalize, File};
 use std::io::{Read, Write};
@@ -12,11 +13,6 @@ pub struct Config {
     #[serde(default = "default::product_id", skip_serializing_if = "skip_if_ffff")]
     pub product_id: u16,
     pub product_name: String,
-    #[serde(
-        default = "default::major_version",
-        skip_serializing_if = "skip_if_ffff"
-    )]
-    pub major_version: u16,
     #[serde(default = "default::btl_version", skip_serializing_if = "skip_if_one")]
     pub btl_version: u8,
     #[serde(
@@ -41,10 +37,10 @@ pub struct Config {
 pub struct FwConfig {
     #[serde(default = "default::node_id", skip_serializing_if = "skip_if_zero_u8")]
     pub node_id: u8,
+    #[serde(default = "Default::default", skip_serializing_if = "Option::is_none")]
+    pub version: Option<Version>,
     pub btl_path: String,
     pub app_path: String,
-    #[serde(default = "Default::default", skip_serializing_if = "skip_if_version")]
-    pub version: ImageVersion,
     pub app_address: AddressRange,
     pub btl_address: AddressRange,
     #[serde(
@@ -68,7 +64,7 @@ impl Default for FwConfig {
             node_id: default::node_id(),
             btl_path: "".to_string(),
             app_path: "".to_string(),
-            version: Default::default(),
+            version: None,
             app_address: Default::default(),
             btl_address: Default::default(),
             include_in_script: true,
@@ -177,7 +173,6 @@ impl Default for Config {
         Config {
             product_id: 0,
             product_name: "".to_string(),
-            major_version: 0xFFFF,
             btl_version: 1,
             use_backdoor: false,
             blocking: false,
@@ -264,43 +259,11 @@ impl DeviceConfig {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct ImageVersion {
-    #[serde(
-        default = "default::minor_version",
-        skip_serializing_if = "skip_if_ffff"
-    )]
-    pub minor: u16,
-    #[serde(
-        default = "default::patch_version",
-        skip_serializing_if = "skip_if_ffffffff"
-    )]
-    pub patch: u32,
-}
-
-impl Default for ImageVersion {
-    fn default() -> Self {
-        Self {
-            minor: default::minor_version(),
-            patch: default::patch_version(),
-        }
-    }
-}
-
 pub mod default {
     use super::Endianness;
 
     pub fn node_id() -> u8 {
         0
-    }
-    pub fn major_version() -> u16 {
-        0xFFFF
-    }
-    pub fn minor_version() -> u16 {
-        0xFFFF
-    }
-    pub fn patch_version() -> u32 {
-        0xFFFFFFFF
     }
     pub fn header_offset() -> u64 {
         4
@@ -371,10 +334,6 @@ fn skip_if_false(value: &bool) -> bool {
 
 fn skip_if_true(value: &bool) -> bool {
     *value
-}
-
-fn skip_if_version(value: &ImageVersion) -> bool {
-    value.patch == default::patch_version() && value.minor == default::minor_version()
 }
 
 fn skip_if_default_write_data_size(value: &usize) -> bool {

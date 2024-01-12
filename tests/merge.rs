@@ -72,10 +72,10 @@ fn merge() {
     assert_eq!(fw.range.end, 0xAC00);
     assert_eq!(fw.image_length(), 256 + 128); // full btl and first 128bytes of app (2 pages)
     assert_eq!(config.product_id, 0x605);
-    assert_eq!(config.major_version, 3);
     assert_eq!(config.images[0].node_id, 1);
-    assert_eq!(config.images[0].version.minor, 5);
-    assert_eq!(config.images[0].version.patch, 4);
+    assert_eq!(config.images[0].version.as_ref().unwrap().major, 3);
+    assert_eq!(config.images[0].version.as_ref().unwrap().minor, 5);
+    assert_eq!(config.images[0].version.as_ref().unwrap().patch, 4);
 
     // reconstruct app data
     let mut data: Vec<_> = (1u8..0x50).collect();

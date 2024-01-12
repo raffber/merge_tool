@@ -1,3 +1,5 @@
+use semver::Version;
+
 use crate::config::Config;
 use crate::firmware::Firmware;
 use crate::script_cmd::Command;
@@ -23,12 +25,10 @@ fn make_header(config: &Config) -> Command {
     .map(|(x, y)| (x.to_string(), y.to_string()))
     .collect();
     for fw in &config.images {
+        let version = fw.version.clone().unwrap_or(Version::new(0, 0, 0));
         header.push((
             format!("version_f{}", fw.node_id),
-            format!(
-                "{}.{}.{}",
-                config.major_version, fw.version.minor, fw.version.patch
-            ),
+            version.to_string(),
         ));
     }
     if config.use_backdoor {
@@ -79,8 +79,9 @@ pub fn generate_script<P: Protocol>(
             validation_data[0] = config.product_id as u8 & 0xFF;
             validation_data[1] = ((config.product_id >> 8) & 0xFF) as u8;
         }
-        validation_data[2] = config.major_version as u8 & 0xFF;
-        validation_data[3] = ((config.major_version >> 8) & 0xFF) as u8;
+        let major_version = fw_config.version.as_ref().unwrap().major as u16;
+        validation_data[2] = major_version as u8 & 0xFF;
+        validation_data[3] = ((major_version >> 8) & 0xFF) as u8;
         validation_data[4] = config.btl_version;
         ret.push(Command::Log("Validating firmware...".to_string()));
         ret.extend(protocol.validate(id, &validation_data, config.time_state_transition));

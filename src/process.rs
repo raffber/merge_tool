@@ -13,6 +13,7 @@ use crate::script::Script;
 use crate::Error;
 
 use crate::blocking_ddp::BlockingDdpProtocol;
+use semver::Version;
 use serde::{Deserialize, Serialize};
 
 pub fn merge_firmware(
@@ -27,16 +28,10 @@ pub fn merge_firmware(
 
 fn generate_script_filename(config: &Config) -> String {
     let mut parts = Vec::new();
-    parts.push(format!(
-        "{}_{}",
-        config.product_name.clone(),
-        config.major_version
-    ));
+    parts.push(format!("{}", config.product_name.clone()));
     for fw_config in &config.images {
-        parts.push(format!(
-            "_{}.{}",
-            fw_config.version.minor, fw_config.version.patch
-        ));
+        let version = fw_config.version.clone().unwrap_or(Version::new(0, 0, 0));
+        parts.push(format!("_{}", version));
     }
     parts.push(".gctbtl".to_string());
     parts.join("")
@@ -115,51 +110,25 @@ fn configure_header(mut fw: Firmware, config: &mut Config, idx: usize) -> Result
     } else if config.product_id == default::product_id() {
         config.product_id = header.product_id();
     }
-    if config.major_version != default::major_version()
-        && config.major_version != header.major_version()
-    {
-        return Err(Error::InvalidConfig(format!(
-            "Major version in config ({}) and firmware ({}) does not match",
-            config.major_version,
-            header.major_version()
-        )));
-    } else if config.major_version == default::major_version() {
-        config.major_version = header.major_version();
-    } else if header.major_version() == default::major_version() {
-        header.set_major_version(config.major_version);
-    }
-
-    let minor = config.images[idx].version.minor;
-    if minor != default::minor_version() && minor != header.minor_version() {
-        return Err(Error::InvalidConfig(format!(
-            "Minor version in firmware and config does not match: {} vs. {}",
-            minor,
-            header.minor_version()
-        )));
-    } else if minor == default::minor_version() {
-        config.images[idx].version.minor = header.minor_version();
-    } else if header.minor_version() == default::minor_version() {
-        header.set_minor_version(minor);
-    }
-
-    let patch = config.images[idx].version.patch;
-    if patch != default::patch_version() && patch != header.patch_version() {
-        return Err(Error::InvalidConfig(format!(
-            "Patch version in firmware and config does not match: {} vs. {}",
-            patch,
-            header.patch_version()
-        )));
-    } else if patch == default::patch_version() {
-        config.images[idx].version.patch = header.patch_version();
-    } else if header.patch_version() == default::patch_version() {
-        header.set_patch_version(patch);
+    let fwconfig = &mut config.images[idx];
+    if let Some(version) = fwconfig.version.as_ref() {
+        header.set_major_version(version.major as u16);
+        header.set_minor_version(version.minor as u16);
+        header.set_patch_version(version.patch as u32);
+    } else {
+        let version = Version::new(
+            header.major_version() as u64,
+            header.minor_version() as u64,
+            header.patch_version() as u64,
+        );
+        fwconfig.version = Some(version);
     }
 
     let fw_id = config.images[idx].node_id;
     if fw_id != default::node_id() && fw_id != header.fw_id() {
         return Err(Error::InvalidConfig(format!(
             "Firmware ID in firmware and config does not match: {} vs. {}",
-            patch,
+            fw_id,
             header.fw_id()
         )));
     } else if fw_id == default::node_id() {
@@ -201,8 +170,7 @@ pub fn load_btl(config: &Config, idx: usize, config_dir: &Path) -> Result<Firmwa
 #[derive(Clone, Serialize, Deserialize)]
 struct FwInfo {
     fw_id: u8,
-    minor: u16,
-    patch: u32,
+    version: Version,
     crc: u32,
 }
 
@@ -210,7 +178,6 @@ struct FwInfo {
 struct Info {
     product_id: u16,
     project_name: String,
-    major_version: u16,
     images: Vec<FwInfo>,
     files: Vec<String>,
 }
@@ -231,8 +198,7 @@ pub fn info(config: &Config, config_dir: &Path, output_dir: &Path) -> Result<Pat
         let fw_cfg = &config.images[idx];
         let fw_info = FwInfo {
             fw_id: fw_cfg.node_id,
-            minor: fw_cfg.version.minor,
-            patch: fw_cfg.version.patch,
+            version: fw_cfg.version.clone().unwrap_or(Version::new(0, 0, 0)),
             crc: fw.read_u32(0),
         };
         fws.push(fw_info);
@@ -252,7 +218,6 @@ pub fn info(config: &Config, config_dir: &Path, output_dir: &Path) -> Result<Pat
     let info = Info {
         product_id: config.product_id,
         project_name: config.product_name,
-        major_version: config.major_version,
         images: fws,
         files,
     };
