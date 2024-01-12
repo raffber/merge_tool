@@ -8,8 +8,10 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::{fmt, io};
+use thiserror::Error as ErrorBase;
 
 pub mod blocking_ddp;
+pub mod changelog;
 pub mod config;
 pub mod crc;
 pub mod ddp;
@@ -22,7 +24,7 @@ pub mod script;
 pub mod script_cmd;
 pub mod srecord;
 
-#[derive(Debug)]
+#[derive(Debug, ErrorBase)]
 pub enum Error {
     AddressRangeNotAlignedToPage,
     ImageTooShortForHeader,
@@ -34,6 +36,7 @@ pub enum Error {
     CannotParseConfig(JsonError),
     CannotFindGitRepo,
     InvalidProductName,
+    CannotParseChangelog,
 }
 
 impl From<io::Error> for Error {
@@ -47,8 +50,6 @@ impl fmt::Display for Error {
         write!(f, "{:?}", self)
     }
 }
-
-impl std::error::Error for Error {}
 
 pub fn swap_bytearray(data: &mut Vec<u8>) {
     for k in (0..data.len()).step_by(2) {

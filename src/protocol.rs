@@ -26,10 +26,7 @@ fn make_header(config: &Config) -> Command {
     .collect();
     for fw in &config.images {
         let version = fw.version.clone().unwrap_or(Version::new(0, 0, 0));
-        header.push((
-            format!("version_f{}", fw.node_id),
-            version.to_string(),
-        ));
+        header.push((format!("version_f{}", fw.node_id), version.to_string()));
     }
     if config.use_backdoor {
         header.push(("backdoor".to_string(), "true".to_string()));

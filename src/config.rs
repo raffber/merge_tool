@@ -242,9 +242,9 @@ impl Default for Endianness {
 
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct DeviceConfig {
-    #[serde(default="default::get_false")]
+    #[serde(default = "default::get_false")]
     pub word_addressing: bool,
-    #[serde(default="default::endianness")]
+    #[serde(default = "default::endianness")]
     pub endianness: Endianness,
     pub page_size: u64,
 }
