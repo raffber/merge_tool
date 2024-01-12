@@ -272,17 +272,17 @@ pub struct ImageVersion {
     )]
     pub minor: u16,
     #[serde(
-        default = "default::build_version",
+        default = "default::patch_version",
         skip_serializing_if = "skip_if_ffffffff"
     )]
-    pub build: u32,
+    pub patch: u32,
 }
 
 impl Default for ImageVersion {
     fn default() -> Self {
         Self {
             minor: default::minor_version(),
-            build: default::build_version(),
+            patch: default::patch_version(),
         }
     }
 }
@@ -299,7 +299,7 @@ pub mod default {
     pub fn minor_version() -> u16 {
         0xFFFF
     }
-    pub fn build_version() -> u32 {
+    pub fn patch_version() -> u32 {
         0xFFFFFFFF
     }
     pub fn header_offset() -> u64 {
@@ -374,7 +374,7 @@ fn skip_if_true(value: &bool) -> bool {
 }
 
 fn skip_if_version(value: &ImageVersion) -> bool {
-    value.build == default::build_version() && value.minor == default::minor_version()
+    value.patch == default::patch_version() && value.minor == default::minor_version()
 }
 
 fn skip_if_default_write_data_size(value: &usize) -> bool {

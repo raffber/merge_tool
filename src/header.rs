@@ -5,7 +5,7 @@ const PRODUCT_ID_OFFSET: usize = 0;
 const FW_ID_OFFSET: usize = 2;
 const MAJOR_VERSION_OFFSET: usize = 4;
 const MINOR_VERSION_OFFSET: usize = 6;
-const BUILD_VERSION_OFFSET: usize = 8;
+const PATCH_VERSION_OFFSET: usize = 8;
 const LENGTH_OFFSET: usize = 12;
 
 const HEADER_LENGTH: usize = 32;
@@ -51,12 +51,12 @@ impl<'a> Header<'a> {
         self.fw.write_u16(self.offset + MINOR_VERSION_OFFSET, value);
     }
 
-    pub fn build_version(&self) -> u32 {
-        self.fw.read_u32(self.offset + BUILD_VERSION_OFFSET)
+    pub fn patch_version(&self) -> u32 {
+        self.fw.read_u32(self.offset + PATCH_VERSION_OFFSET)
     }
 
-    pub fn set_build_version(&mut self, value: u32) {
-        self.fw.write_u32(self.offset + BUILD_VERSION_OFFSET, value);
+    pub fn set_patch_version(&mut self, value: u32) {
+        self.fw.write_u32(self.offset + PATCH_VERSION_OFFSET, value);
     }
 
     pub fn fw_id(&self) -> u8 {

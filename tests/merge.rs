@@ -35,10 +35,10 @@ fn create_test_data() {
     data[4 + 5] = 0; // major msb
     data[4 + 6] = 5; // minor
     data[4 + 7] = 0; // minor msb
-    data[4 + 8] = 4; // build
-    data[4 + 9] = 0; // build
-    data[4 + 10] = 0; // build
-    data[4 + 11] = 0; // build
+    data[4 + 8] = 4; // patch
+    data[4 + 9] = 0; // patch
+    data[4 + 10] = 0; // patch
+    data[4 + 11] = 0; // patch
     save_hex(
         "tests/app_f1.hex",
         &data.clone(),
@@ -48,7 +48,7 @@ fn create_test_data() {
     data[4 + 2] = 2; // firmware id
     data[4 + 4] = 3; // major
     data[4 + 6] = 8; // minor
-    data[4 + 8] = 7; // build
+    data[4 + 8] = 7; // patch
     save_hex(
         "tests/app_f2.hex",
         &data.clone(),
@@ -75,7 +75,7 @@ fn merge() {
     assert_eq!(config.major_version, 3);
     assert_eq!(config.images[0].node_id, 1);
     assert_eq!(config.images[0].version.minor, 5);
-    assert_eq!(config.images[0].version.build, 4);
+    assert_eq!(config.images[0].version.patch, 4);
 
     // reconstruct app data
     let mut data: Vec<_> = (1u8..0x50).collect();
@@ -86,7 +86,7 @@ fn merge() {
     data[4 + 5] = 0;
     data[4 + 6] = 5; // minor
     data[4 + 7] = 0;
-    data[4 + 8] = 4; // build
+    data[4 + 8] = 4; // patch
     data[4 + 9] = 0;
     data[4 + 10] = 0;
     data[4 + 11] = 0;

@@ -32,8 +32,8 @@ __attribute__((section(".app_header"))) static const uint16_t app_header[] = {
     NODE_ID,            // 2
     VERSION_MAJOR,      // 4
     VERSION_MINOR,      // 6
-    VERSION_BUILD_LO,   // 8
-    VERSION_BUILD_HI,   // 10
+    VERSION_PATCH_LO,   // 8
+    VERSION_PATCH_HI,   // 10
     0xFFFF,             // 12
     0xFFFF,             // 14
 

@@ -35,7 +35,7 @@ fn generate_script_filename(config: &Config) -> String {
     for fw_config in &config.images {
         parts.push(format!(
             "_{}.{}",
-            fw_config.version.minor, fw_config.version.build
+            fw_config.version.minor, fw_config.version.patch
         ));
     }
     parts.push(".gctbtl".to_string());
@@ -142,24 +142,24 @@ fn configure_header(mut fw: Firmware, config: &mut Config, idx: usize) -> Result
         header.set_minor_version(minor);
     }
 
-    let build = config.images[idx].version.build;
-    if build != default::build_version() && build != header.build_version() {
+    let patch = config.images[idx].version.patch;
+    if patch != default::patch_version() && patch != header.patch_version() {
         return Err(Error::InvalidConfig(format!(
-            "Build version in firmware and config does not match: {} vs. {}",
-            build,
-            header.build_version()
+            "Patch version in firmware and config does not match: {} vs. {}",
+            patch,
+            header.patch_version()
         )));
-    } else if build == default::build_version() {
-        config.images[idx].version.build = header.build_version();
-    } else if header.build_version() == default::build_version() {
-        header.set_build_version(build);
+    } else if patch == default::patch_version() {
+        config.images[idx].version.patch = header.patch_version();
+    } else if header.patch_version() == default::patch_version() {
+        header.set_patch_version(patch);
     }
 
     let fw_id = config.images[idx].node_id;
     if fw_id != default::node_id() && fw_id != header.fw_id() {
         return Err(Error::InvalidConfig(format!(
             "Firmware ID in firmware and config does not match: {} vs. {}",
-            build,
+            patch,
             header.fw_id()
         )));
     } else if fw_id == default::node_id() {
@@ -202,7 +202,7 @@ pub fn load_btl(config: &Config, idx: usize, config_dir: &Path) -> Result<Firmwa
 struct FwInfo {
     fw_id: u8,
     minor: u16,
-    build: u32,
+    patch: u32,
     crc: u32,
 }
 
@@ -232,7 +232,7 @@ pub fn info(config: &Config, config_dir: &Path, output_dir: &Path) -> Result<Pat
         let fw_info = FwInfo {
             fw_id: fw_cfg.node_id,
             minor: fw_cfg.version.minor,
-            build: fw_cfg.version.build,
+            patch: fw_cfg.version.patch,
             crc: fw.read_u32(0),
         };
         fws.push(fw_info);

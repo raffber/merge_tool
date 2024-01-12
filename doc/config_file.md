@@ -54,7 +54,7 @@ Typically you use your build tool to copy the config file to the build folder an
 
 * `"node_id" : 1` - Override the firmware id specified in the firmware header
 * `"version.minor" : 1` - Override the minor firmware version specified in the firmware header
-* `"version.build" : 2` - Override the minor firmware version specified in the firmware header
+* `"version.patch" : 2` - Override the patch firmware version specified in the firmware header
 * `"write_data_size": 32` - The amount of data to be sent in each transaction. Defaults to `16`.
 * `"include_in_script": false` - Allows creating a script file where this firmware image is not included. Default to `true`.
 * `"header_offset": 4` - Allows specifying the offset of the firmware header in the application image.

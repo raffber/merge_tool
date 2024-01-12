@@ -44,7 +44,7 @@ The output directory may be defined with `-o <output-directory>`. If not otherwi
 
 The release process associates meta data to firmware images:
 
-* Version numbers: `<major>.<minor>.<build>`
+* Version numbers: `<major>.<minor>.<patch>`
 * A product ID: An arbitrary 16-bit number which is used to uniquely identify the product to which the firmware belongs to.
 * An 8-bit `node_id`: Allows specifying an MCU within a system containing multiple MCUs. For a system with a single node, this is set to 1.
 * An 8-bit `bootloader_version` tag. This additional tag may be considered as an arbitrary 16-bit meta data field without pre-defined meaning. But, as the name suggests, it could be used to version the bootloader protocol.

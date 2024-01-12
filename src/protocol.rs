@@ -27,7 +27,7 @@ fn make_header(config: &Config) -> Command {
             format!("version_f{}", fw.node_id),
             format!(
                 "{}.{}.{}",
-                config.major_version, fw.version.minor, fw.version.build
+                config.major_version, fw.version.minor, fw.version.patch
             ),
         ));
     }
