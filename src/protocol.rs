@@ -1,7 +1,7 @@
 use semver::Version;
 
 use crate::config::Config;
-use crate::firmware::Firmware;
+use crate::process::LoadedFirmwareImages;
 use crate::script_cmd::Command;
 use crate::Error;
 
@@ -36,14 +36,16 @@ fn make_header(config: &Config) -> Command {
 
 pub fn generate_script<P: Protocol>(
     protocol: &P,
-    fws: &[Firmware],
+    fws: &LoadedFirmwareImages,
     config: &Config,
 ) -> Result<Vec<Command>, Error> {
-    assert_eq!(fws.len(), config.images.len());
     let mut ret = Vec::new();
 
     ret.push(make_header(&config));
-    for (fw, fw_config) in fws.iter().zip(&config.images) {
+    for loaded_fw in &fws.images {
+        let fw = &loaded_fw.app;
+        let fw_config = &loaded_fw.config;
+
         if fw.data.len() % fw_config.write_data_size != 0 {
             return Err(Error::InvalidConfig(
                 "The length of the firmware image must be a multiple of the data write size."

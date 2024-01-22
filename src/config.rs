@@ -79,7 +79,7 @@ impl Default for FwConfig {
 
 impl FwConfig {
     pub fn designator(&self) -> String {
-        format!("F{}", self.node_id)
+        format!("f{}", self.node_id)
     }
 }
 

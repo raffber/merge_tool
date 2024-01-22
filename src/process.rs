@@ -1,4 +1,4 @@
-use std::fs::{canonicalize, File};
+use std::fs::{create_dir_all, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -13,90 +13,102 @@ use crate::script::Script;
 use crate::Error;
 
 use crate::blocking_ddp::BlockingDdpProtocol;
-use gix::commit::describe::SelectRef;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 
-pub fn merge_firmware(
-    config: &mut Config,
-    idx: usize,
-    config_dir: &Path,
-) -> Result<Firmware, Error> {
-    let app = load_app(config, idx, config_dir)?;
-    let btl = load_btl(config, idx, config_dir)?;
-    Firmware::merge(btl, app)
+pub struct GenerateOptions {
+    pub config: Config,
+    pub output_dir: PathBuf,
+    pub config_dir: PathBuf,
+    pub repo_dir: PathBuf,
 }
 
-fn generate_script_filename(config: &Config) -> String {
-    let mut parts = Vec::new();
-    parts.push(format!("{}", config.product_name.clone()));
-    for fw_config in &config.images {
-        let version = fw_config.version.clone().unwrap_or(Version::new(0, 0, 0));
-        parts.push(format!("_{}", version));
-    }
-    parts.push(".gctbtl".to_string());
-    parts.join("")
+pub fn generate(options: GenerateOptions) -> Result<(), Error> {
+    create_dir_all(&options.output_dir)?;
+
+    let loaded = load_firmware_images(&options.config, &options.config_dir)?;
+
+    // create script
+    let script = create_script(&loaded)?;
+    save_script(&script, &loaded, &options.config_dir)?;
+
+    // merge firmware images
+    let merged = merge_all(&loaded)?;
+    save_merged_firmware_images(&merged, &options.output_dir)?;
+
+    // generate info.json
+    let info = generate_info(&loaded, &options.config_dir, &options.output_dir)?;
+    save_info(&info, &options.output_dir)?;
+
+    Ok(())
 }
 
-pub fn create_script(
-    config: &mut Config,
-    config_dir: &Path,
-    output_dir: &Path,
-) -> Result<PathBuf, Error> {
-    config.transform_to_byte_addrs();
-    let mut fws = Vec::new();
-    for idx in 0..config.images.len() {
-        fws.push(load_app(config, idx, config_dir)?);
-    }
-
-    let cmds = if !config.blocking {
-        let protocol = DdpProtocol::new(DDP_CMD_CODE);
-        generate_script(&protocol, &fws, config)?
-    } else {
-        let protocol = BlockingDdpProtocol::new(DDP_CMD_CODE);
-        generate_script(&protocol, &fws, config)?
-    };
-
-    let filename = generate_script_filename(config);
-    let script = Script::new(cmds);
-    let path = output_dir.join(&filename);
-    let mut file = File::create(&path).map_err(Error::Io)?;
-    file.write_all(script.serialize().as_bytes())
-        .map_err(Error::Io)?;
-    Ok(path)
+pub struct LoadedFirmware {
+    pub btl: Firmware,
+    pub app: Firmware,
+    pub config: FwConfig,
+    pub merged_hex_file_name: String,
 }
 
-pub fn merge_all(config: &mut Config, config_dir: &Path) -> Result<Vec<Firmware>, Error> {
-    let mut ret = Vec::new();
-    config.transform_to_byte_addrs();
-    for idx in 0..config.images.len() {
-        let fw = merge_firmware(config, idx, config_dir)?;
-        ret.push(fw);
-    }
-    Ok(ret)
+pub struct LoadedFirmwareImages {
+    pub images: Vec<LoadedFirmware>,
+    pub config: Config,
+    pub script_file_name: String,
 }
 
-fn get_fw_hex_filename(fw_config: &FwConfig) -> String {
-    format!(
-        "{}.{}",
-        fw_config.designator(),
-        fw_config.hex_file_format.file_extension()
-    )
-}
-
-pub fn write_fws(
+pub fn load_firmware_images(
     config: &Config,
-    fws: &[Firmware],
-    target_folder: &Path,
-) -> Result<Vec<PathBuf>, Error> {
+    config_dir: &Path,
+) -> Result<LoadedFirmwareImages, Error> {
+    let mut config = config.clone();
     let mut ret = Vec::new();
-    for (fw, fw_config) in fws.iter().zip(config.images.iter()) {
-        let file_name = get_fw_hex_filename(fw_config);
-        let fpath = target_folder.join(file_name);
-        fw.write_to_file(&fpath, &fw_config.hex_file_format)?;
-        ret.push(fpath);
+    config.transform_to_byte_addrs();
+    for idx in 0..config.images.len() {
+        let app = load_app(&mut config, idx, config_dir)?;
+        let btl = load_btl(&mut config, idx, config_dir)?;
+        let merged_hex_file_name = get_merged_hex_filename(&config.images[idx]);
+
+        let loaded = LoadedFirmware {
+            btl,
+            app,
+            config: config.images[idx].clone(),
+            merged_hex_file_name,
+        };
+
+        ret.push(loaded);
     }
-    Ok(ret)
+    Ok(LoadedFirmwareImages {
+        images: ret,
+        config: config.clone(),
+        script_file_name: generate_script_filename(&config),
+    })
+}
+
+pub fn load_app(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Firmware, Error> {
+    let path = Config::normalize_path(&config.images[idx].app_path, config_dir)?;
+    let fw = Firmware::load_from_file(
+        &path,
+        &config.images[idx].hex_file_format,
+        &config.images[idx].device_config,
+        &config.images[idx].app_address,
+    )?;
+
+    let mut fw = configure_header(fw, config, idx)?;
+    let crc = crc32(&fw.data[4..fw.image_length()]);
+    fw.write_u32(0, crc);
+
+    Ok(fw)
+}
+
+pub fn load_btl(config: &Config, idx: usize, config_dir: &Path) -> Result<Firmware, Error> {
+    let path = Config::normalize_path(&config.images[idx].btl_path, config_dir)?;
+    let fw_config = &config.images[idx];
+    Firmware::load_from_file(
+        &path,
+        &fw_config.hex_file_format,
+        &fw_config.device_config,
+        &fw_config.btl_address,
+    )
 }
 
 fn configure_header(mut fw: Firmware, config: &mut Config, idx: usize) -> Result<Firmware, Error> {
@@ -141,31 +153,80 @@ fn configure_header(mut fw: Firmware, config: &mut Config, idx: usize) -> Result
     Ok(fw)
 }
 
-pub fn load_app(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Firmware, Error> {
-    let path = Config::normalize_path(&config.images[idx].app_path, config_dir)?;
-    let fw = Firmware::load_from_file(
-        &path,
-        &config.images[idx].hex_file_format,
-        &config.images[idx].device_config,
-        &config.images[idx].app_address,
-    )?;
-
-    let mut fw = configure_header(fw, config, idx)?;
-    let crc = crc32(&fw.data[4..fw.image_length()]);
-    fw.write_u32(0, crc);
-
-    Ok(fw)
+fn get_merged_hex_filename(fw_config: &FwConfig) -> String {
+    format!(
+        "merged_{}.{}",
+        fw_config.designator(),
+        fw_config.hex_file_format.file_extension()
+    )
 }
 
-pub fn load_btl(config: &Config, idx: usize, config_dir: &Path) -> Result<Firmware, Error> {
-    let path = Config::normalize_path(&config.images[idx].btl_path, config_dir)?;
-    let fw_config = &config.images[idx];
-    Firmware::load_from_file(
-        &path,
-        &fw_config.hex_file_format,
-        &fw_config.device_config,
-        &fw_config.btl_address,
-    )
+fn generate_script_filename(config: &Config) -> String {
+    let mut parts = Vec::new();
+    parts.push(format!("{}", config.product_name.clone()));
+    for fw_config in &config.images {
+        let version = fw_config.version.clone().unwrap_or(Version::new(0, 0, 0));
+        parts.push(format!("_{}", version));
+    }
+    parts.push(".gctbtl".to_string());
+    parts.join("")
+}
+
+pub fn create_script(loaded: &LoadedFirmwareImages) -> Result<Script, crate::Error> {
+    let cmds = if !loaded.config.blocking {
+        let protocol = DdpProtocol::new(DDP_CMD_CODE);
+        generate_script(&protocol, loaded, &loaded.config)?
+    } else {
+        let protocol = BlockingDdpProtocol::new(DDP_CMD_CODE);
+        generate_script(&protocol, loaded, &loaded.config)?
+    };
+    let script = Script::new(cmds);
+    Ok(script)
+}
+
+pub fn save_script(
+    script: &Script,
+    loaded: &LoadedFirmwareImages,
+    output_dir: &Path,
+) -> Result<(), Error> {
+    let path = output_dir.join(&loaded.script_file_name);
+    let mut file = File::create(&path).map_err(Error::Io)?;
+    file.write_all(script.serialize().as_bytes())
+        .map_err(Error::Io)?;
+    Ok(())
+}
+
+pub struct MergedFirmwareImages<'a> {
+    pub images: Vec<(Firmware, &'a LoadedFirmware)>,
+}
+
+pub fn merge_all<'a>(loaded: &'a LoadedFirmwareImages) -> Result<MergedFirmwareImages<'a>, Error> {
+    let mut ret = Vec::new();
+    for fw in &loaded.images {
+        let merged = Firmware::merge(&fw.btl, &fw.app)?;
+        ret.push((merged, fw));
+    }
+    Ok(MergedFirmwareImages { images: ret })
+}
+
+pub fn save_merged_firmware_images(
+    merged: &MergedFirmwareImages,
+    output_dir: &Path,
+) -> Result<(), Error> {
+    for fw in &merged.images {
+        let fpath = output_dir.join(&fw.1.merged_hex_file_name);
+        fw.0.write_to_file(&fpath, &fw.1.config.hex_file_format)
+            .unwrap();
+    }
+    Ok(())
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Info {
+    product_id: u16,
+    project_name: String,
+    images: Vec<FwInfo>,
+    files: Vec<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -175,78 +236,49 @@ struct FwInfo {
     crc: u32,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-struct Info {
-    product_id: u16,
-    project_name: String,
-    images: Vec<FwInfo>,
-    files: Vec<String>,
-}
-
-pub fn info(config: &Config, config_dir: &Path, output_dir: &Path) -> Result<PathBuf, Error> {
-    let mut config = config.clone();
-    config.transform_to_byte_addrs();
-
-    let output_dir = canonicalize(output_dir)?;
-
+pub fn generate_info(
+    fws: &LoadedFirmwareImages,
+    config_dir: &Path,
+    output_dir: &Path,
+) -> Result<Info, Error> {
     let mut files = Vec::new();
+    let mut fw_infos = Vec::new();
 
-    let mut fws = Vec::new();
-    for idx in 0..config.images.len() {
-        // will modify config
-        let fw = load_app(&mut config, idx, config_dir)?;
-
-        let fw_cfg = &config.images[idx];
-        let version = fw_cfg.version.clone().unwrap_or(Version::new(0, 0, 0));
-
-        let repo = gix::discover(Path::new(".")).unwrap();
-        let mut head = repo.head().unwrap();
-        let head_commit = head.peel_to_commit_in_place().unwrap();
-        let describe = head_commit.describe().names(SelectRef::AllTags);
-        let resolution = describe.try_resolve().unwrap().unwrap();
-        let tag_name = resolution.outcome.name.unwrap();
-        println!("HEAD: {}", tag_name);
-        let ref_name = format!("tags/{}", tag_name);
-        let mut tag_ref = repo.find_reference(&ref_name).unwrap();
-        let tag_id = tag_ref.peel_to_id_in_place().unwrap();
-        println!("id: {}", tag_id);
-
-        // let head_id = head.id().unwrap();
-
-        // let graph = repo.commit_graph().unwrap();
-
-        // git_describe(&head_id, &mut graph, DescribeOptions::default()).unwrap();
-
+    for fw in &fws.images {
         let fw_info = FwInfo {
-            fw_id: fw_cfg.node_id,
-            version,
-            crc: fw.read_u32(0),
+            fw_id: fw.config.node_id,
+            version: fw.config.version.clone().unwrap(),
+            crc: fw.app.read_u32(0),
         };
-        fws.push(fw_info);
+        fw_infos.push(fw_info);
 
         // add generated files, for possible archival
-        let fw_file = output_dir.join(get_fw_hex_filename(fw_cfg));
+        let fw_file = output_dir.join(&fw.merged_hex_file_name);
         files.push(fw_file.to_str().unwrap().to_string());
-        let btl_path = Config::normalize_path(&fw_cfg.btl_path, config_dir)?;
-        let app_path = Config::normalize_path(&fw_cfg.app_path, config_dir)?;
+        let btl_path = Config::normalize_path(&fw.config.btl_path, config_dir)?;
+        let app_path = Config::normalize_path(&fw.config.app_path, config_dir)?;
         files.push(btl_path.to_str().unwrap().to_string());
         files.push(app_path.to_str().unwrap().to_string());
     }
 
-    let script_file = output_dir.join(generate_script_filename(&config));
+    let script_file = output_dir.join(&fws.script_file_name);
     files.push(script_file.to_str().unwrap().to_string());
 
     let info = Info {
-        product_id: config.product_id,
-        project_name: config.product_name,
-        images: fws,
+        product_id: fws.config.product_id,
+        project_name: fws.config.product_name.clone(),
+        images: fw_infos,
         files,
     };
 
+    Ok(info)
+}
+
+pub fn save_info(info: &Info, output_dir: &Path) -> Result<(), Error> {
     let data = serde_json::to_string_pretty(&info).unwrap();
 
     let path = output_dir.join("info.json");
     let mut file = File::create(&path).map_err(Error::Io)?;
     file.write_all(data.as_bytes()).map_err(Error::Io)?;
-    Ok(path)
+    Ok(())
 }

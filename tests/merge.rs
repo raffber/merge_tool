@@ -6,7 +6,7 @@ use std::path::Path;
 use merge_tool::config::{AddressRange, Config};
 use merge_tool::crc::crc32;
 use merge_tool::intel_hex;
-use merge_tool::process;
+use merge_tool::process::{self, save_merged_firmware_images};
 
 fn save_hex(path: &str, data: &[u8], range: &AddressRange) {
     let serialized = intel_hex::serialize(false, range, data);
@@ -61,21 +61,25 @@ fn merge() {
     create_test_data();
     let config_path = Path::new("tests/test.gctmrg");
     let config_dir = Config::get_config_dir(config_path).unwrap();
-    let mut config = Config::load_from_file(config_path).unwrap();
-    let fws = process::merge_all(&mut config, &config_dir).unwrap();
+    let config = Config::load_from_file(config_path).unwrap();
+    let loaded = process::load_firmware_images(&config, &config_dir).unwrap();
+    let fws = process::merge_all(&loaded).unwrap();
 
     // examine F1 firmware
-    let fw = &fws[0];
+    let fw = &fws.images[0].0;
+    let fw_cfg = &loaded.images[0].config;
     assert_eq!(fw.data[256 + 6], 1);
     assert_eq!(fw.config.page_size, 64);
     assert_eq!(fw.range.begin, 0xAA00);
     assert_eq!(fw.range.end, 0xAC00);
     assert_eq!(fw.image_length(), 256 + 128); // full btl and first 128bytes of app (2 pages)
-    assert_eq!(config.product_id, 0x605);
-    assert_eq!(config.images[0].node_id, 1);
-    assert_eq!(config.images[0].version.as_ref().unwrap().major, 3);
-    assert_eq!(config.images[0].version.as_ref().unwrap().minor, 5);
-    assert_eq!(config.images[0].version.as_ref().unwrap().patch, 4);
+    assert_eq!(loaded.config.product_id, 0x605);
+    assert_eq!(fw_cfg.node_id, 1);
+
+    let version = fw_cfg.version.as_ref().unwrap();
+    assert_eq!(version.major, 3);
+    assert_eq!(version.minor, 5);
+    assert_eq!(version.patch, 4);
 
     // reconstruct app data
     let mut data: Vec<_> = (1u8..0x50).collect();
@@ -102,7 +106,7 @@ fn merge() {
 
     let output_dir = config_dir.join("out");
     create_dir_all(&output_dir).unwrap();
-    process::write_fws(&config, &fws, &output_dir).unwrap();
+    save_merged_firmware_images(&fws, &output_dir).unwrap()
 }
 
 #[test]
@@ -111,10 +115,11 @@ fn script() {
 
     let config_path = Path::new("tests/test.gctmrg");
     let config_dir = Config::get_config_dir(config_path).unwrap();
-    let mut config = Config::load_from_file(config_path).unwrap();
+    let config = Config::load_from_file(config_path).unwrap();
     let output_dir = config_dir.join("out");
-    let ret = process::create_script(&mut config, &config_dir, &output_dir);
-    assert!(ret.is_ok());
+    let loaded = process::load_firmware_images(&config, &config_dir).unwrap();
+    let script = process::create_script(&loaded).unwrap();
+    process::save_script(&script, &loaded, &output_dir).unwrap();
 }
 
 #[test]
@@ -123,8 +128,9 @@ fn info() {
 
     let config_path = Path::new("tests/test.gctmrg");
     let config_dir = Config::get_config_dir(config_path).unwrap();
-    let mut config = Config::load_from_file(config_path).unwrap();
+    let config = Config::load_from_file(config_path).unwrap();
     let output_dir = config_dir.join("out");
-    let ret = process::info(&mut config, &config_dir, &output_dir);
+    let loaded = process::load_firmware_images(&config, &config_dir).unwrap();
+    let ret = process::generate_info(&loaded, &config_dir, &output_dir);
     assert!(ret.is_ok());
 }

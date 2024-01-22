@@ -3,6 +3,7 @@ use crate::{intel_hex, srecord, Error};
 use std::iter::repeat;
 use std::path::Path;
 
+#[derive(Clone)]
 pub struct Firmware {
     pub range: AddressRange,
     pub config: DeviceConfig,
@@ -27,8 +28,8 @@ impl Firmware {
         })
     }
 
-    pub fn merge(first: Firmware, second: Firmware) -> Result<Firmware, Error> {
-        let mut second = second;
+    pub fn merge(first: &Firmware, second: &Firmware) -> Result<Firmware, Error> {
+        let mut second = second.clone();
         second.prepend(&first.data, first.range.begin)?;
         Ok(second)
     }
