@@ -13,6 +13,7 @@ use crate::script::Script;
 use crate::Error;
 
 use crate::blocking_ddp::BlockingDdpProtocol;
+use gix::commit::describe::SelectRef;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 
@@ -201,9 +202,16 @@ pub fn info(config: &Config, config_dir: &Path, output_dir: &Path) -> Result<Pat
         let repo = gix::discover(Path::new(".")).unwrap();
         let mut head = repo.head().unwrap();
         let head_commit = head.peel_to_commit_in_place().unwrap();
-        let fmt = head_commit.describe().format().unwrap();
+        let describe = head_commit.describe().names(SelectRef::AllTags);
+        let resolution = describe.try_resolve().unwrap().unwrap();
+        let tag_name = resolution.outcome.name.unwrap();
+        if resolution.outcome.id != head_commit.id() {
+            println!("HEAD is not tagged, using commit hash");
+        } else {
+            println!("HEAD is tagged");
+        }
 
-        println!("HEAD: {}", fmt);
+        println!("HEAD: {}", tag_name);
         // let head_id = head.id().unwrap();
 
         // let graph = repo.commit_graph().unwrap();
