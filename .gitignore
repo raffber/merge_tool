@@ -6,3 +6,6 @@ out/
 Nimbus2000*.gctbtl
 
 jenkinsfile*
+
+.pyprojectx
+.venv
