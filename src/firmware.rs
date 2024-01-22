@@ -28,12 +28,6 @@ impl Firmware {
         })
     }
 
-    pub fn merge(first: &Firmware, second: &Firmware) -> Result<Firmware, Error> {
-        let mut second = second.clone();
-        second.prepend(&first.data, first.range.begin)?;
-        Ok(second)
-    }
-
     pub fn load_from_file(
         path: &Path,
         file_format: &HexFileFormat,
@@ -126,17 +120,19 @@ impl Firmware {
         return len + page_size - last_page_size;
     }
 
-    pub fn prepend(&mut self, data: &Vec<u8>, addr: u64) -> Result<(), Error> {
-        if self.range.begin < addr + (data.len() as u64) {
+    pub fn concatenate(first: &Firmware, second: &Firmware) -> Result<Firmware, Error> {
+        if second.range.begin < first.range.begin + (first.data.len() as u64) {
             return Err(Error::InvalidAddress);
         }
-        let gap = self.range.begin - (addr + (data.len() as u64));
+        let gap = second.range.begin - (first.range.begin + (first.data.len() as u64));
+        let new_range = AddressRange::new(first.range.begin, second.range.end);
+
         let mut new_code = Vec::new();
-        new_code.extend(data);
+        new_code.extend(&first.data);
         new_code.extend(repeat(0xFF).take(gap as usize));
-        new_code.extend(self.data.clone());
-        self.data = new_code;
-        self.range.begin = addr;
-        Ok(())
+        new_code.extend(second.data.clone());
+
+        let ret = Firmware::new(new_range, first.config.clone(), new_code)?;
+        Ok(ret)
     }
 }

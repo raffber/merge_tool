@@ -1,12 +1,12 @@
 use std::fs::{create_dir_all, File};
 use std::io::Write;
 use std::iter::repeat;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use merge_tool::config::{AddressRange, Config};
 use merge_tool::crc::crc32;
 use merge_tool::intel_hex;
-use merge_tool::process::{self, save_merged_firmware_images};
+use merge_tool::process::{self, save_info, save_merged_firmware_images};
 
 fn save_hex(path: &str, data: &[u8], range: &AddressRange) {
     let serialized = intel_hex::serialize(false, range, data);
@@ -56,12 +56,33 @@ fn create_test_data() {
     );
 }
 
+struct IntegrationTest {
+    config: Config,
+    output_dir: PathBuf,
+    config_dir: PathBuf,
+}
+
+impl IntegrationTest {
+    fn new() -> IntegrationTest {
+        create_test_data();
+        let config_path = Path::new("tests/test.gctmrg");
+        let config_path = std::fs::canonicalize(&config_path).unwrap();
+        let config_dir = Config::get_config_dir(&config_path).unwrap();
+        let config = Config::load_from_file(&config_path).unwrap();
+        let output_dir = config_dir.join("out");
+        IntegrationTest {
+            config,
+            output_dir,
+            config_dir,
+        }
+    }
+}
+
 #[test]
 fn merge() {
-    create_test_data();
-    let config_path = Path::new("tests/test.gctmrg");
-    let config_dir = Config::get_config_dir(config_path).unwrap();
-    let config = Config::load_from_file(config_path).unwrap();
+    let test = IntegrationTest::new();
+    let config = test.config;
+    let config_dir = test.config_dir;
     let loaded = process::load_firmware_images(&config, &config_dir).unwrap();
     let fws = process::merge_all(&loaded).unwrap();
 
@@ -111,26 +132,16 @@ fn merge() {
 
 #[test]
 fn script() {
-    create_test_data();
-
-    let config_path = Path::new("tests/test.gctmrg");
-    let config_dir = Config::get_config_dir(config_path).unwrap();
-    let config = Config::load_from_file(config_path).unwrap();
-    let output_dir = config_dir.join("out");
-    let loaded = process::load_firmware_images(&config, &config_dir).unwrap();
+    let test = IntegrationTest::new();
+    let loaded = process::load_firmware_images(&test.config, &test.config_dir).unwrap();
     let script = process::create_script(&loaded).unwrap();
-    process::save_script(&script, &loaded, &output_dir).unwrap();
+    process::save_script(&script, &loaded, &test.output_dir).unwrap();
 }
 
 #[test]
 fn info() {
-    create_test_data();
-
-    let config_path = Path::new("tests/test.gctmrg");
-    let config_dir = Config::get_config_dir(config_path).unwrap();
-    let config = Config::load_from_file(config_path).unwrap();
-    let output_dir = config_dir.join("out");
-    let loaded = process::load_firmware_images(&config, &config_dir).unwrap();
-    let ret = process::generate_info(&loaded, &config_dir, &output_dir);
-    assert!(ret.is_ok());
+    let test = IntegrationTest::new();
+    let loaded = process::load_firmware_images(&test.config, &test.config_dir).unwrap();
+    let info = process::generate_info(&loaded, &test.output_dir).unwrap();
+    save_info(&info, &test.output_dir).unwrap();
 }

@@ -2,7 +2,7 @@ use crate::Error;
 use regex::Regex;
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use std::fs::{canonicalize, File};
+use std::fs::{self, canonicalize, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
@@ -29,8 +29,8 @@ pub struct Config {
     )]
     pub time_state_transition: u32,
 
-    #[serde(skip_serializing, skip_deserializing)]
-    byte_addr_transformed: bool,
+    #[serde(skip)]
+    byte_addresses: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -58,25 +58,6 @@ pub struct FwConfig {
     pub timings: Timings,
 }
 
-impl Default for FwConfig {
-    fn default() -> Self {
-        FwConfig {
-            node_id: default::node_id(),
-            btl_path: "".to_string(),
-            app_path: "".to_string(),
-            version: None,
-            app_address: Default::default(),
-            btl_address: Default::default(),
-            include_in_script: true,
-            header_offset: default::header_offset(),
-            hex_file_format: Default::default(),
-            device_config: Default::default(),
-            timings: Default::default(),
-            write_data_size: default::write_data_size(),
-        }
-    }
-}
-
 impl FwConfig {
     pub fn designator(&self) -> String {
         format!("f{}", self.node_id)
@@ -96,10 +77,12 @@ impl Config {
     }
 
     pub fn get_config_dir(config_path: &Path) -> Result<PathBuf, Error> {
-        Ok(config_path
+        let path = config_path
             .parent()
             .map(|x| x.to_path_buf())
-            .unwrap_or(PathBuf::from("/")))
+            .unwrap_or(PathBuf::from("/"));
+
+        Ok(fs::canonicalize(path)?)
     }
 
     pub fn normalize_path(path: &str, config_dir: &Path) -> Result<PathBuf, Error> {
@@ -134,7 +117,7 @@ impl Config {
     }
 
     pub fn transform_to_byte_addrs(&mut self) {
-        if self.byte_addr_transformed {
+        if self.byte_addresses {
             return;
         }
         for fwconfig in &mut self.images {
@@ -147,11 +130,11 @@ impl Config {
                 fwconfig.device_config.page_size *= 2;
             }
         }
-        self.byte_addr_transformed = true;
+        self.byte_addresses = true;
     }
 
     pub fn transform_to_word_addrs(&mut self) {
-        if !self.byte_addr_transformed {
+        if !self.byte_addresses {
             return;
         }
         for fwconfig in &mut self.images {
@@ -164,7 +147,7 @@ impl Config {
                 fwconfig.device_config.page_size /= 2;
             }
         }
-        self.byte_addr_transformed = true;
+        self.byte_addresses = true;
     }
 }
 
@@ -178,7 +161,7 @@ impl Default for Config {
             blocking: false,
             images: vec![],
             time_state_transition: 0,
-            byte_addr_transformed: false,
+            byte_addresses: false,
         }
     }
 }

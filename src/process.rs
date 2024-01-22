@@ -37,7 +37,7 @@ pub fn generate(options: GenerateOptions) -> Result<(), Error> {
     save_merged_firmware_images(&merged, &options.output_dir)?;
 
     // generate info.json
-    let info = generate_info(&loaded, &options.config_dir, &options.output_dir)?;
+    let info = generate_info(&loaded, &options.output_dir)?;
     save_info(&info, &options.output_dir)?;
 
     Ok(())
@@ -86,6 +86,7 @@ pub fn load_firmware_images(
 
 pub fn load_app(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Firmware, Error> {
     let path = Config::normalize_path(&config.images[idx].app_path, config_dir)?;
+    config.images[idx].app_path = path.to_str().unwrap().to_string();
     let fw = Firmware::load_from_file(
         &path,
         &config.images[idx].hex_file_format,
@@ -100,8 +101,9 @@ pub fn load_app(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Fi
     Ok(fw)
 }
 
-pub fn load_btl(config: &Config, idx: usize, config_dir: &Path) -> Result<Firmware, Error> {
+pub fn load_btl(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Firmware, Error> {
     let path = Config::normalize_path(&config.images[idx].btl_path, config_dir)?;
+    config.images[idx].btl_path = path.to_str().unwrap().to_string();
     let fw_config = &config.images[idx];
     Firmware::load_from_file(
         &path,
@@ -203,7 +205,7 @@ pub struct MergedFirmwareImages<'a> {
 pub fn merge_all<'a>(loaded: &'a LoadedFirmwareImages) -> Result<MergedFirmwareImages<'a>, Error> {
     let mut ret = Vec::new();
     for fw in &loaded.images {
-        let merged = Firmware::merge(&fw.btl, &fw.app)?;
+        let merged = Firmware::concatenate(&fw.btl, &fw.app)?;
         ret.push((merged, fw));
     }
     Ok(MergedFirmwareImages { images: ret })
@@ -227,6 +229,8 @@ pub struct Info {
     project_name: String,
     images: Vec<FwInfo>,
     files: Vec<String>,
+    script_file: String,
+    output_dir: String,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -234,44 +238,61 @@ struct FwInfo {
     fw_id: u8,
     version: Version,
     crc: u32,
+    merged_file: String,
+    app_file: String,
+    btl_file: String,
 }
 
-pub fn generate_info(
-    fws: &LoadedFirmwareImages,
-    config_dir: &Path,
-    output_dir: &Path,
-) -> Result<Info, Error> {
+pub fn generate_info(fws: &LoadedFirmwareImages, output_dir: &Path) -> Result<Info, Error> {
     let mut files = Vec::new();
     let mut fw_infos = Vec::new();
 
     for fw in &fws.images {
+        let btl_path = normalize_file_path(&fw.config.btl_path, output_dir);
+        let app_path = normalize_file_path(&fw.config.app_path, output_dir);
+
         let fw_info = FwInfo {
             fw_id: fw.config.node_id,
             version: fw.config.version.clone().unwrap(),
             crc: fw.app.read_u32(0),
+            merged_file: fw.merged_hex_file_name.clone(),
+            app_file: app_path.clone(),
+            btl_file: btl_path.clone(),
         };
+
         fw_infos.push(fw_info);
 
         // add generated files, for possible archival
-        let fw_file = output_dir.join(&fw.merged_hex_file_name);
-        files.push(fw_file.to_str().unwrap().to_string());
-        let btl_path = Config::normalize_path(&fw.config.btl_path, config_dir)?;
-        let app_path = Config::normalize_path(&fw.config.app_path, config_dir)?;
-        files.push(btl_path.to_str().unwrap().to_string());
-        files.push(app_path.to_str().unwrap().to_string());
+        let merged = fw.merged_hex_file_name.clone();
+        files.push(merged);
+        files.push(btl_path);
+        files.push(app_path);
     }
 
-    let script_file = output_dir.join(&fws.script_file_name);
-    files.push(script_file.to_str().unwrap().to_string());
+    files.push(fws.script_file_name.clone());
 
     let info = Info {
         product_id: fws.config.product_id,
         project_name: fws.config.product_name.clone(),
         images: fw_infos,
+        script_file: fws.script_file_name.clone(),
         files,
+        output_dir: output_dir.to_str().unwrap().to_string(),
     };
 
     Ok(info)
+}
+
+fn normalize_file_path(path: &str, output_dir: &Path) -> String {
+    let path = Path::new(path);
+    assert!(path.is_absolute());
+    assert!(output_dir.is_absolute());
+
+    if let Some(ret) = pathdiff::diff_paths(path, output_dir) {
+        ret.to_str().unwrap().to_string()
+    } else {
+        path.to_str().unwrap().to_string()
+    }
 }
 
 pub fn save_info(info: &Info, output_dir: &Path) -> Result<(), Error> {
