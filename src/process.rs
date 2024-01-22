@@ -205,13 +205,12 @@ pub fn info(config: &Config, config_dir: &Path, output_dir: &Path) -> Result<Pat
         let describe = head_commit.describe().names(SelectRef::AllTags);
         let resolution = describe.try_resolve().unwrap().unwrap();
         let tag_name = resolution.outcome.name.unwrap();
-        if resolution.outcome.id != head_commit.id() {
-            println!("HEAD is not tagged, using commit hash");
-        } else {
-            println!("HEAD is tagged");
-        }
-
         println!("HEAD: {}", tag_name);
+        let ref_name = format!("tags/{}", tag_name);
+        let mut tag_ref = repo.find_reference(&ref_name).unwrap();
+        let tag_id = tag_ref.peel_to_id_in_place().unwrap();
+        println!("id: {}", tag_id);
+
         // let head_id = head.id().unwrap();
 
         // let graph = repo.commit_graph().unwrap();
