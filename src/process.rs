@@ -196,9 +196,23 @@ pub fn info(config: &Config, config_dir: &Path, output_dir: &Path) -> Result<Pat
         let fw = load_app(&mut config, idx, config_dir)?;
 
         let fw_cfg = &config.images[idx];
+        let version = fw_cfg.version.clone().unwrap_or(Version::new(0, 0, 0));
+
+        let repo = gix::discover(Path::new(".")).unwrap();
+        let mut head = repo.head().unwrap();
+        let head_commit = head.peel_to_commit_in_place().unwrap();
+        let fmt = head_commit.describe().format().unwrap();
+
+        println!("HEAD: {}", fmt);
+        // let head_id = head.id().unwrap();
+
+        // let graph = repo.commit_graph().unwrap();
+
+        // git_describe(&head_id, &mut graph, DescribeOptions::default()).unwrap();
+
         let fw_info = FwInfo {
             fw_id: fw_cfg.node_id,
-            version: fw_cfg.version.clone().unwrap_or(Version::new(0, 0, 0)),
+            version,
             crc: fw.read_u32(0),
         };
         fws.push(fw_info);

@@ -108,10 +108,23 @@ fn merge() {
 #[test]
 fn script() {
     create_test_data();
+
     let config_path = Path::new("tests/test.gctmrg");
     let config_dir = Config::get_config_dir(config_path).unwrap();
     let mut config = Config::load_from_file(config_path).unwrap();
     let output_dir = config_dir.join("out");
     let ret = process::create_script(&mut config, &config_dir, &output_dir);
+    assert!(ret.is_ok());
+}
+
+#[test]
+fn info() {
+    create_test_data();
+
+    let config_path = Path::new("tests/test.gctmrg");
+    let config_dir = Config::get_config_dir(config_path).unwrap();
+    let mut config = Config::load_from_file(config_path).unwrap();
+    let output_dir = config_dir.join("out");
+    let ret = process::info(&mut config, &config_dir, &output_dir);
     assert!(ret.is_ok());
 }

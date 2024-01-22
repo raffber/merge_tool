@@ -20,6 +20,7 @@ thiserror = "1"
 clap = "2"
 env_logger = "0.7"
 semver = { version = "1.0.21", features = ["serde"] }
+gix = { version = "0.58.0", features = ["revision"] }
 
 [dev-dependencies]
 assert_matches = "1.5"
