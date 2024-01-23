@@ -44,11 +44,11 @@ function(merge_tool_generate)
         set(BACKDOOR_FLAG "--use-backdoor")
     endif()
 
-    add_custom_target(
-        ${ARG_TARGET_NAME} ALL
+    add_custom_target(${ARG_TARGET_NAME} ALL
+        BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/info.json
+        DEPENDS ${ARG_APP} ${ARG_BTL}
         COMMAND "${MERGE_TOOL_BIN}" generate ${BACKDOOR_FLAG} -c "${ARG_CONFIG_FILE}" -o "${CMAKE_CURRENT_BINARY_DIR}" --repo-path "${CMAKE_CURRENT_SOURCE_DIR}"
-        DEPENDS ${ARG_APP_HEX} ${ARG_BTL_HEX}
-        BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/info.json)
+    )
 endfunction()
 
 function(merge_tool_bundle)
@@ -63,8 +63,8 @@ function(merge_tool_bundle)
         set(VERSIONED_FLAG "--versioned")
     endif()
 
-    add_custom_target(
-        ${ARG_TARGET_NAME} ALL
+    add_custom_target(${ARG_TARGET_NAME} ALL
+        COMMAND ${CMAKE_COMMAND} -E rm -rf ${ARG_OUTPUT_DIR}
         COMMAND "${MERGE_TOOL_BIN}" bundle -i ${ARG_INFO_FILE} --output-dir ${ARG_OUTPUT_DIR} ${VERSIONED_FLAG}
         DEPENDS ${ARG_INFO_FILE})
 endfunction()
