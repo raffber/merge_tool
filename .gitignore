@@ -1,11 +1,6 @@
 target
-cli/target
 .idea
 out/
-
-Nimbus2000*.gctbtl
-
-jenkinsfile*
 
 .pyprojectx
 .venv
