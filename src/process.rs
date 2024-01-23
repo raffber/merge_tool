@@ -2,18 +2,19 @@ use std::fs::{create_dir_all, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use crate::config::default;
 use crate::config::{Config, FwConfig, DDP_CMD_CODE};
 use crate::crc::crc32;
 use crate::ddp::DdpProtocol;
 use crate::firmware::Firmware;
+use crate::git_description::GitDescription;
 use crate::header::Header;
 use crate::protocol::generate_script;
 use crate::script::Script;
 use crate::Error;
 
 use crate::blocking_ddp::BlockingDdpProtocol;
-use semver::Version;
+use chrono::Utc;
+use semver::{BuildMetadata, Prerelease, Version};
 use serde::{Deserialize, Serialize};
 
 pub struct GenerateOptions {
@@ -61,6 +62,11 @@ pub fn load_firmware_images(
     config_dir: &Path,
 ) -> Result<LoadedFirmwareImages, Error> {
     let mut config = config.clone();
+
+    if config.build_time.timestamp() == 0 {
+        config.build_time = chrono::Utc::now();
+    }
+
     let mut ret = Vec::new();
     config.transform_to_byte_addrs();
     for idx in 0..config.images.len() {
@@ -80,7 +86,7 @@ pub fn load_firmware_images(
     Ok(LoadedFirmwareImages {
         images: ret,
         config: config.clone(),
-        script_file_name: generate_script_filename(&config),
+        script_file_name: format!("{}.gctbtl", config.product_name),
     })
 }
 
@@ -114,15 +120,18 @@ pub fn load_btl(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Fi
 }
 
 fn configure_header(mut fw: Firmware, config: &mut Config, idx: usize) -> Result<Firmware, Error> {
+    let default_config = Config::default();
+    let default_fw_config = FwConfig::default();
+
     let image_length = fw.image_length();
     let mut header = Header::new(&mut fw, config.images[idx].header_offset)?;
-    if config.product_id != default::product_id() && config.product_id != header.product_id() {
+    if config.product_id != default_config.product_id && config.product_id != header.product_id() {
         return Err(Error::InvalidConfig(format!(
             "Product ID in firmware and config does not match: {} vs. {}",
             config.product_id,
             header.product_id()
         )));
-    } else if config.product_id == default::product_id() {
+    } else if config.product_id == default_config.product_id {
         config.product_id = header.product_id();
     }
     let fwconfig = &mut config.images[idx];
@@ -140,18 +149,21 @@ fn configure_header(mut fw: Firmware, config: &mut Config, idx: usize) -> Result
     }
 
     let fw_id = config.images[idx].node_id;
-    if fw_id != default::node_id() && fw_id != header.fw_id() {
+    if fw_id != default_fw_config.node_id && fw_id != header.fw_id() {
         return Err(Error::InvalidConfig(format!(
             "Firmware ID in firmware and config does not match: {} vs. {}",
             fw_id,
             header.fw_id()
         )));
-    } else if fw_id == default::node_id() {
+    } else if fw_id == default_fw_config.node_id {
         config.images[idx].node_id = header.fw_id();
-    } else if header.fw_id() == default::node_id() {
+    } else if header.fw_id() == default_fw_config.node_id {
         header.set_fw_id(fw_id);
     }
     header.set_length(image_length as u32);
+
+    header.set_timestamp(config.build_time.timestamp() as u64);
+
     Ok(fw)
 }
 
@@ -302,4 +314,17 @@ pub fn save_info(info: &Info, output_dir: &Path) -> Result<(), Error> {
     let mut file = File::create(&path).map_err(Error::Io)?;
     file.write_all(data.as_bytes()).map_err(Error::Io)?;
     Ok(())
+}
+
+pub fn add_pre_release_info(
+    version: &mut Version,
+    date_time: &chrono::DateTime<Utc>,
+    description: GitDescription,
+) {
+    if description.is_pre_release() {
+        let date_time = date_time.format("%Y%m%d.%H%M%S");
+        let pre_release = format!("pre.{}", date_time);
+        version.pre = Prerelease::new(&pre_release).unwrap();
+        version.build = BuildMetadata::new(&description.sha).unwrap();
+    }
 }

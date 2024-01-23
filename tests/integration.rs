@@ -3,6 +3,8 @@ use std::io::Write;
 use std::iter::repeat;
 use std::path::{Path, PathBuf};
 
+use byteorder::{ByteOrder, LittleEndian};
+use chrono::{DateTime, Utc};
 use merge_tool::config::{AddressRange, Config};
 use merge_tool::crc::crc32;
 use merge_tool::intel_hex;
@@ -68,7 +70,8 @@ impl IntegrationTest {
         let config_path = Path::new("tests/test.gctmrg");
         let config_path = std::fs::canonicalize(&config_path).unwrap();
         let config_dir = Config::get_config_dir(&config_path).unwrap();
-        let config = Config::load_from_file(&config_path).unwrap();
+        let mut config = Config::load_from_file(&config_path).unwrap();
+        config.build_time = DateTime::<Utc>::from_timestamp(1000, 0).unwrap();
         let output_dir = config_dir.join("out");
         IntegrationTest {
             config,
@@ -119,6 +122,9 @@ fn merge() {
     data[4 + 13] = 0;
     data[4 + 14] = 0;
     data[4 + 15] = 0;
+
+    LittleEndian::write_u32(&mut data[4 + 18..4 + 22], 1000);
+    LittleEndian::write_u16(&mut data[4 + 22..4 + 24], 0);
 
     // compute and compare CRC
     let ref_crc = crc32(&data[4..128]);

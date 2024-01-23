@@ -46,7 +46,7 @@ fn main() {
             ),
         )
         .subcommand(
-            SubCommand::with_name("changelog")
+            SubCommand::with_name("get-version")
                 .about("Extract version information from changelog")
                 .arg(
                     Arg::with_name("changelog")
@@ -67,8 +67,8 @@ fn main() {
         }
     }
 
-    if let Some(_) = matches.subcommand_matches("changelog") {
-        let changelog = matches.value_of("changelog").unwrap_or("CHANGELOG.md");
+    if let Some(_) = matches.subcommand_matches("get-version") {
+        let changelog = matches.value_of("get-version").unwrap_or("CHANGELOG.md");
         match extract_version_from_changelog_file(changelog.as_ref()) {
             Ok(version) => println!("{}", version.to_string()),
             Err(err) => {
