@@ -4,6 +4,7 @@ use clap::{crate_authors, crate_version, App, Arg, ArgMatches, SubCommand};
 
 use merge_tool::changelog::extract_version_from_changelog_file;
 use merge_tool::config::Config;
+use merge_tool::git_description::retrieve_description;
 use merge_tool::process::{self, GenerateOptions};
 use std::process::exit;
 use std::str::FromStr;
@@ -54,8 +55,14 @@ fn main() {
                         .long("changelog")
                         .value_name("FILE")
                         .help("Set a changelog file. Defaults to CHANGELOG.md."),
-                ),
-        )
+                )
+                .arg(
+                    Arg::with_name("prerelease")
+                        .short("p")
+                        .long("prerelease")
+                        .help("Include prerelease versions in the output."),
+                )
+            )
         .subcommand(
             SubCommand::with_name("bundle")
                 .about("Bundle the firmware files")
@@ -104,15 +111,29 @@ fn main() {
         }
     }
 
-    if let Some(_) = matches.subcommand_matches("get-version") {
+    if let Some(matches) = matches.subcommand_matches("get-version") {
         let changelog = matches.value_of("get-version").unwrap_or("CHANGELOG.md");
-        match extract_version_from_changelog_file(changelog.as_ref()) {
-            Ok(version) => println!("{}", version.to_string()),
+        let mut version = match extract_version_from_changelog_file(changelog.as_ref()) {
+            Ok(version) => version,
             Err(err) => {
                 println!("Error: Could not extract version from changelog: {}", err);
                 exit(1);
             }
+        };
+        let prerelease = matches.is_present("prerelease");
+        if prerelease {
+            let repo = std::env::current_dir().unwrap();
+            let git_description = match retrieve_description(&repo) {
+                Ok(git_description) => git_description,
+                Err(err) => {
+                    println!("Error: Could not retrieve git description: {}", err);
+                    exit(1);
+                }
+            };
+            let date_time = chrono::Utc::now();
+            process::add_pre_release_info(&mut version, &date_time, &git_description);
         }
+        println!("{}", version)
     }
 }
 
