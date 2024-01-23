@@ -1,12 +1,12 @@
-use std::fs::{create_dir_all, File};
+use std::fs::{self, create_dir_all, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use crate::config::{Config, FwConfig, DDP_CMD_CODE};
+use crate::config::{Config, FwConfig, HexFileFormat, DDP_CMD_CODE};
 use crate::crc::crc32;
 use crate::ddp::DdpProtocol;
 use crate::firmware::Firmware;
-use crate::git_description::GitDescription;
+use crate::git_description::{retrieve_description, GitDescription};
 use crate::header::Header;
 use crate::protocol::generate_script;
 use crate::script::Script;
@@ -21,13 +21,17 @@ pub struct GenerateOptions {
     pub config: Config,
     pub output_dir: PathBuf,
     pub config_dir: PathBuf,
-    pub repo_dir: PathBuf,
+    pub repo_dir: Option<PathBuf>,
 }
 
 pub fn generate(options: GenerateOptions) -> Result<(), Error> {
     create_dir_all(&options.output_dir)?;
 
-    let loaded = load_firmware_images(&options.config, &options.config_dir)?;
+    let loaded = load_firmware_images(
+        &options.config,
+        &options.config_dir,
+        options.repo_dir.as_ref().map(|x| x.as_path()),
+    )?;
 
     // create script
     let script = create_script(&loaded)?;
@@ -60,6 +64,7 @@ pub struct LoadedFirmwareImages {
 pub fn load_firmware_images(
     config: &Config,
     config_dir: &Path,
+    git_repo: Option<&Path>,
 ) -> Result<LoadedFirmwareImages, Error> {
     let mut config = config.clone();
 
@@ -67,12 +72,31 @@ pub fn load_firmware_images(
         config.build_time = chrono::Utc::now();
     }
 
+    let mut git_description = None;
+    if let Some(repo) = git_repo {
+        git_description = Some(retrieve_description(repo)?);
+    }
+
     let mut ret = Vec::new();
     config.transform_to_byte_addrs();
     for idx in 0..config.images.len() {
         let app = load_app(&mut config, idx, config_dir)?;
         let btl = load_btl(&mut config, idx, config_dir)?;
-        let merged_hex_file_name = get_merged_hex_filename(&config.images[idx]);
+
+        if let Some(desc) = git_description.as_ref() {
+            add_pre_release_info(
+                &mut config.images[idx].version.as_mut().unwrap(),
+                &config.build_time,
+                desc,
+            );
+        }
+
+        let fw_config = &config.images[idx];
+        let merged_hex_file_name = format!(
+            "merged_f{}.{}",
+            fw_config.node_id,
+            fw_config.hex_file_format.file_extension(),
+        );
 
         let loaded = LoadedFirmware {
             btl,
@@ -167,25 +191,6 @@ fn configure_header(mut fw: Firmware, config: &mut Config, idx: usize) -> Result
     Ok(fw)
 }
 
-fn get_merged_hex_filename(fw_config: &FwConfig) -> String {
-    format!(
-        "merged_{}.{}",
-        fw_config.designator(),
-        fw_config.hex_file_format.file_extension()
-    )
-}
-
-fn generate_script_filename(config: &Config) -> String {
-    let mut parts = Vec::new();
-    parts.push(format!("{}", config.product_name.clone()));
-    for fw_config in &config.images {
-        let version = fw_config.version.clone().unwrap_or(Version::new(0, 0, 0));
-        parts.push(format!("_{}", version));
-    }
-    parts.push(".gctbtl".to_string());
-    parts.join("")
-}
-
 pub fn create_script(loaded: &LoadedFirmwareImages) -> Result<Script, crate::Error> {
     let cmds = if !loaded.config.blocking {
         let protocol = DdpProtocol::new(DDP_CMD_CODE);
@@ -238,7 +243,7 @@ pub fn save_merged_firmware_images(
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Info {
     product_id: u16,
-    project_name: String,
+    product_name: String,
     images: Vec<FwInfo>,
     files: Vec<String>,
     script_file: String,
@@ -250,6 +255,7 @@ struct FwInfo {
     fw_id: u8,
     version: Version,
     crc: u32,
+    hex_file_format: HexFileFormat,
     merged_file: String,
     app_file: String,
     btl_file: String,
@@ -270,6 +276,7 @@ pub fn generate_info(fws: &LoadedFirmwareImages, output_dir: &Path) -> Result<In
             merged_file: fw.merged_hex_file_name.clone(),
             app_file: app_path.clone(),
             btl_file: btl_path.clone(),
+            hex_file_format: fw.config.hex_file_format,
         };
 
         fw_infos.push(fw_info);
@@ -285,7 +292,7 @@ pub fn generate_info(fws: &LoadedFirmwareImages, output_dir: &Path) -> Result<In
 
     let info = Info {
         product_id: fws.config.product_id,
-        project_name: fws.config.product_name.clone(),
+        product_name: fws.config.product_name.clone(),
         images: fw_infos,
         script_file: fws.script_file_name.clone(),
         files,
@@ -319,12 +326,117 @@ pub fn save_info(info: &Info, output_dir: &Path) -> Result<(), Error> {
 pub fn add_pre_release_info(
     version: &mut Version,
     date_time: &chrono::DateTime<Utc>,
-    description: GitDescription,
+    description: &GitDescription,
 ) {
     if description.is_pre_release() {
-        let date_time = date_time.format("%Y%m%d.%H%M%S");
+        let date_time = date_time.format("%Y%m%d%H%M%S");
         let pre_release = format!("pre.{}", date_time);
         version.pre = Prerelease::new(&pre_release).unwrap();
         version.build = BuildMetadata::new(&description.sha).unwrap();
     }
+}
+
+pub fn bundle(info: &Path, output_dir: &Path, versioned: bool) -> Result<(), crate::Error> {
+    let info = info.canonicalize()?;
+    let info_data = fs::read_to_string(&info)?;
+    let info_dir = info.parent().unwrap_or(Path::new("/"));
+
+    let info: Info =
+        serde_json::from_str(&info_data).map_err(|x| crate::Error::InvalidInfoFile(x.into()))?;
+
+    let mut new_info: Info = info.clone();
+    new_info.files = Vec::new();
+
+    create_dir_all(output_dir)?;
+
+    for (fw, fw_new) in info.images.iter().zip(new_info.images.iter_mut()) {
+        fw_new.app_file = get_app_file_name(&fw, versioned);
+        fw_new.btl_file = get_btl_file_name(&fw, versioned);
+        fw_new.merged_file = get_merged_file_name(&fw, versioned);
+        copy_and_rename(&info_dir.join(&fw.app_file), output_dir, &fw_new.app_file)?;
+        copy_and_rename(&info_dir.join(&fw.btl_file), output_dir, &fw_new.btl_file)?;
+        copy_and_rename(
+            &info_dir.join(&fw.merged_file),
+            output_dir,
+            &fw_new.merged_file,
+        )?;
+        new_info.files.push(fw_new.app_file.clone());
+        new_info.files.push(fw_new.btl_file.clone());
+        new_info.files.push(fw_new.merged_file.clone());
+    }
+
+    new_info.script_file = get_script_file_name(&info, versioned);
+    copy_and_rename(
+        &info_dir.join(&info.script_file),
+        output_dir,
+        &new_info.script_file,
+    )?;
+    new_info.files.push(new_info.script_file.clone());
+
+    let new_info_data = serde_json::to_string_pretty(&new_info).unwrap();
+    let new_info_path = output_dir.join("info.json");
+    let mut file = File::create(&new_info_path)?;
+    file.write_all(new_info_data.as_bytes())?;
+
+    Ok(())
+}
+
+fn copy_and_rename(src: &Path, dest_dir: &Path, new_name: &str) -> Result<(), crate::Error> {
+    Ok(fs::copy(src, dest_dir.join(new_name)).map(|_| ())?)
+}
+
+fn get_app_file_name(fw: &FwInfo, versioned: bool) -> String {
+    if versioned {
+        format!(
+            "app_f{}_{}.{}",
+            fw.fw_id,
+            fw.version,
+            fw.hex_file_format.file_extension()
+        )
+    } else {
+        format!("app_f{}.{}", fw.fw_id, fw.hex_file_format.file_extension())
+    }
+}
+
+fn get_btl_file_name(fw: &FwInfo, versioned: bool) -> String {
+    if versioned {
+        format!(
+            "btl_f{}_{}.{}",
+            fw.fw_id,
+            fw.version,
+            fw.hex_file_format.file_extension()
+        )
+    } else {
+        format!("btl_f{}.{}", fw.fw_id, fw.hex_file_format.file_extension())
+    }
+}
+
+fn get_merged_file_name(fw: &FwInfo, versioned: bool) -> String {
+    if versioned {
+        format!(
+            "merged_f{}_{}.{}",
+            fw.fw_id,
+            fw.version,
+            fw.hex_file_format.file_extension()
+        )
+    } else {
+        format!(
+            "merged_f{}.{}",
+            fw.fw_id,
+            fw.hex_file_format.file_extension()
+        )
+    }
+}
+
+fn get_script_file_name(info: &Info, versioned: bool) -> String {
+    if !versioned {
+        return format!("{}.gctbtl", info.product_name);
+    }
+    let mut parts = Vec::new();
+    parts.push(format!("{}", info.product_name.clone()));
+    for fw_info in &info.images {
+        parts.push(format!("_{}", fw_info.version));
+    }
+    parts.push(".gctbtl".to_string());
+    parts.join("")
 }

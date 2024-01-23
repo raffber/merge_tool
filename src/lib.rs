@@ -36,6 +36,7 @@ pub enum Error {
     InvalidProductName,
     CannotParseChangelog,
     Git(anyhow::Error),
+    InvalidInfoFile(anyhow::Error),
 }
 
 impl From<io::Error> for Error {

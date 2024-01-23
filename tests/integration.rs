@@ -1,4 +1,4 @@
-use std::fs::{create_dir_all, File};
+use std::fs::{self, File};
 use std::io::Write;
 use std::iter::repeat;
 use std::path::{Path, PathBuf};
@@ -8,7 +8,8 @@ use chrono::{DateTime, Utc};
 use merge_tool::config::{AddressRange, Config};
 use merge_tool::crc::crc32;
 use merge_tool::intel_hex;
-use merge_tool::process::{self, save_info, save_merged_firmware_images};
+use merge_tool::process;
+use serial_test::serial;
 
 fn save_hex(path: &str, data: &[u8], range: &AddressRange) {
     let serialized = intel_hex::serialize(false, range, data);
@@ -73,6 +74,8 @@ impl IntegrationTest {
         let mut config = Config::load_from_file(&config_path).unwrap();
         config.build_time = DateTime::<Utc>::from_timestamp(1000, 0).unwrap();
         let output_dir = config_dir.join("out");
+        let _ = fs::remove_dir_all(&output_dir);
+        fs::create_dir_all(&output_dir).unwrap();
         IntegrationTest {
             config,
             output_dir,
@@ -82,11 +85,12 @@ impl IntegrationTest {
 }
 
 #[test]
+#[serial]
 fn merge() {
     let test = IntegrationTest::new();
     let config = test.config;
     let config_dir = test.config_dir;
-    let loaded = process::load_firmware_images(&config, &config_dir).unwrap();
+    let loaded = process::load_firmware_images(&config, &config_dir, None).unwrap();
     let fws = process::merge_all(&loaded).unwrap();
 
     // examine F1 firmware
@@ -131,23 +135,45 @@ fn merge() {
     let crc = fw.read_u32(256);
     assert_eq!(ref_crc, crc);
 
-    let output_dir = config_dir.join("out");
-    create_dir_all(&output_dir).unwrap();
-    save_merged_firmware_images(&fws, &output_dir).unwrap()
+    process::save_merged_firmware_images(&fws, &test.output_dir).unwrap()
 }
 
 #[test]
+#[serial]
 fn script() {
     let test = IntegrationTest::new();
-    let loaded = process::load_firmware_images(&test.config, &test.config_dir).unwrap();
+    let loaded = process::load_firmware_images(&test.config, &test.config_dir, None).unwrap();
     let script = process::create_script(&loaded).unwrap();
     process::save_script(&script, &loaded, &test.output_dir).unwrap();
 }
 
 #[test]
+#[serial]
 fn info() {
     let test = IntegrationTest::new();
-    let loaded = process::load_firmware_images(&test.config, &test.config_dir).unwrap();
+    let loaded = process::load_firmware_images(&test.config, &test.config_dir, None).unwrap();
     let info = process::generate_info(&loaded, &test.output_dir).unwrap();
-    save_info(&info, &test.output_dir).unwrap();
+    process::save_info(&info, &test.output_dir).unwrap();
+}
+
+#[test]
+#[serial]
+fn bundle() {
+    let test = IntegrationTest::new();
+
+    let loaded =
+        process::load_firmware_images(&test.config, &test.config_dir, Some(&test.config_dir))
+            .unwrap();
+
+    let script = process::create_script(&loaded).unwrap();
+    process::save_script(&script, &loaded, &test.output_dir).unwrap();
+
+    let fws = process::merge_all(&loaded).unwrap();
+    process::save_merged_firmware_images(&fws, &test.output_dir).unwrap();
+
+    let info = process::generate_info(&loaded, &test.output_dir).unwrap();
+    process::save_info(&info, &test.output_dir).unwrap();
+
+    let bundle_output_dir = test.output_dir.join("bundle");
+    process::bundle(&test.output_dir.join("info.json"), &bundle_output_dir, true).unwrap();
 }

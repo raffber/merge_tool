@@ -205,7 +205,7 @@ impl AddressRange {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Copy, Clone, Serialize, Deserialize, Debug)]
 pub enum HexFileFormat {
     IntelHex,
     SRecord,

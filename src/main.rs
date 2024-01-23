@@ -56,6 +56,28 @@ fn main() {
                         .help("Set a changelog file. Defaults to CHANGELOG.md."),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("bundle")
+                .about("Bundle the firmware files")
+                .arg(
+                    Arg::with_name("info")
+                        .short("i")
+                        .long("info")
+                        .value_name("FILE")
+                        .help("Info file to bundle. Defaults to info.json."),
+                ).arg(
+                    Arg::with_name("output-dir")
+                        .short("o")
+                        .long("output-dir")
+                        .value_name("DIRECTORY")
+                        .help("Output directory for the bundled firmware files."),
+                )
+                .arg(
+                    Arg::with_name("versioned")
+                        .long("versioned")
+                        .help("Use versioned output directory."),
+                )
+        )
         .get_matches();
 
     if let Some(_) = matches.subcommand_matches("generate") {
@@ -63,6 +85,21 @@ fn main() {
 
         if let Err(err) = process::generate(options) {
             println!("Error: Could not generate firmware: {}", err);
+            exit(1);
+        }
+    }
+
+    if let Some(_) = matches.subcommand_matches("bundle") {
+        let info = Path::new(matches.value_of("info").unwrap_or("info.json"));
+        let Some(output_dir) = matches.value_of("output-dir") else {
+            println!("Error: No output directory specified.");
+            exit(1);
+        };
+        let versioned = matches.is_present("versioned");
+        let output_dir = Path::new(output_dir);
+
+        if let Err(err) = process::bundle(info, output_dir, versioned) {
+            println!("Error: Could not bundle firmware: {}", err);
             exit(1);
         }
     }
@@ -116,8 +153,7 @@ fn get_generation_options(matches: &ArgMatches) -> GenerateOptions {
 
     let repo_dir = matches
         .value_of("repo-path")
-        .and_then(|x| PathBuf::from_str(x).ok())
-        .unwrap_or(config_dir.clone());
+        .and_then(|x| PathBuf::from_str(x).ok());
 
     GenerateOptions {
         config,
