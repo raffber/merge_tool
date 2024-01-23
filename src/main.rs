@@ -11,7 +11,7 @@ use std::str::FromStr;
 fn main() {
     env_logger::init();
 
-    let matches = App::new("Merge Tool")
+    let matches = App::new("merge_tool")
         .author(crate_authors!())
         .version(crate_version!())
         .author("Raphael Bernhard <beraphae@gmail.com>")
