@@ -80,7 +80,7 @@ fn main() {
         )
         .get_matches();
 
-    if let Some(_) = matches.subcommand_matches("generate") {
+    if let Some(matches) = matches.subcommand_matches("generate") {
         let options = get_generation_options(&matches);
 
         if let Err(err) = process::generate(options) {
@@ -89,7 +89,7 @@ fn main() {
         }
     }
 
-    if let Some(_) = matches.subcommand_matches("bundle") {
+    if let Some(matches) = matches.subcommand_matches("bundle") {
         let info = Path::new(matches.value_of("info").unwrap_or("info.json"));
         let Some(output_dir) = matches.value_of("output-dir") else {
             println!("Error: No output directory specified.");
