@@ -4,7 +4,7 @@ if(CMAKE_HOST_SYSTEM_NAME STREQUAL Linux)
     FetchContent_Declare(
         merge_tool
         DOWNLOAD_NO_EXTRACT TRUE
-        URL https://github.com/raffber/merge_tool/releases/download/release%2F0.3.0-alpha.1/merge_tool
+        URL https://github.com/raffber/merge_tool/releases/download/release%2F0.3.0-alpha.2/merge_tool
     )
 
     FetchContent_Populate(merge_tool)
@@ -17,7 +17,7 @@ elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL Windows)
     FetchContent_Declare(
         merge_tool
         DOWNLOAD_NO_EXTRACT TRUE
-        URL https://github.com/raffber/merge_tool/releases/download/release%2F0.3.0-alpha.1/merge_tool.exe
+        URL https://github.com/raffber/merge_tool/releases/download/release%2F0.3.0-alpha.2/merge_tool.exe
     )
 
     FetchContent_Populate(merge_tool)
@@ -37,8 +37,6 @@ function(merge_tool_generate)
     set(oneValueArgs TARGET_NAME CONFIG_FILE APP BTL)
 
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "" ${ARGN})
-
-    message(":::::::::::::: ${ARG_TARGET_NAME} ::::::::::::::")
 
     set(BACKDOOR_FLAG "")
 
