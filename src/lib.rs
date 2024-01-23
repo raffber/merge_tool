@@ -6,7 +6,6 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::{fmt, io};
-use thiserror::Error as ErrorBase;
 
 pub mod blocking_ddp;
 pub mod changelog;
@@ -14,6 +13,7 @@ pub mod config;
 pub mod crc;
 pub mod ddp;
 pub mod firmware;
+pub mod git_description;
 pub mod header;
 pub mod intel_hex;
 pub mod process;
@@ -22,7 +22,7 @@ pub mod script;
 pub mod script_cmd;
 pub mod srecord;
 
-#[derive(Debug, ErrorBase)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
     AddressRangeNotAlignedToPage,
     ImageTooShortForHeader,
@@ -35,6 +35,8 @@ pub enum Error {
     CannotFindGitRepo,
     InvalidProductName,
     CannotParseChangelog,
+    Git(anyhow::Error),
+    InvalidInfoFile(anyhow::Error),
 }
 
 impl From<io::Error> for Error {

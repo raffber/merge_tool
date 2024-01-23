@@ -1,46 +1,52 @@
-use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 
 use clap::{crate_authors, crate_version, App, Arg, ArgMatches, SubCommand};
 
 use merge_tool::changelog::extract_version_from_changelog_file;
 use merge_tool::config::Config;
-use merge_tool::process;
+use merge_tool::process::{self, GenerateOptions};
 use std::process::exit;
 use std::str::FromStr;
 
 fn main() {
     env_logger::init();
 
-    let matches = App::new("Merge Tool")
+    let matches = App::new("merge_tool")
         .author(crate_authors!())
         .version(crate_version!())
         .author("Raphael Bernhard <beraphae@gmail.com>")
         .about("Merge firmwares like in 1999")
-        .arg(
-            Arg::with_name("config")
-                .short("c")
-                .long("config")
-                .value_name("FILE")
-                .help("Set a config file. Defaults to config.gctmrg."),
-        )
-        .arg(
-            Arg::with_name("output-dir")
-                .short("o")
-                .long("output-dir")
-                .value_name("FILE")
-                .help("Output folder for generated files. Defaults to `<config-file-dir>/out`"),
-        )
-        .arg(
-            Arg::with_name("use-backdoor")
-                .long("use-backdoor")
-                .help("Use the backdoor to validate the firmware image."),
-        )
-        .subcommand(SubCommand::with_name("script").about("Create a bootload script"))
-        .subcommand(SubCommand::with_name("merge").about("Merge firmware files"))
-        .subcommand(SubCommand::with_name("info").about("Write a .info.json file"))
         .subcommand(
-            SubCommand::with_name("changelog")
+            SubCommand::with_name("generate")
+                .about("Create a bootload script, merge firmware files and write a info.json file")
+            .arg(
+                Arg::with_name("config")
+                    .short("c")
+                    .long("config")
+                    .value_name("FILE")
+                    .help("Set a config file. Defaults to config.gctmrg."),
+            )
+            .arg(
+                Arg::with_name("output-dir")
+                    .short("o")
+                    .long("output-dir")
+                    .value_name("FILE")
+                    .help("Output folder for generated files. Defaults to `<config-file-dir>/out`"),
+            )
+            .arg(
+                Arg::with_name("use-backdoor")
+                    .long("use-backdoor")
+                    .help("Use the backdoor to validate the firmware image."),
+            )
+            .arg(
+                Arg::with_name("repo-path")
+                    .long("repo-path")
+                    .value_name("FILE")
+                    .help("Path to the git repository (or any file within the repository). Defaults to the config file path."),
+            ),
+        )
+        .subcommand(
+            SubCommand::with_name("get-version")
                 .about("Extract version information from changelog")
                 .arg(
                     Arg::with_name("changelog")
@@ -50,51 +56,56 @@ fn main() {
                         .help("Set a changelog file. Defaults to CHANGELOG.md."),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("bundle")
+                .about("Bundle the firmware files")
+                .arg(
+                    Arg::with_name("info")
+                        .short("i")
+                        .long("info")
+                        .value_name("FILE")
+                        .help("Info file to bundle. Defaults to info.json."),
+                ).arg(
+                    Arg::with_name("output-dir")
+                        .short("o")
+                        .long("output-dir")
+                        .value_name("DIRECTORY")
+                        .help("Output directory for the bundled firmware files."),
+                )
+                .arg(
+                    Arg::with_name("versioned")
+                        .long("versioned")
+                        .help("Use versioned output directory."),
+                )
+        )
         .get_matches();
 
-    if let Some(_) = matches.subcommand_matches("script") {
-        let (mut config, config_dir, output_dir) = get_config_or_exit(&matches);
+    if let Some(_) = matches.subcommand_matches("generate") {
+        let options = get_generation_options(&matches);
 
-        if let Err(err) = create_dir_all(&output_dir) {
-            println!("Cannot create output directory: {}", err);
-            exit(1);
-        }
-        if let Err(err) = process::create_script(&mut config, &config_dir, &output_dir) {
-            println!("Error: Could not create bootload script: {}", err);
+        if let Err(err) = process::generate(options) {
+            println!("Error: Could not generate firmware: {}", err);
             exit(1);
         }
     }
 
-    if let Some(_) = matches.subcommand_matches("merge") {
-        let (mut config, config_dir, output_dir) = get_config_or_exit(&matches);
-        if let Err(err) = create_dir_all(&output_dir) {
-            println!("Cannot create output directory: {}", err);
+    if let Some(_) = matches.subcommand_matches("bundle") {
+        let info = Path::new(matches.value_of("info").unwrap_or("info.json"));
+        let Some(output_dir) = matches.value_of("output-dir") else {
+            println!("Error: No output directory specified.");
             exit(1);
-        }
-        match process::merge_all(&mut config, &config_dir) {
-            Ok(fws) => {
-                if let Err(err) = process::write_fws(&config, &fws, &output_dir) {
-                    println!("Error: Couldn't write merged firmware to disk: {}", err);
-                    exit(1);
-                }
-            }
-            Err(err) => {
-                println!("Error: Couldn't merge firmware images: {}", err);
-                exit(1);
-            }
-        }
-    }
+        };
+        let versioned = matches.is_present("versioned");
+        let output_dir = Path::new(output_dir);
 
-    if let Some(_) = matches.subcommand_matches("info") {
-        let (mut config, config_dir, output_dir) = get_config_or_exit(&matches);
-        if let Err(err) = process::info(&mut config, &config_dir, &output_dir) {
-            println!("Error: Could not extract firmware info: {}", err);
+        if let Err(err) = process::bundle(info, output_dir, versioned) {
+            println!("Error: Could not bundle firmware: {}", err);
             exit(1);
         }
     }
 
-    if let Some(_) = matches.subcommand_matches("changelog") {
-        let changelog = matches.value_of("changelog").unwrap_or("CHANGELOG.md");
+    if let Some(_) = matches.subcommand_matches("get-version") {
+        let changelog = matches.value_of("get-version").unwrap_or("CHANGELOG.md");
         match extract_version_from_changelog_file(changelog.as_ref()) {
             Ok(version) => println!("{}", version.to_string()),
             Err(err) => {
@@ -105,7 +116,7 @@ fn main() {
     }
 }
 
-fn get_config_or_exit(matches: &ArgMatches) -> (Config, PathBuf, PathBuf) {
+fn get_generation_options(matches: &ArgMatches) -> GenerateOptions {
     let config = matches.value_of("config").unwrap_or("config.gctmrg");
     let config_path = Path::new(config);
     if !config_path.exists() {
@@ -140,5 +151,14 @@ fn get_config_or_exit(matches: &ArgMatches) -> (Config, PathBuf, PathBuf) {
         config.use_backdoor = true;
     }
 
-    (config, config_dir, output_dir)
+    let repo_dir = matches
+        .value_of("repo-path")
+        .and_then(|x| PathBuf::from_str(x).ok());
+
+    GenerateOptions {
+        config,
+        output_dir,
+        config_dir,
+        repo_dir,
+    }
 }

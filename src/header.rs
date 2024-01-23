@@ -7,6 +7,7 @@ const MAJOR_VERSION_OFFSET: usize = 4;
 const MINOR_VERSION_OFFSET: usize = 6;
 const PATCH_VERSION_OFFSET: usize = 8;
 const LENGTH_OFFSET: usize = 12;
+const TIMESTAMP_OFFSET: usize = 18;
 
 const HEADER_LENGTH: usize = 32;
 
@@ -73,5 +74,42 @@ impl<'a> Header<'a> {
 
     pub fn set_length(&mut self, value: u32) {
         self.fw.write_u32(self.offset + LENGTH_OFFSET, value);
+    }
+
+    pub fn set_timestamp(&mut self, value: u64) {
+        self.fw
+            .write_u32(self.offset + TIMESTAMP_OFFSET, (value & 0xFFFFFFFF) as u32);
+        self.fw.write_u16(
+            self.offset + TIMESTAMP_OFFSET + 4,
+            ((value >> 32) & 0xFFFF) as u16,
+        );
+    }
+
+    pub fn get_timestamp(&self) -> u64 {
+        let low = self.fw.read_u32(self.offset + TIMESTAMP_OFFSET) as u64;
+        let high = self.fw.read_u16(self.offset + TIMESTAMP_OFFSET + 4) as u64;
+        low | (high << 32)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::config::{AddressRange, DeviceConfig};
+
+    #[test]
+    fn test_timestamp() {
+        use crate::firmware::Firmware;
+        use crate::header::Header;
+
+        let mut fw = Firmware::new(
+            AddressRange::new(0, 128),
+            DeviceConfig::default(),
+            (0..128).collect(),
+        )
+        .unwrap();
+
+        let mut header = Header::new(&mut fw, 0).unwrap();
+        header.set_timestamp(0x000056789ABCDEF0);
+        assert_eq!(header.get_timestamp(), 0x000056789ABCDEF0);
     }
 }

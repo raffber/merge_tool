@@ -1,8 +1,9 @@
 use crate::Error;
+use chrono::{DateTime, Utc};
 use regex::Regex;
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use std::fs::{canonicalize, File};
+use std::fs::{self, canonicalize, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
@@ -10,32 +11,29 @@ pub const DDP_CMD_CODE: u8 = 0x10;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Config {
-    #[serde(default = "default::product_id", skip_serializing_if = "skip_if_ffff")]
+    #[serde(default = "default::product_id")]
     pub product_id: u16,
     pub product_name: String,
-    #[serde(default = "default::btl_version", skip_serializing_if = "skip_if_one")]
+    #[serde(default = "default::btl_version")]
     pub btl_version: u8,
-    #[serde(
-        default = "default::use_backdoor",
-        skip_serializing_if = "skip_if_false"
-    )]
+    #[serde(default = "default::use_backdoor")]
     pub use_backdoor: bool,
-    #[serde(default = "default::blocking", skip_serializing_if = "skip_if_true")]
+    #[serde(default = "default::blocking")]
     pub blocking: bool,
     pub images: Vec<FwConfig>,
-    #[serde(
-        default = "default::zero_u32",
-        skip_serializing_if = "skip_if_zero_u32"
-    )]
+    #[serde(default = "default::zero_u32")]
     pub time_state_transition: u32,
 
-    #[serde(skip_serializing, skip_deserializing)]
-    byte_addr_transformed: bool,
+    #[serde(skip)]
+    byte_addresses: bool,
+
+    #[serde(default = "default::default_time")]
+    pub build_time: DateTime<Utc>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct FwConfig {
-    #[serde(default = "default::node_id", skip_serializing_if = "skip_if_zero_u8")]
+    #[serde(default = "default::node_id")]
     pub node_id: u8,
     #[serde(default = "Default::default", skip_serializing_if = "Option::is_none")]
     pub version: Option<Version>,
@@ -43,10 +41,7 @@ pub struct FwConfig {
     pub app_path: String,
     pub app_address: AddressRange,
     pub btl_address: AddressRange,
-    #[serde(
-        default = "default::write_data_size",
-        skip_serializing_if = "skip_if_default_write_data_size"
-    )]
+    #[serde(default = "default::write_data_size")]
     pub write_data_size: usize,
     #[serde(default = "default::include_in_script")]
     pub include_in_script: bool,
@@ -61,25 +56,25 @@ pub struct FwConfig {
 impl Default for FwConfig {
     fn default() -> Self {
         FwConfig {
-            node_id: default::node_id(),
-            btl_path: "".to_string(),
-            app_path: "".to_string(),
+            node_id: 0,
             version: None,
+            btl_path: Default::default(),
+            app_path: Default::default(),
             app_address: Default::default(),
             btl_address: Default::default(),
-            include_in_script: true,
-            header_offset: default::header_offset(),
-            hex_file_format: Default::default(),
-            device_config: Default::default(),
-            timings: Default::default(),
             write_data_size: default::write_data_size(),
+            include_in_script: false,
+            header_offset: default::header_offset(),
+            hex_file_format: HexFileFormat::default(),
+            device_config: DeviceConfig::default(),
+            timings: Timings::default(),
         }
     }
 }
 
 impl FwConfig {
     pub fn designator(&self) -> String {
-        format!("F{}", self.node_id)
+        format!("f{}", self.node_id)
     }
 }
 
@@ -96,10 +91,12 @@ impl Config {
     }
 
     pub fn get_config_dir(config_path: &Path) -> Result<PathBuf, Error> {
-        Ok(config_path
+        let path = config_path
             .parent()
             .map(|x| x.to_path_buf())
-            .unwrap_or(PathBuf::from("/")))
+            .unwrap_or(PathBuf::from("/"));
+
+        Ok(fs::canonicalize(path)?)
     }
 
     pub fn normalize_path(path: &str, config_dir: &Path) -> Result<PathBuf, Error> {
@@ -134,7 +131,7 @@ impl Config {
     }
 
     pub fn transform_to_byte_addrs(&mut self) {
-        if self.byte_addr_transformed {
+        if self.byte_addresses {
             return;
         }
         for fwconfig in &mut self.images {
@@ -147,11 +144,11 @@ impl Config {
                 fwconfig.device_config.page_size *= 2;
             }
         }
-        self.byte_addr_transformed = true;
+        self.byte_addresses = true;
     }
 
     pub fn transform_to_word_addrs(&mut self) {
-        if !self.byte_addr_transformed {
+        if !self.byte_addresses {
             return;
         }
         for fwconfig in &mut self.images {
@@ -164,7 +161,7 @@ impl Config {
                 fwconfig.device_config.page_size /= 2;
             }
         }
-        self.byte_addr_transformed = true;
+        self.byte_addresses = true;
     }
 }
 
@@ -178,7 +175,8 @@ impl Default for Config {
             blocking: false,
             images: vec![],
             time_state_transition: 0,
-            byte_addr_transformed: false,
+            byte_addresses: false,
+            build_time: default::default_time(),
         }
     }
 }
@@ -207,7 +205,7 @@ impl AddressRange {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Copy, Clone, Serialize, Deserialize, Debug)]
 pub enum HexFileFormat {
     IntelHex,
     SRecord,
@@ -240,13 +238,23 @@ impl Default for Endianness {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, Default)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DeviceConfig {
     #[serde(default = "default::get_false")]
     pub word_addressing: bool,
     #[serde(default = "default::endianness")]
     pub endianness: Endianness,
     pub page_size: u64,
+}
+
+impl Default for DeviceConfig {
+    fn default() -> Self {
+        DeviceConfig {
+            word_addressing: false,
+            endianness: default::endianness(),
+            page_size: 64,
+        }
+    }
 }
 
 impl DeviceConfig {
@@ -260,6 +268,8 @@ impl DeviceConfig {
 }
 
 pub mod default {
+    use chrono::{DateTime, Utc};
+
     use super::Endianness;
 
     pub fn node_id() -> u8 {
@@ -302,32 +312,8 @@ pub mod default {
     pub fn endianness() -> Endianness {
         Endianness::Little
     }
-}
 
-fn skip_if_ffff(value: &u16) -> bool {
-    *value == 0xFFFF
-}
-
-fn skip_if_zero_u8(value: &u8) -> bool {
-    *value == 0
-}
-
-fn skip_if_zero_u32(value: &u32) -> bool {
-    *value == 0
-}
-
-fn skip_if_one(value: &u8) -> bool {
-    *value == 1
-}
-
-fn skip_if_false(value: &bool) -> bool {
-    !*value
-}
-
-fn skip_if_true(value: &bool) -> bool {
-    *value
-}
-
-fn skip_if_default_write_data_size(value: &usize) -> bool {
-    *value == 16
+    pub fn default_time() -> DateTime<Utc> {
+        DateTime::<Utc>::from_timestamp(0, 0).unwrap()
+    }
 }

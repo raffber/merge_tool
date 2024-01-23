@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "merge_tool"
+version = "0.1.0"
+description = ""
+authors = ["Raphael Bernhard <beraphae@gmail.com>"]
+packages = [{ include = "merge_tool", from = "python" }]
+
+[tool.poetry.dependencies]
+python = ">=3.8, <4.0"
+
+[tool.poetry.dev-dependencies]
+black = "23.3"
+mypy = "^1.2.0"
+poetry = "1.7.1"
+ruff = "^0.1.7"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pyprojectx]
+poetry = "poetry==1.7.1"
+
+[tool.pyprojectx.aliases]
+install = "poetry install"
+run = "poetry run"
+outdated = "poetry show --outdated"
+
+[tool.pytest.ini_options]
+testpaths = ["python/python"]
+python_files = "/*/test_*.py"
+
+[tool.ruff]
+line-length = 120

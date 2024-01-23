@@ -28,23 +28,22 @@ The header is 32-byte long and is 16-bit aligned (to simplify compatibility with
 
 ```c
 __attribute__((section(".app_header"))) static const uint16_t app_header[] = {
-    PRODUCT_ID,         // 0
-    NODE_ID,            // 2
-    VERSION_MAJOR,      // 4
-    VERSION_MINOR,      // 6
-    VERSION_PATCH_LO,   // 8
-    VERSION_PATCH_HI,   // 10
-    0xFFFF,             // 12
-    0xFFFF,             // 14
-
-    0xFFFF,             // 16
-    0xFFFF,             // 18
-    0xFFFF,             // 20
-    0xFFFF,             // 22
-    0xFFFF,             // 24
-    0xFFFF,             // 26
-    0xFFFF,             // 28
-    0xFFFF,             // 30
+    PRODUCT_ID,            // 0
+    NODE_ID,               // 2
+    VERSION_MAJOR,         // 4
+    VERSION_MINOR,         // 6
+    VERSION_PATCH[0:2],    // 8
+    VERSION_PATCH[2:4],    // 10
+    IMAGE_LENGTH[0:2],     // 12
+    IMAGE_LENGTH[2:4],     // 14
+    BUILD_VARIANT,         // 16
+    BUILD_TIME_STAMP[0:2], // 18
+    BUILD_TIME_STAMP[2:4], // 20
+    BUILD_TIME_STAMP[4:6], // 22
+    0xFFFF,                // 24
+    0xFFFF,                // 26
+    0xFFFF,                // 28
+    0xFFFF,                // 30
 };
 ```
 

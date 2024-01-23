@@ -1,6 +1,6 @@
 [package]
 name = "merge_tool"
-version = "0.2.3"
+version = "0.3.0-alpha.1"
 authors = ["Raphael Bernhard <beraphae@gmail.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
@@ -20,9 +20,13 @@ thiserror = "1"
 clap = "2"
 env_logger = "0.7"
 semver = { version = "1.0.21", features = ["serde"] }
+gix = { version = "0.58.0", features = ["revision"] }
+anyhow = "1.0.79"
+chrono = { version = "0.4.32", features = ["serde"] }
 
 [dev-dependencies]
 assert_matches = "1.5"
+serial_test = "3.0.0"
 
 [profile.release]
 strip = "debuginfo"
