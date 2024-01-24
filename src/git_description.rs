@@ -35,10 +35,11 @@ fn retrieve_description_inner(repo_path: &Path) -> anyhow::Result<GitDescription
     let ref_name = format!("tags/{}", tag_name);
     let mut tag_ref = repo.find_reference(&ref_name)?;
     let tag_id = tag_ref.peel_to_id_in_place()?;
+    let head_id = head.id().unwrap();
 
     Ok(GitDescription {
         parent_tag_name: Some(tag_name.to_string()),
-        on_tag: tag_id == head.id().unwrap(),
+        on_tag: tag_id == head_id,
         sha,
     })
 }
@@ -53,7 +54,7 @@ impl GitDescription {
             return true;
         }
         if let Some(tag_name) = &self.parent_tag_name {
-            tag_name.contains("release/")
+            !tag_name.contains("release/")
         } else {
             false
         }

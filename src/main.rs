@@ -44,7 +44,14 @@ fn main() {
                     .long("repo-path")
                     .value_name("FILE")
                     .help("Path to the git repository (or any file within the repository). Defaults to the config file path."),
-            ),
+            )
+            .arg(
+                Arg::with_name("timestamp")
+                    .short("t")
+                    .long("timestamp")
+                    .value_name("TIMESTAMP")
+                    .help("Timestamp to use for the generated files in RFC3339. Defaults to the current time.")
+            )
         )
         .subcommand(
             SubCommand::with_name("get-version")
@@ -61,6 +68,13 @@ fn main() {
                         .short("p")
                         .long("prerelease")
                         .help("Include prerelease versions in the output."),
+                )
+                .arg(
+                    Arg::with_name("timestamp")
+                        .short("t")
+                        .long("timestamp")
+                        .value_name("TIMESTAMP")
+                        .help("Timestamp to use for the generated files in RFC3339. Defaults to the current time.")
                 )
             )
         .subcommand(
@@ -130,10 +144,14 @@ fn main() {
                     exit(1);
                 }
             };
-            let date_time = chrono::Utc::now();
+            let date_time = parse_timestamp_arg(matches).unwrap_or_else(|| chrono::Utc::now());
             process::add_pre_release_info(&mut version, &date_time, &git_description);
         }
         println!("{}", version)
+    }
+
+    if matches.subcommand_name().is_none() {
+        println!("{}", matches.usage())
     }
 }
 
@@ -176,10 +194,27 @@ fn get_generation_options(matches: &ArgMatches) -> GenerateOptions {
         .value_of("repo-path")
         .and_then(|x| PathBuf::from_str(x).ok());
 
+    if let Some(timestamp) = parse_timestamp_arg(matches) {
+        config.build_time = timestamp;
+    }
+
     GenerateOptions {
         config,
         output_dir,
         config_dir,
         repo_dir,
+    }
+}
+
+fn parse_timestamp_arg(matches: &ArgMatches) -> Option<chrono::DateTime<chrono::Utc>> {
+    let Some(timestamp) = matches.value_of("timestamp") else {
+        return None;
+    };
+    match chrono::DateTime::parse_from_rfc3339(timestamp) {
+        Ok(ret) => Some(ret.with_timezone(&chrono::Utc)),
+        Err(err) => {
+            println!("Invalid timestamp format: {}", err);
+            exit(1);
+        }
     }
 }
