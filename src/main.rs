@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use clap::{crate_authors, crate_version, Arg, ArgMatches, Command};
+use clap::{crate_authors, crate_version, Arg, ArgAction, ArgMatches, Command};
 
 use merge_tool::changelog::extract_version_from_changelog_file;
 use merge_tool::config::Config;
@@ -38,6 +38,7 @@ fn main() {
             .arg(
                 Arg::new("use-backdoor")
                     .long("use-backdoor")
+                    .action(ArgAction::SetTrue)
                     .help("Use the backdoor to validate the firmware image."),
             )
             .arg(
@@ -68,6 +69,7 @@ fn main() {
                     Arg::new("prerelease")
                         .short('p')
                         .long("prerelease")
+                        .action(ArgAction::SetTrue)
                         .help("Include prerelease versions in the output."),
                 )
                 .arg(
@@ -97,6 +99,7 @@ fn main() {
                 .arg(
                     Arg::new("versioned")
                         .long("versioned")
+                        .action(ArgAction::SetTrue)
                         .help("Use versioned output directory."),
                 )
         )
@@ -132,7 +135,7 @@ fn main() {
 
     if let Some(matches) = matches.subcommand_matches("get-version") {
         let changelog = matches
-            .get_one::<String>("get-version")
+            .get_one::<String>("changelog")
             .cloned()
             .unwrap_or("CHANGELOG.md".to_string());
         let mut version = match extract_version_from_changelog_file(changelog.as_ref()) {

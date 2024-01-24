@@ -4,7 +4,7 @@ if(CMAKE_HOST_SYSTEM_NAME STREQUAL Linux)
     FetchContent_Declare(
         merge_tool
         DOWNLOAD_NO_EXTRACT TRUE
-        URL https://github.com/raffber/merge_tool/releases/download/release%2F0.3.0-alpha.2/merge_tool
+        URL https://github.com/raffber/merge_tool/releases/download/release%2F0.3.0-alpha.4/merge_tool
     )
 
     FetchContent_Populate(merge_tool)
@@ -17,7 +17,7 @@ elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL Windows)
     FetchContent_Declare(
         merge_tool
         DOWNLOAD_NO_EXTRACT TRUE
-        URL https://github.com/raffber/merge_tool/releases/download/release%2F0.3.0-alpha.2/merge_tool.exe
+        URL https://github.com/raffber/merge_tool/releases/download/release%2F0.3.0-alpha.4/merge_tool.exe
     )
 
     FetchContent_Populate(merge_tool)
@@ -28,7 +28,12 @@ endif()
 execute_process(
     COMMAND ${MERGE_TOOL_BIN} --version
     OUTPUT_VARIABLE MERGE_TOOL_VERSION
+    RESULT_VARIABLE MERGE_TOOL_RESULT
     OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+if(NOT MERGE_TOOL_RESULT EQUAL 0)
+    message(FATAL_ERROR "Failed to execute merge_tool: ${MERGE_TOOL_RESULT}")
+endif()
 
 message("Using merge_tool ${MERGE_TOOL_VERSION}")
 
