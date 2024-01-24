@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use clap::{crate_authors, crate_version, App, Arg, ArgMatches, SubCommand};
+use clap::{crate_authors, crate_version, Arg, ArgMatches, Command};
 
 use merge_tool::changelog::extract_version_from_changelog_file;
 use merge_tool::config::Config;
@@ -12,89 +12,90 @@ use std::str::FromStr;
 fn main() {
     env_logger::init();
 
-    let matches = App::new("merge_tool")
+    let matches = Command::new("merge_tool")
         .author(crate_authors!())
         .version(crate_version!())
         .author("Raphael Bernhard <beraphae@gmail.com>")
         .about("Merge firmwares like in 1999")
+        .arg_required_else_help(true)
         .subcommand(
-            SubCommand::with_name("generate")
+            Command::new("generate")
                 .about("Create a bootload script, merge firmware files and write a info.json file")
             .arg(
-                Arg::with_name("config")
-                    .short("c")
+                Arg::new("config")
+                    .short('c')
                     .long("config")
                     .value_name("FILE")
                     .help("Set a config file. Defaults to config.gctmrg."),
             )
             .arg(
-                Arg::with_name("output-dir")
-                    .short("o")
+                Arg::new("output-dir")
+                    .short('o')
                     .long("output-dir")
                     .value_name("FILE")
                     .help("Output folder for generated files. Defaults to `<config-file-dir>/out`"),
             )
             .arg(
-                Arg::with_name("use-backdoor")
+                Arg::new("use-backdoor")
                     .long("use-backdoor")
                     .help("Use the backdoor to validate the firmware image."),
             )
             .arg(
-                Arg::with_name("repo-path")
+                Arg::new("repo-path")
                     .long("repo-path")
                     .value_name("FILE")
                     .help("Path to the git repository (or any file within the repository). Defaults to the config file path."),
             )
             .arg(
-                Arg::with_name("timestamp")
-                    .short("t")
+                Arg::new("timestamp")
+                    .short('t')
                     .long("timestamp")
                     .value_name("TIMESTAMP")
                     .help("Timestamp to use for the generated files in RFC3339. Defaults to the current time.")
             )
         )
         .subcommand(
-            SubCommand::with_name("get-version")
+            Command::new("get-version")
                 .about("Extract version information from changelog")
                 .arg(
-                    Arg::with_name("changelog")
-                        .short("c")
+                    Arg::new("changelog")
+                        .short('c')
                         .long("changelog")
                         .value_name("FILE")
                         .help("Set a changelog file. Defaults to CHANGELOG.md."),
                 )
                 .arg(
-                    Arg::with_name("prerelease")
-                        .short("p")
+                    Arg::new("prerelease")
+                        .short('p')
                         .long("prerelease")
                         .help("Include prerelease versions in the output."),
                 )
                 .arg(
-                    Arg::with_name("timestamp")
-                        .short("t")
+                    Arg::new("timestamp")
+                        .short('t')
                         .long("timestamp")
                         .value_name("TIMESTAMP")
                         .help("Timestamp to use for the generated files in RFC3339. Defaults to the current time.")
                 )
             )
         .subcommand(
-            SubCommand::with_name("bundle")
+            Command::new("bundle")
                 .about("Bundle the firmware files")
                 .arg(
-                    Arg::with_name("info")
-                        .short("i")
+                    Arg::new("info")
+                        .short('i')
                         .long("info")
                         .value_name("FILE")
                         .help("Info file to bundle. Defaults to info.json."),
                 ).arg(
-                    Arg::with_name("output-dir")
-                        .short("o")
+                    Arg::new("output-dir")
+                        .short('o')
                         .long("output-dir")
                         .value_name("DIRECTORY")
                         .help("Output directory for the bundled firmware files."),
                 )
                 .arg(
-                    Arg::with_name("versioned")
+                    Arg::new("versioned")
                         .long("versioned")
                         .help("Use versioned output directory."),
                 )
@@ -111,12 +112,16 @@ fn main() {
     }
 
     if let Some(matches) = matches.subcommand_matches("bundle") {
-        let info = Path::new(matches.value_of("info").unwrap_or("info.json"));
-        let Some(output_dir) = matches.value_of("output-dir") else {
+        let info = matches
+            .get_one::<String>("info")
+            .cloned()
+            .unwrap_or("info.json".to_string());
+        let info = Path::new(&info);
+        let Some(output_dir) = matches.get_one::<String>("output-dir") else {
             println!("Error: No output directory specified.");
             exit(1);
         };
-        let versioned = matches.is_present("versioned");
+        let versioned = matches.contains_id("versioned");
         let output_dir = Path::new(output_dir);
 
         if let Err(err) = process::bundle(info, output_dir, versioned) {
@@ -126,7 +131,10 @@ fn main() {
     }
 
     if let Some(matches) = matches.subcommand_matches("get-version") {
-        let changelog = matches.value_of("get-version").unwrap_or("CHANGELOG.md");
+        let changelog = matches
+            .get_one::<String>("get-version")
+            .cloned()
+            .unwrap_or("CHANGELOG.md".to_string());
         let mut version = match extract_version_from_changelog_file(changelog.as_ref()) {
             Ok(version) => version,
             Err(err) => {
@@ -134,7 +142,7 @@ fn main() {
                 exit(1);
             }
         };
-        let prerelease = matches.is_present("prerelease");
+        let prerelease = matches.contains_id("prerelease");
         if prerelease {
             let repo = std::env::current_dir().unwrap();
             let git_description = match retrieve_description(&repo) {
@@ -149,15 +157,14 @@ fn main() {
         }
         println!("{}", version)
     }
-
-    if matches.subcommand_name().is_none() {
-        println!("{}", matches.usage())
-    }
 }
 
 fn get_generation_options(matches: &ArgMatches) -> GenerateOptions {
-    let config = matches.value_of("config").unwrap_or("config.gctmrg");
-    let config_path = Path::new(config);
+    let config = matches
+        .get_one::<String>("config")
+        .cloned()
+        .unwrap_or("config.gctmrg".to_string());
+    let config_path = Path::new(&config);
     if !config_path.exists() {
         println!("Config file does not exist.");
         exit(1);
@@ -172,7 +179,7 @@ fn get_generation_options(matches: &ArgMatches) -> GenerateOptions {
     };
 
     let output_dir = matches
-        .value_of("output-dir")
+        .get_one::<String>("output-dir")
         .and_then(|x| PathBuf::from_str(x).ok())
         .unwrap_or(config_dir.join("out"));
     log::debug!("Output directory: {:?}", output_dir);
@@ -185,13 +192,13 @@ fn get_generation_options(matches: &ArgMatches) -> GenerateOptions {
         }
     };
 
-    let use_backdoor = matches.is_present("use-backdoor");
+    let use_backdoor = matches.contains_id("use-backdoor");
     if use_backdoor {
         config.use_backdoor = true;
     }
 
     let repo_dir = matches
-        .value_of("repo-path")
+        .get_one::<String>("repo-path")
         .and_then(|x| PathBuf::from_str(x).ok());
 
     if let Some(timestamp) = parse_timestamp_arg(matches) {
@@ -207,7 +214,7 @@ fn get_generation_options(matches: &ArgMatches) -> GenerateOptions {
 }
 
 fn parse_timestamp_arg(matches: &ArgMatches) -> Option<chrono::DateTime<chrono::Utc>> {
-    let Some(timestamp) = matches.value_of("timestamp") else {
+    let Some(timestamp) = matches.get_one::<String>("timestamp") else {
         return None;
     };
     match chrono::DateTime::parse_from_rfc3339(timestamp) {
