@@ -1,6 +1,6 @@
 [package]
 name = "merge_tool"
-version = "0.3.0-alpha.4"
+version = "0.3.0-alpha.5"
 authors = ["Raphael Bernhard <beraphae@gmail.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
@@ -23,6 +23,8 @@ semver = { version = "1.0.21", features = ["serde"] }
 gix = { version = "0.58.0", features = ["revision"] }
 anyhow = "1.0.79"
 chrono = { version = "0.4.32", features = ["serde"] }
+ciborium = "0.2.2"
+base64 = "0.22.1"
 
 [dev-dependencies]
 assert_matches = "1.5"

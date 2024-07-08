@@ -103,7 +103,24 @@ fn main() {
                         .help("Use versioned output directory."),
                 )
         )
-        .get_matches();
+        .subcommand(
+            Command::new("merge-packages")
+            .about("Merge multiple firmware packages")
+            .arg(
+                Arg::new("output-file")
+                    .short('o')
+                    .long("output-file")
+                    .value_name("FILE")
+                    .help("Output file for the merged firmware package."),
+            ).arg(
+                Arg::new("packages")
+                    .short('p')
+                    .long("packages")
+                    .value_name("FILES")
+                    .action(clap::ArgAction::Append)
+                    .help("Input files to merge."),
+            )
+    ).get_matches();
 
     if let Some(matches) = matches.subcommand_matches("generate") {
         let options = get_generation_options(&matches);
@@ -159,6 +176,23 @@ fn main() {
             process::add_pre_release_info(&mut version, &date_time, &git_description);
         }
         println!("{}", version)
+    }
+
+    if let Some(matches) = matches.subcommand_matches("merge-packages") {
+        let output_file = matches
+            .get_one::<String>("output-file")
+            .cloned()
+            .unwrap_or("merged.fwpkg".to_string());
+        let output_file = Path::new(&output_file);
+        let packages: Vec<_> = matches
+            .get_many::<String>("packages")
+            .unwrap()
+            .map(|x| Path::new(x))
+            .collect();
+        if let Err(err) = process::merge_app_packages(&packages, &output_file) {
+            println!("Error: Could not merge packages: {}", err);
+            exit(1);
+        }
     }
 }
 

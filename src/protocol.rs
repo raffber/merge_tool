@@ -37,9 +37,9 @@ fn make_header(config: &Config) -> Command {
 pub fn generate_script<P: Protocol>(
     protocol: &P,
     fws: &LoadedFirmwareImages,
-    config: &Config,
 ) -> Result<Vec<Command>, Error> {
     let mut ret = Vec::new();
+    let config = &fws.config;
 
     ret.push(make_header(&config));
     for loaded_fw in &fws.images {

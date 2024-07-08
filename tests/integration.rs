@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use byteorder::{ByteOrder, LittleEndian};
 use chrono::{DateTime, Utc};
+use merge_tool::app_package::AppPackage;
 use merge_tool::config::{AddressRange, Config};
 use merge_tool::crc::crc32;
 use merge_tool::intel_hex;
@@ -173,6 +174,9 @@ fn bundle() {
 
     let info = process::generate_info(&loaded, &test.output_dir).unwrap();
     process::save_info(&info, &test.output_dir).unwrap();
+
+    let package = AppPackage::from_loaded_firmware_images(loaded.config.product_id, &loaded);
+    process::save_app_package(&package, &test.output_dir, &loaded.app_package_file_name).unwrap();
 
     let bundle_output_dir = test.output_dir.join("bundle");
     process::bundle(&test.output_dir.join("info.json"), &bundle_output_dir, true).unwrap();

@@ -2,6 +2,7 @@ use std::fs::{self, create_dir_all, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+use crate::app_package::{self, AppPackage};
 use crate::config::{Config, FwConfig, HexFileFormat, DDP_CMD_CODE};
 use crate::crc::crc32;
 use crate::ddp::DdpProtocol;
@@ -45,6 +46,10 @@ pub fn generate(options: GenerateOptions) -> Result<(), Error> {
     let info = generate_info(&loaded, &options.output_dir)?;
     save_info(&info, &options.output_dir)?;
 
+    // generate app package
+    let package = AppPackage::from_loaded_firmware_images(loaded.config.product_id, &loaded);
+    save_app_package(&package, &options.output_dir, &loaded.app_package_file_name)?;
+
     Ok(())
 }
 
@@ -59,6 +64,7 @@ pub struct LoadedFirmwareImages {
     pub images: Vec<LoadedFirmware>,
     pub config: Config,
     pub script_file_name: String,
+    pub app_package_file_name: String,
 }
 
 pub fn load_firmware_images(
@@ -107,10 +113,12 @@ pub fn load_firmware_images(
 
         ret.push(loaded);
     }
+
     Ok(LoadedFirmwareImages {
         images: ret,
         config: config.clone(),
         script_file_name: format!("{}.gctbtl", config.product_name),
+        app_package_file_name: format!("app_pkg.{}", app_package::BINARY_FILE_EXTENSION),
     })
 }
 
@@ -194,10 +202,10 @@ fn configure_header(mut fw: Firmware, config: &mut Config, idx: usize) -> Result
 pub fn create_script(loaded: &LoadedFirmwareImages) -> Result<Script, crate::Error> {
     let cmds = if !loaded.config.blocking {
         let protocol = DdpProtocol::new(DDP_CMD_CODE);
-        generate_script(&protocol, loaded, &loaded.config)?
+        generate_script(&protocol, loaded)?
     } else {
         let protocol = BlockingDdpProtocol::new(DDP_CMD_CODE);
-        generate_script(&protocol, loaded, &loaded.config)?
+        generate_script(&protocol, loaded)?
     };
     let script = Script::new(cmds);
     Ok(script)
@@ -247,6 +255,7 @@ pub struct Info {
     images: Vec<FwInfo>,
     files: Vec<String>,
     script_file: String,
+    package_file: String,
     output_dir: String,
 }
 
@@ -297,6 +306,7 @@ pub fn generate_info(fws: &LoadedFirmwareImages, output_dir: &Path) -> Result<In
         script_file: fws.script_file_name.clone(),
         files,
         output_dir: output_dir.to_str().unwrap().to_string(),
+        package_file: fws.app_package_file_name.clone(),
     };
 
     Ok(info)
@@ -373,11 +383,48 @@ pub fn bundle(info: &Path, output_dir: &Path, versioned: bool) -> Result<(), cra
     )?;
     new_info.files.push(new_info.script_file.clone());
 
+    new_info.package_file = get_app_package_file_name(&info, versioned);
+    copy_and_rename(
+        &info_dir.join(&info.package_file),
+        output_dir,
+        &new_info.package_file,
+    )?;
+    new_info.files.push(new_info.package_file.clone());
+
     let new_info_data = serde_json::to_string_pretty(&new_info).unwrap();
     let new_info_path = output_dir.join("info.json");
     let mut file = File::create(&new_info_path)?;
     file.write_all(new_info_data.as_bytes())?;
 
+    Ok(())
+}
+
+pub fn merge_app_packages(files: &[&Path], output_file: &Path) -> crate::Result<()> {
+    let mut packages = Vec::new();
+    for fpath in files {
+        let package = app_package::AppPackage::load_from_file(fpath)?;
+        packages.extend(package.app);
+    }
+
+    let merged = app_package::AppPackage::new(packages);
+
+    let data = merged.to_cbor();
+    let mut file = File::create(output_file)?;
+    file.write_all(&data)?;
+    file.flush()?;
+
+    Ok(())
+}
+
+pub fn save_app_package(
+    info: &AppPackage,
+    output_dir: &Path,
+    file_name: &str,
+) -> Result<(), Error> {
+    let data = info.to_cbor();
+    let path = output_dir.join(file_name);
+    let mut file = File::create(&path).map_err(Error::Io)?;
+    file.write_all(&data).map_err(Error::Io)?;
     Ok(())
 }
 
@@ -438,5 +485,17 @@ fn get_script_file_name(info: &Info, versioned: bool) -> String {
         parts.push(format!("_{}", fw_info.version));
     }
     parts.push(".gctbtl".to_string());
+    parts.join("")
+}
+
+fn get_app_package_file_name(info: &Info, versioned: bool) -> String {
+    if !versioned {
+        return format!("app_pkg.{}", app_package::BINARY_FILE_EXTENSION);
+    }
+    let mut parts = vec!["app_pkg".to_string()];
+    for fw_info in &info.images {
+        parts.push(format!("_{}", fw_info.version));
+    }
+    parts.push(format!(".{}", app_package::BINARY_FILE_EXTENSION));
     parts.join("")
 }
