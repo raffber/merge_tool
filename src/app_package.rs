@@ -8,14 +8,83 @@
 use semver::Version;
 use serde::{Deserialize, Serialize};
 
+pub const BINARY_FILE_EXTENSION: &'static str = "gctapkgb";
+
+pub const JSON_FILE_EXTENSION: &'static str = "gctapkg";
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct App {
     pub product_id: u16,
-    pub node_id: u16,
+    pub node_id: u8,
     pub version: Version,
+    pub crc: u32,
 
+    pub image: Vec<Section>,
+}
+
+impl App {
+    pub fn from_loaded_firmware(
+        product_id: u16,
+        loaded_fw: &crate::process::LoadedFirmware,
+    ) -> Self {
+        let app = &loaded_fw.app;
+        let config = &loaded_fw.config;
+        let image = Section::new(app.range.begin, app.data.clone());
+
+        App {
+            product_id: product_id,
+            node_id: config.node_id,
+            version: config.version.clone().unwrap_or(Version::new(0, 0, 0)),
+            crc: app.read_u32(0),
+            image: vec![image],
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Section {
+    offset: u64,
     #[serde(with = "base64")]
-    pub image: Vec<u8>,
+    data: Vec<u8>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AppPackage {
+    app: Vec<App>,
+}
+
+impl AppPackage {
+    pub fn new(apps: Vec<App>) -> Self {
+        AppPackage { app: apps }
+    }
+
+    pub fn from_loaded_firmware_images(
+        product_id: u16,
+        fws: &crate::process::LoadedFirmwareImages,
+    ) -> Self {
+        let apps = fws
+            .images
+            .iter()
+            .map(|fw| App::from_loaded_firmware(product_id, fw))
+            .collect();
+        AppPackage::new(apps)
+    }
+
+    pub fn to_cbor(&self) -> Vec<u8> {
+        let mut ret = Vec::new();
+        ciborium::into_writer(self, &mut ret).expect("This shouldn't fail");
+        ret
+    }
+
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(self).expect("This shouldn't fail")
+    }
+}
+
+impl Section {
+    pub fn new(offset: u64, data: Vec<u8>) -> Self {
+        Section { offset, data }
+    }
 }
 
 mod base64 {
@@ -71,33 +140,4 @@ mod base64 {
             deserializer.deserialize_bytes(BytesVis)
         }
     }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AppPackage {
-    app: Vec<App>,
-}
-
-impl AppPackage {
-    pub fn new(apps: Vec<App>) -> Self {
-        AppPackage { app: apps }
-    }
-
-    pub fn to_cbor(&self) -> Vec<u8> {
-        let mut ret = Vec::new();
-        ciborium::into_writer(self, &mut ret).expect("This shouldn't fail");
-        ret
-    }
-
-    pub fn to_json(&self) -> String {
-        serde_json::to_string(self).expect("This shouldn't fail")
-    }
-}
-
-pub fn get_binary_file_extension() -> &'static str {
-    "gctapkgb"
-}
-
-pub fn get_json_file_extension() -> &'static str {
-    "gctapkg"
 }

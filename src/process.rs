@@ -2,6 +2,7 @@ use std::fs::{self, create_dir_all, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+use crate::app_package::{self, AppPackage};
 use crate::config::{Config, FwConfig, HexFileFormat, DDP_CMD_CODE};
 use crate::crc::crc32;
 use crate::ddp::DdpProtocol;
@@ -45,6 +46,10 @@ pub fn generate(options: GenerateOptions) -> Result<(), Error> {
     let info = generate_info(&loaded, &options.output_dir)?;
     save_info(&info, &options.output_dir)?;
 
+    // generate app package
+    let package = AppPackage::from_loaded_firmware_images(loaded.config.product_id, &loaded);
+    save_app_package(&package, &options.output_dir, &loaded.app_package_file_name)?;
+
     Ok(())
 }
 
@@ -59,6 +64,7 @@ pub struct LoadedFirmwareImages {
     pub images: Vec<LoadedFirmware>,
     pub config: Config,
     pub script_file_name: String,
+    pub app_package_file_name: String,
 }
 
 pub fn load_firmware_images(
@@ -107,10 +113,12 @@ pub fn load_firmware_images(
 
         ret.push(loaded);
     }
+
     Ok(LoadedFirmwareImages {
         images: ret,
         config: config.clone(),
         script_file_name: format!("{}.gctbtl", config.product_name),
+        app_package_file_name: format!("app_pkg.{}", app_package::BINARY_FILE_EXTENSION),
     })
 }
 
@@ -194,10 +202,10 @@ fn configure_header(mut fw: Firmware, config: &mut Config, idx: usize) -> Result
 pub fn create_script(loaded: &LoadedFirmwareImages) -> Result<Script, crate::Error> {
     let cmds = if !loaded.config.blocking {
         let protocol = DdpProtocol::new(DDP_CMD_CODE);
-        generate_script(&protocol, loaded, &loaded.config)?
+        generate_script(&protocol, loaded)?
     } else {
         let protocol = BlockingDdpProtocol::new(DDP_CMD_CODE);
-        generate_script(&protocol, loaded, &loaded.config)?
+        generate_script(&protocol, loaded)?
     };
     let script = Script::new(cmds);
     Ok(script)
@@ -378,6 +386,18 @@ pub fn bundle(info: &Path, output_dir: &Path, versioned: bool) -> Result<(), cra
     let mut file = File::create(&new_info_path)?;
     file.write_all(new_info_data.as_bytes())?;
 
+    Ok(())
+}
+
+pub fn save_app_package(
+    info: &AppPackage,
+    output_dir: &Path,
+    file_name: &str,
+) -> Result<(), Error> {
+    let data = info.to_cbor();
+    let path = output_dir.join(file_name);
+    let mut file = File::create(&path).map_err(Error::Io)?;
+    file.write_all(&data).map_err(Error::Io)?;
     Ok(())
 }
 
