@@ -23,6 +23,8 @@ semver = { version = "1.0.21", features = ["serde"] }
 gix = { version = "0.58.0", features = ["revision"] }
 anyhow = "1.0.79"
 chrono = { version = "0.4.32", features = ["serde"] }
+ciborium = "0.2.2"
+base64 = "0.22.1"
 
 [dev-dependencies]
 assert_matches = "1.5"
