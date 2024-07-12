@@ -83,7 +83,10 @@ impl AppPackage {
     }
 
     pub fn from_cbor(data: &[u8]) -> crate::Result<Self> {
-        ciborium::from_reader(data).map_err(crate::Error::other)
+        // TODO: this is really not nice, should create a PR for dynamic buffer size in ciborium
+        let mut scratch = Vec::new();
+        scratch.resize(10 * 1024 * 1024, 0_u8);
+        ciborium::from_reader_with_buffer(data, &mut scratch).map_err(crate::Error::other)
     }
 
     pub fn from_json(data: &str) -> crate::Result<Self> {

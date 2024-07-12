@@ -116,8 +116,8 @@ fn main() {
                 Arg::new("packages")
                     .short('p')
                     .long("packages")
-                    .num_args(1..)
                     .value_name("FILES")
+                    .action(clap::ArgAction::Append)
                     .help("Input files to merge."),
             )
     ).get_matches();

@@ -402,7 +402,6 @@ pub fn bundle(info: &Path, output_dir: &Path, versioned: bool) -> Result<(), cra
 pub fn merge_app_packages(files: &[&Path], output_file: &Path) -> crate::Result<()> {
     let mut packages = Vec::new();
     for fpath in files {
-        let fpath = Path::new(fpath);
         let package = app_package::AppPackage::load_from_file(fpath)?;
         packages.extend(package.app);
     }
