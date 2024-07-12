@@ -255,6 +255,7 @@ pub struct Info {
     images: Vec<FwInfo>,
     files: Vec<String>,
     script_file: String,
+    package_file: String,
     output_dir: String,
 }
 
@@ -305,6 +306,7 @@ pub fn generate_info(fws: &LoadedFirmwareImages, output_dir: &Path) -> Result<In
         script_file: fws.script_file_name.clone(),
         files,
         output_dir: output_dir.to_str().unwrap().to_string(),
+        package_file: fws.app_package_file_name.clone(),
     };
 
     Ok(info)
@@ -380,6 +382,14 @@ pub fn bundle(info: &Path, output_dir: &Path, versioned: bool) -> Result<(), cra
         &new_info.script_file,
     )?;
     new_info.files.push(new_info.script_file.clone());
+
+    new_info.package_file = get_app_package_file_name(&info, versioned);
+    copy_and_rename(
+        &info_dir.join(&info.package_file),
+        output_dir,
+        &new_info.package_file,
+    )?;
+    new_info.files.push(new_info.package_file.clone());
 
     let new_info_data = serde_json::to_string_pretty(&new_info).unwrap();
     let new_info_path = output_dir.join("info.json");
@@ -458,5 +468,17 @@ fn get_script_file_name(info: &Info, versioned: bool) -> String {
         parts.push(format!("_{}", fw_info.version));
     }
     parts.push(".gctbtl".to_string());
+    parts.join("")
+}
+
+fn get_app_package_file_name(info: &Info, versioned: bool) -> String {
+    if !versioned {
+        return format!("app_pkg.{}", app_package::BINARY_FILE_EXTENSION);
+    }
+    let mut parts = vec!["app_pkg".to_string()];
+    for fw_info in &info.images {
+        parts.push(format!("_{}", fw_info.version));
+    }
+    parts.push(format!(".{}", app_package::BINARY_FILE_EXTENSION));
     parts.join("")
 }

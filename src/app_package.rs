@@ -8,11 +8,11 @@
 use semver::Version;
 use serde::{Deserialize, Serialize};
 
-pub const BINARY_FILE_EXTENSION: &'static str = "gctapkgb";
+pub const BINARY_FILE_EXTENSION: &'static str = "gctapkg";
 
-pub const JSON_FILE_EXTENSION: &'static str = "gctapkg";
+pub const JSON_FILE_EXTENSION: &'static str = "gctapkg.json";
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct App {
     pub product_id: u16,
     pub node_id: u8,
@@ -41,14 +41,14 @@ impl App {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Section {
     offset: u64,
     #[serde(with = "base64")]
     data: Vec<u8>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AppPackage {
     app: Vec<App>,
 }
@@ -139,5 +139,35 @@ mod base64 {
         } else {
             deserializer.deserialize_bytes(BytesVis)
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use semver::Version;
+
+    #[test]
+    fn test_app_package() {
+        let app = App {
+            product_id: 0x1234,
+            node_id: 0x12,
+            version: Version::new(1, 2, 3),
+            crc: 0x12345678,
+            image: vec![Section::new(0, vec![0x12, 0x34, 0x56, 0x78])],
+        };
+
+        let app_package = AppPackage::new(vec![app]);
+
+        let cbor = app_package.to_cbor();
+        let json = app_package.to_json();
+
+        let app_package_cbor: AppPackage =
+            ciborium::from_reader(&cbor[..]).expect("This shouldn't fail");
+        let app_package_json: AppPackage =
+            serde_json::from_str(&json).expect("This shouldn't fail");
+
+        assert_eq!(app_package, app_package_cbor);
+        assert_eq!(app_package, app_package_json);
     }
 }
