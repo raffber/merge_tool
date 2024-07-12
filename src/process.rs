@@ -399,6 +399,24 @@ pub fn bundle(info: &Path, output_dir: &Path, versioned: bool) -> Result<(), cra
     Ok(())
 }
 
+pub fn merge_app_packages(files: &[&Path], output_file: &Path) -> crate::Result<()> {
+    let mut packages = Vec::new();
+    for fpath in files {
+        let fpath = Path::new(fpath);
+        let package = app_package::AppPackage::load_from_file(fpath)?;
+        packages.extend(package.app);
+    }
+
+    let merged = app_package::AppPackage::new(packages);
+
+    let data = merged.to_cbor();
+    let mut file = File::create(output_file)?;
+    file.write_all(&data)?;
+    file.flush()?;
+
+    Ok(())
+}
+
 pub fn save_app_package(
     info: &AppPackage,
     output_dir: &Path,

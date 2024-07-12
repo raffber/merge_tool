@@ -5,6 +5,8 @@
 //! We serialize this data with serde to either json or CBOR.
 //! As a file extension, we use `.gctapkg` or `.gct.apkgb`
 
+use std::path::Path;
+
 use semver::Version;
 use serde::{Deserialize, Serialize};
 
@@ -50,7 +52,7 @@ pub struct Section {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AppPackage {
-    app: Vec<App>,
+    pub app: Vec<App>,
 }
 
 impl AppPackage {
@@ -78,6 +80,23 @@ impl AppPackage {
 
     pub fn to_json(&self) -> String {
         serde_json::to_string(self).expect("This shouldn't fail")
+    }
+
+    pub fn from_cbor(data: &[u8]) -> crate::Result<Self> {
+        ciborium::from_reader(data).map_err(crate::Error::other)
+    }
+
+    pub fn from_json(data: &str) -> crate::Result<Self> {
+        serde_json::from_str(data).map_err(crate::Error::other)
+    }
+
+    pub fn load_from_file(fpath: &Path) -> crate::Result<Self> {
+        let ext = fpath.extension().unwrap_or_default();
+        let data = std::fs::read(fpath)?;
+        match ext.to_str() {
+            Some(JSON_FILE_EXTENSION) => Self::from_json(&String::from_utf8_lossy(&data)),
+            _ => Self::from_cbor(&data),
+        }
     }
 }
 

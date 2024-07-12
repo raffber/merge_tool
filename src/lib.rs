@@ -38,11 +38,18 @@ pub enum Error {
     CannotParseChangelog,
     Git(anyhow::Error),
     InvalidInfoFile(anyhow::Error),
+    Other(Box<dyn std::error::Error + 'static>),
 }
 
 impl From<io::Error> for Error {
     fn from(x: io::Error) -> Self {
         Error::Io(x)
+    }
+}
+
+impl Error {
+    pub fn other<T: std::error::Error + 'static>(x: T) -> Self {
+        Error::Other(Box::new(x))
     }
 }
 
@@ -52,13 +59,15 @@ impl fmt::Display for Error {
     }
 }
 
+type Result<T> = std::result::Result<T, Error>;
+
 pub fn swap_bytearray(data: &mut Vec<u8>) {
     for k in (0..data.len()).step_by(2) {
         data.swap(k, k + 1)
     }
 }
 
-pub fn load_lines(path: &Path) -> Result<Vec<String>, Error> {
+pub fn load_lines(path: &Path) -> Result<Vec<String>> {
     let file = File::open(path).map_err(Error::Io)?;
     let lines = BufReader::new(file).lines();
     let mut ret = Vec::new();
