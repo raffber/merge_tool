@@ -31,7 +31,9 @@ impl App {
     ) -> Self {
         let app = &loaded_fw.app;
         let config = &loaded_fw.config;
-        let image = Section::new(app.range.begin, app.data.clone());
+
+        let app_data = &app.data[0..loaded_fw.app.image_length()];
+        let image = Section::new(app.range.begin, app_data.to_vec());
 
         App {
             product_id: product_id,
