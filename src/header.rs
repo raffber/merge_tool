@@ -7,6 +7,7 @@ const MAJOR_VERSION_OFFSET: usize = 4;
 const MINOR_VERSION_OFFSET: usize = 6;
 const PATCH_VERSION_OFFSET: usize = 8;
 const LENGTH_OFFSET: usize = 12;
+const BUILD_VARIANT_OFFSET: usize = 16;
 const TIMESTAMP_OFFSET: usize = 18;
 
 const HEADER_LENGTH: usize = 32;
@@ -89,6 +90,14 @@ impl<'a> Header<'a> {
         let low = self.fw.read_u32(self.offset + TIMESTAMP_OFFSET) as u64;
         let high = self.fw.read_u16(self.offset + TIMESTAMP_OFFSET + 4) as u64;
         low | (high << 32)
+    }
+
+    pub fn get_build_variant(&self) -> u16 {
+        self.fw.read_u16(self.offset + BUILD_VARIANT_OFFSET)
+    }
+
+    pub fn set_build_variant(&mut self, value: u16) {
+        self.fw.write_u16(self.offset + BUILD_VARIANT_OFFSET, value);
     }
 }
 
