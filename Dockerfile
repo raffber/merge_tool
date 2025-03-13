@@ -1,9 +1,9 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1.75-bullseye as planner
+FROM lukemathwalker/cargo-chef:latest-rust-1.85-bookworm AS planner
 WORKDIR /workspace
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
-FROM lukemathwalker/cargo-chef:latest-rust-1.75-bullseye as builder
+FROM lukemathwalker/cargo-chef:latest-rust-1.85-bookworm AS builder
 
 WORKDIR /workspace
 
@@ -18,24 +18,25 @@ ENV KEYRINGS="/usr/local/share/keyrings" \
 ENV CFLAGS_x86_64_pc_windows_msvc="$CL_FLAGS" CXXFLAGS_x86_64_pc_windows_msvc="$CL_FLAGS"
 
 RUN set -eux; \
+    LLVM_VERSION="20"; \
     mkdir -p $KEYRINGS; \
     apt-get update && apt-get install -y gpg curl; \
     # clang/lld/llvm
     curl --fail https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor > $KEYRINGS/llvm.gpg; \
-    echo "deb [signed-by=$KEYRINGS/llvm.gpg] http://apt.llvm.org/bullseye/ llvm-toolchain-bullseye-13 main" > /etc/apt/sources.list.d/llvm.list; \
+    echo "deb [signed-by=$KEYRINGS/llvm.gpg] http://apt.llvm.org/bookworm/ llvm-toolchain-bookworm-${LLVM_VERSION} main" > /etc/apt/sources.list.d/llvm.list; \
     dpkg --add-architecture i386; \
     # Skipping all of the "recommended" cruft reduces total images size by ~300MiB
     apt-get update && apt-get install --no-install-recommends -y \
-    clang-13 \
+    clang-${LLVM_VERSION} \
     # llvm-ar
-    llvm-13 \
-    lld-13 \
+    llvm-${LLVM_VERSION} \
+    lld-${LLVM_VERSION} \
     # Unpack xwin
     tar; \
     # ensure that clang/clang++ are callable directly
-    ln -s clang-13 /usr/bin/clang && ln -s clang /usr/bin/clang++ && ln -s lld-13 /usr/bin/ld.lld; \
+    ln -s clang-${LLVM_VERSION} /usr/bin/clang && ln -s clang /usr/bin/clang++ && ln -s lld-${LLVM_VERSION} /usr/bin/ld.lld; \
     # We also need to setup symlinks ourselves for the MSVC shims because they aren't in the debian packages
-    ln -s clang-13 /usr/bin/clang-cl && ln -s llvm-ar-13 /usr/bin/llvm-lib && ln -s lld-link-13 /usr/bin/lld-link; \
+    ln -s clang-${LLVM_VERSION} /usr/bin/clang-cl && ln -s llvm-ar-${LLVM_VERSION} /usr/bin/llvm-lib && ln -s lld-link-${LLVM_VERSION} /usr/bin/lld-link; \
     # Verify the symlinks are correct
     clang++ -v; \
     ld.lld -v; \
