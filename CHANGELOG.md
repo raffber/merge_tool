@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0-alpha.7] - 2025-03-13
+
+### Fixed
+
+ - Parsing of `use-backdoor` CLI flag always yielded true
+ - Config initialization not working if config file in same directory and referenced with relative path
+
+
 ## [0.3.0-alpha.6] - 2024-07-26
 
 ### Changed
