@@ -91,6 +91,7 @@ impl Config {
     }
 
     pub fn get_config_dir(config_path: &Path) -> Result<PathBuf, Error> {
+        let config_path = fs::canonicalize(config_path)?;
         let path = config_path
             .parent()
             .map(|x| x.to_path_buf())
