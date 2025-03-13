@@ -229,8 +229,8 @@ fn get_generation_options(matches: &ArgMatches) -> GenerateOptions {
         }
     };
 
-    let use_backdoor = matches.contains_id("use-backdoor");
-    if use_backdoor {
+    let use_backdoor = matches.get_one::<bool>("use-backdoor").unwrap();
+    if *use_backdoor {
         config.use_backdoor = true;
     }
 
