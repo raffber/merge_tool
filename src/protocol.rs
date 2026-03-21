@@ -101,11 +101,11 @@ pub fn generate_script<P: Protocol>(
         }
         ret.push(Command::Log("done".to_string()));
 
-        ret.push(Command::Log("Checking CRC...".to_string()));
+        ret.push(Command::Log("Checking Signature...".to_string()));
         ret.extend(protocol.finish(
             id,
             fw_config.timings.data_send_done,
-            fw_config.timings.crc_check,
+            fw_config.timings.signature_check,
         ));
         ret.push(Command::SetErrorMessage("failed".to_string()));
         ret.push(Command::Log("done".to_string()));

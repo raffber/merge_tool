@@ -29,6 +29,15 @@ pub struct Config {
 
     #[serde(default = "default::default_time")]
     pub build_time: DateTime<Utc>,
+
+    #[serde(skip)]
+    pub ed25519_private_key: Option<[u8; 32]>,
+}
+
+#[derive(Eq, PartialEq, Copy, Clone, Serialize, Deserialize, Debug)]
+pub enum SignatureType {
+    Unsigned,
+    Ed25519,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -47,10 +56,14 @@ pub struct FwConfig {
     pub include_in_script: bool,
     #[serde(default = "default::header_offset")]
     pub header_offset: u64,
+
     pub hex_file_format: HexFileFormat,
     pub device_config: DeviceConfig,
     #[serde(default = "Default::default")]
     pub timings: Timings,
+
+    #[serde(default = "default::signature_type")]
+    pub signature_type: SignatureType,
 }
 
 impl Default for FwConfig {
@@ -68,6 +81,7 @@ impl Default for FwConfig {
             hex_file_format: HexFileFormat::default(),
             device_config: DeviceConfig::default(),
             timings: Timings::default(),
+            signature_type: default::signature_type(),
         }
     }
 }
@@ -75,6 +89,13 @@ impl Default for FwConfig {
 impl FwConfig {
     pub fn designator(&self) -> String {
         format!("f{}", self.node_id)
+    }
+
+    pub fn crc_offset(&self) -> usize {
+        match self.signature_type {
+            SignatureType::Unsigned => 0,
+            SignatureType::Ed25519 => 64,
+        }
     }
 }
 
@@ -126,9 +147,14 @@ impl Config {
     }
 
     pub fn load_from_string(data: &str) -> Result<Config, Error> {
-        let config: Config = serde_json::from_str(data).map_err(Error::CannotParseConfig)?;
+        let mut config: Config = serde_json::from_str(data).map_err(Error::CannotParseConfig)?;
         Self::validate_product_name(&config.product_name)?;
+        config.ed25519_private_key = Self::load_private_key_from_env()?;
         Ok(config)
+    }
+
+    fn load_private_key_from_env() -> Result<Option<[u8; 32]>, Error> {
+        crate::ed25519::load_private_key_from_env()
     }
 
     pub fn transform_to_byte_addrs(&mut self) {
@@ -178,6 +204,7 @@ impl Default for Config {
             time_state_transition: 0,
             byte_addresses: false,
             build_time: default::default_time(),
+            ed25519_private_key: None,
         }
     }
 }
@@ -185,7 +212,7 @@ impl Default for Config {
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct Timings {
     pub data_send: u32,
-    pub crc_check: u32,
+    pub signature_check: u32,
     pub data_send_done: u32,
     pub leave_btl: u32,
     pub erase_time: u32,
@@ -316,5 +343,9 @@ pub mod default {
 
     pub fn default_time() -> DateTime<Utc> {
         DateTime::<Utc>::from_timestamp(0, 0).unwrap()
+    }
+
+    pub fn signature_type() -> super::SignatureType {
+        super::SignatureType::Unsigned
     }
 }

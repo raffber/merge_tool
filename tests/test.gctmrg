@@ -26,7 +26,7 @@
         "data_send_done": 2,
         "leave_btl": 3,
         "erase_time": 4,
-        "crc_check": 5
+        "signature_check": 5
       }
     },
     {
@@ -53,7 +53,7 @@
         "data_send_done": 2,
         "leave_btl": 3,
         "erase_time": 4,
-        "crc_check": 5
+        "signature_check": 5
       }
     }
   ],

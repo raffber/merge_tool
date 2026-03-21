@@ -13,6 +13,7 @@ pub mod changelog;
 pub mod config;
 pub mod crc;
 pub mod ddp;
+pub mod ed25519;
 pub mod firmware;
 pub mod git_description;
 pub mod header;
@@ -35,6 +36,8 @@ pub enum Error {
     CannotParseConfig(JsonError),
     CannotFindGitRepo,
     InvalidProductName,
+    InvalidPrivateKey,
+    InvalidSignature,
     CannotParseChangelog,
     Git(anyhow::Error),
     InvalidInfoFile(anyhow::Error),

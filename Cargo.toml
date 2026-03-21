@@ -1,6 +1,6 @@
 [package]
 name = "merge_tool"
-version = "0.3.0-alpha.7"
+version = "0.3.0-alpha.8"
 authors = ["Raphael Bernhard <beraphae@gmail.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
@@ -25,6 +25,8 @@ anyhow = "1.0.79"
 chrono = { version = "0.4.32", features = ["serde"] }
 ciborium = "0.2.2"
 base64 = "0.22.1"
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+rand = "0.8"
 
 [dev-dependencies]
 assert_matches = "1.5"

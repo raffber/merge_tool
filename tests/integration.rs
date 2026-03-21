@@ -6,11 +6,15 @@ use std::path::{Path, PathBuf};
 use byteorder::{ByteOrder, LittleEndian};
 use chrono::{DateTime, Utc};
 use merge_tool::app_package::AppPackage;
-use merge_tool::config::{AddressRange, Config};
+use merge_tool::config::{AddressRange, Config, DeviceConfig};
 use merge_tool::crc::crc32;
+use merge_tool::ed25519;
+use merge_tool::firmware::Firmware;
+use merge_tool::header::Header;
 use merge_tool::intel_hex;
 use merge_tool::process;
 use serial_test::serial;
+use sha2::{Digest, Sha512};
 
 fn save_hex(path: &str, data: &[u8], range: &AddressRange) {
     let serialized = intel_hex::serialize(false, range, data);
@@ -180,4 +184,105 @@ fn bundle() {
 
     let bundle_output_dir = test.output_dir.join("bundle");
     process::bundle(&test.output_dir.join("info.json"), &bundle_output_dir, true).unwrap();
+}
+
+/// Ed25519 image layout used in these tests:
+///   [0..64]   64-byte signature  (written by sign())
+///   [64..68]  CRC32              (covers bytes 68..image_len)
+///   [68..100] Firmware header    (HEADER_OFFSET = 68)
+///   [100..256] Firmware code
+/// The signature covers SHA-512([64..image_len]).
+const IMG_SIZE: usize = 256;
+const HEADER_OFFSET: u64 = 68;
+const CRC_OFFSET: usize = 64;
+
+fn make_signed_fw_image() -> Firmware {
+    // Fill with a recognisable non-0xFF pattern so image_length() == IMG_SIZE.
+    let data: Vec<u8> = (0..IMG_SIZE)
+        .map(|i| (i as u8).wrapping_mul(3) | 0x01)
+        .collect();
+
+    let mut fw = Firmware::new(
+        AddressRange::new(0, IMG_SIZE as u64),
+        DeviceConfig::default(),
+        data,
+    )
+    .unwrap();
+
+    // Write minimal header fields (version, length).
+    {
+        let mut header = Header::new(&mut fw, HEADER_OFFSET).unwrap();
+        header.set_major_version(1);
+        header.set_minor_version(2);
+        header.set_patch_version(3);
+        header.set_length(IMG_SIZE as u32);
+    }
+
+    // Compute and store the CRC over [CRC_OFFSET+4 .. image_len].
+    let image_len = fw.image_length();
+    let crc = crc32(&fw.data[CRC_OFFSET + 4..image_len]);
+    fw.write_u32(CRC_OFFSET, crc);
+
+    fw
+}
+
+#[test]
+fn ed25519_sign_and_verify() {
+    use ed25519_dalek::{Signer, SigningKey};
+
+    let mut fw = make_signed_fw_image();
+
+    // Generate two independent key pairs to exercise key-table lookup.
+    let private_key_1 = ed25519::generate_private_key();
+    let public_key_1 = ed25519::public_key_bytes(&private_key_1);
+    let private_key_2 = ed25519::generate_private_key();
+    let public_key_2 = ed25519::public_key_bytes(&private_key_2);
+
+    // Simulated bootloader key table: key_id -> public_key.
+    let key_table: Vec<(u32, [u8; 32])> = vec![
+        (crc32(&public_key_1), public_key_1),
+        (crc32(&public_key_2), public_key_2),
+    ];
+
+    // Write key_id into the header (as configure_header does in production).
+    let key_id_1 = crc32(&public_key_1);
+    {
+        let mut header = Header::new(&mut fw, HEADER_OFFSET).unwrap();
+        header.set_key_id(key_id_1);
+    }
+
+    // --- Sign with key_1 ---
+    ed25519::sign(&mut fw, &private_key_1).unwrap();
+
+    // --- Stored signature must equal Ed25519(SHA512(image payload)) ---
+    let image_len = fw.image_length();
+    let mut sha = Sha512::new();
+    Digest::input(&mut sha, &fw.data[CRC_OFFSET..image_len]);
+    let digest = sha.result();
+    let expected_signature = SigningKey::from_bytes(&private_key_1).sign(&digest);
+    assert_eq!(&fw.data[..64], &expected_signature.to_bytes());
+
+    // --- key_id in header must equal CRC32(public_key_1) ---
+    let key_id = {
+        let header = Header::new(&mut fw, HEADER_OFFSET).unwrap();
+        header.key_id()
+    };
+    assert_eq!(key_id, crc32(&public_key_1));
+
+    // --- Look up the public key using key_id (as a bootloader would) ---
+    let found_pub_key = key_table
+        .iter()
+        .find(|(id, _)| *id == key_id)
+        .map(|(_, k)| k)
+        .expect("key_id not found in table");
+
+    // --- Signature verifies with the correct key ---
+    ed25519::verify(&fw, found_pub_key).unwrap();
+
+    // --- key_2 must NOT verify a signature made by key_1 ---
+    assert!(ed25519::verify(&fw, &public_key_2).is_err());
+
+    // --- Any byte modification must invalidate the signature ---
+    fw.data[150] ^= 0xFF;
+    assert!(ed25519::verify(&fw, found_pub_key).is_err());
 }

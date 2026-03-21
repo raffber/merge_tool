@@ -3,7 +3,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use crate::app_package::{self, AppPackage};
-use crate::config::{Config, FwConfig, HexFileFormat, DDP_CMD_CODE};
+use crate::config::{Config, FwConfig, HexFileFormat, SignatureType, DDP_CMD_CODE};
 use crate::crc::crc32;
 use crate::ddp::DdpProtocol;
 use crate::firmware::Firmware;
@@ -58,6 +58,16 @@ pub struct LoadedFirmware {
     pub app: Firmware,
     pub config: FwConfig,
     pub merged_hex_file_name: String,
+}
+
+impl LoadedFirmware {
+    pub fn load_crc(&self) -> u32 {
+        self.app.read_u32(self.config.crc_offset())
+    }
+
+    pub fn compute_crc(&self) -> u32 {
+        crc32(&self.app.data[self.config.crc_offset() + 4..self.app.image_length()])
+    }
 }
 
 pub struct LoadedFirmwareImages {
@@ -131,10 +141,19 @@ pub fn load_app(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Fi
         &config.images[idx].device_config,
         &config.images[idx].app_address,
     )?;
-
     let mut fw = configure_header(fw, config, idx)?;
-    let crc = crc32(&fw.data[4..fw.image_length()]);
-    fw.write_u32(0, crc);
+
+    let crc_off = config.images[idx].crc_offset();
+    let crc = crc32(&fw.data[crc_off + 4..fw.image_length()]);
+    fw.write_u32(crc_off, crc);
+
+    match config.images[idx].signature_type {
+        SignatureType::Unsigned => {}
+        SignatureType::Ed25519 => {
+            let key_bytes = config.ed25519_private_key.unwrap();
+            crate::ed25519::sign(&mut fw, &key_bytes)?;
+        }
+    }
 
     Ok(fw)
 }
@@ -154,6 +173,20 @@ pub fn load_btl(config: &mut Config, idx: usize, config_dir: &Path) -> Result<Fi
 fn configure_header(mut fw: Firmware, config: &mut Config, idx: usize) -> Result<Firmware, Error> {
     let default_config = Config::default();
     let default_fw_config = FwConfig::default();
+
+    // Compute key_id before configure_header so it can be included in the CRC.
+    let key_id = match config.images[idx].signature_type {
+        SignatureType::Unsigned => None,
+        SignatureType::Ed25519 => {
+            let key_bytes = config.ed25519_private_key.ok_or_else(|| {
+                Error::InvalidConfig(format!(
+                    "Ed25519 signature requires {} to be set",
+                    crate::ed25519::ENV_VAR
+                ))
+            })?;
+            Some(crc32(&crate::ed25519::public_key_bytes(&key_bytes)))
+        }
+    };
 
     let image_length = fw.image_length();
     let mut header = Header::new(&mut fw, config.images[idx].header_offset)?;
@@ -193,8 +226,10 @@ fn configure_header(mut fw: Firmware, config: &mut Config, idx: usize) -> Result
         header.set_fw_id(fw_id);
     }
     header.set_length(image_length as u32);
-
     header.set_timestamp(config.build_time.timestamp() as u64);
+    if let Some(k) = key_id {
+        header.set_key_id(k);
+    }
 
     Ok(fw)
 }

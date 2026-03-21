@@ -40,8 +40,8 @@ __attribute__((section(".app_header"))) static const uint16_t app_header[] = {
     BUILD_TIME_STAMP[0:2], // 18
     BUILD_TIME_STAMP[2:4], // 20
     BUILD_TIME_STAMP[4:6], // 22
-    0xFFFF,                // 24
-    0xFFFF,                // 26
+    KEY_ID[0:2],           // 24
+    KEY_ID[2:4],           // 26
     0xFFFF,                // 28
     0xFFFF,                // 30
 };
@@ -50,3 +50,11 @@ __attribute__((section(".app_header"))) static const uint16_t app_header[] = {
 In addition to above fields, the merge tools embeds the image length (aligned to pages) in the header.
 This may be used by the bootloader to dynamically allocate flash space based on image size.
 The length is written as 32-bit integer to the bytes 12 to 16.
+
+### Key ID
+
+For signed images (Ed25519), the `KEY_ID` field at bytes 24–27 holds the CRC32 of the signing public key (32 bytes).
+This allows the bootloader to maintain a table of trusted public keys and quickly select the correct one for verification without trying all keys.
+For unsigned images this field is unused and will contain `0xFFFF` / `0xFFFF`.
+
+See [Signature Format](signature_format.md) for the image signature layout and hashing scheme.

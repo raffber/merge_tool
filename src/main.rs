@@ -120,7 +120,16 @@ fn main() {
                     .action(clap::ArgAction::Append)
                     .help("Input files to merge."),
             )
-    ).get_matches();
+    )
+        .subcommand(
+            Command::new("keygen")
+                .about("Generate a new Ed25519 private key and print it as a hex string")
+        )
+        .subcommand(
+            Command::new("get-public-key")
+                .about("Derive the Ed25519 public key from the private key in MERGE_TOOL_ED25519_PRIVATE_KEY_FILE (preferred) or MERGE_TOOL_ED25519_PRIVATE_KEY and print it as a hex string")
+        )
+        .get_matches();
 
     if let Some(matches) = matches.subcommand_matches("generate") {
         let options = get_generation_options(&matches);
@@ -193,6 +202,31 @@ fn main() {
             println!("Error: Could not merge packages: {}", err);
             exit(1);
         }
+    }
+
+    if let Some(_) = matches.subcommand_matches("keygen") {
+        let key = merge_tool::ed25519::generate_private_key();
+        println!("{}", hex::encode(key));
+    }
+
+    if let Some(_) = matches.subcommand_matches("get-public-key") {
+        let private_key = match merge_tool::ed25519::load_private_key_from_env() {
+            Ok(Some(key)) => key,
+            Ok(None) => {
+                println!(
+                    "Error: neither {} nor {} is set.",
+                    merge_tool::ed25519::ENV_FILE_VAR,
+                    merge_tool::ed25519::ENV_VAR,
+                );
+                exit(1);
+            }
+            Err(err) => {
+                println!("Error: Could not load private key: {}", err);
+                exit(1);
+            }
+        };
+        let public_key = merge_tool::ed25519::public_key_bytes(&private_key);
+        println!("{}", hex::encode(public_key));
     }
 }
 

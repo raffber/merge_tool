@@ -9,6 +9,7 @@ const PATCH_VERSION_OFFSET: usize = 8;
 const LENGTH_OFFSET: usize = 12;
 const BUILD_VARIANT_OFFSET: usize = 16;
 const TIMESTAMP_OFFSET: usize = 18;
+const KEY_ID_OFFSET: usize = 24;
 
 const HEADER_LENGTH: usize = 32;
 
@@ -98,6 +99,14 @@ impl<'a> Header<'a> {
 
     pub fn set_build_variant(&mut self, value: u16) {
         self.fw.write_u16(self.offset + BUILD_VARIANT_OFFSET, value);
+    }
+
+    pub fn key_id(&self) -> u32 {
+        self.fw.read_u32(self.offset + KEY_ID_OFFSET)
+    }
+
+    pub fn set_key_id(&mut self, value: u32) {
+        self.fw.write_u32(self.offset + KEY_ID_OFFSET, value);
     }
 }
 

@@ -10,6 +10,8 @@ use std::path::Path;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 
+use crate::config::SignatureType;
+
 pub const BINARY_FILE_EXTENSION: &'static str = "gctapkg";
 
 pub const JSON_FILE_EXTENSION: &'static str = "gctapkg.json";
@@ -21,7 +23,14 @@ pub struct App {
     pub version: Version,
     pub crc: u32,
 
+    #[serde(default = "default_signature_type")]
+    pub signature_type: SignatureType,
+
     pub image: Vec<Section>,
+}
+
+fn default_signature_type() -> SignatureType {
+    SignatureType::Unsigned
 }
 
 impl App {
@@ -39,7 +48,8 @@ impl App {
             product_id: product_id,
             node_id: config.node_id,
             version: config.version.clone().unwrap_or(Version::new(0, 0, 0)),
-            crc: app.read_u32(0),
+            crc: loaded_fw.load_crc(),
+            signature_type: config.signature_type,
             image: vec![image],
         }
     }
@@ -178,6 +188,7 @@ mod test {
             node_id: 0x12,
             version: Version::new(1, 2, 3),
             crc: 0x12345678,
+            signature_type: SignatureType::Unsigned,
             image: vec![Section::new(0, vec![0x12, 0x34, 0x56, 0x78])],
         };
 
