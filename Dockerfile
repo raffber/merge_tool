@@ -58,6 +58,6 @@ RUN set -eux; \
 
 COPY --from=planner /workspace/recipe.json recipe.json
 
-RUN cargo chef cook --release  --recipe-path recipe.json && mv target /cache/linux-release-cache
+RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json && mv target /cache/linux-release-cache
 
 RUN cargo chef cook --release --target  x86_64-pc-windows-msvc --recipe-path recipe.json && mv target /cache/windows-release-cache
