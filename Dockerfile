@@ -1,9 +1,9 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1.85-bookworm AS planner
+FROM lukemathwalker/cargo-chef:latest-rust-1.88-bookworm AS planner
 WORKDIR /workspace
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
-FROM lukemathwalker/cargo-chef:latest-rust-1.85-bookworm AS builder
+FROM lukemathwalker/cargo-chef:latest-rust-1.88-bookworm AS builder
 
 WORKDIR /workspace
 
@@ -55,6 +55,8 @@ RUN set -eux; \
     mkdir /cache; \
     xwin --accept-license --cache-dir /cache/xwin-temp splat --output /xwin; \
     rm -rf /cache/xwin-temp
+
+RUN rustup target add x86_64-unknown-linux-musl
 
 COPY --from=planner /workspace/recipe.json recipe.json
 
