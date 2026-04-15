@@ -64,6 +64,9 @@ pub struct FwConfig {
 
     #[serde(default = "default::signature_type")]
     pub signature_type: SignatureType,
+
+    #[serde(default = "Default::default")]
+    pub btl_trailer: bool,
 }
 
 impl Default for FwConfig {
@@ -82,6 +85,7 @@ impl Default for FwConfig {
             device_config: DeviceConfig::default(),
             timings: Timings::default(),
             signature_type: default::signature_type(),
+            btl_trailer: Default::default(),
         }
     }
 }
@@ -268,7 +272,7 @@ impl Default for Endianness {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DeviceConfig {
-    #[serde(default = "default::get_false")]
+    #[serde(default = "Default::default")]
     pub word_addressing: bool,
     #[serde(default = "default::endianness")]
     pub endianness: Endianness,
@@ -331,10 +335,6 @@ pub mod default {
 
     pub fn zero_u32() -> u32 {
         0
-    }
-
-    pub fn get_false() -> bool {
-        false
     }
 
     pub fn endianness() -> Endianness {

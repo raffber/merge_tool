@@ -5,7 +5,6 @@ The config file is a standard JSON. An minimal example:
 ```json
 {
   "product_name": "FooBar",
-  "blocking": true,
   "images": [
     {
       "btl_path": "btl/btl.hex",
@@ -15,8 +14,6 @@ The config file is a standard JSON. An minimal example:
       "write_data_size": 32,
       "hex_file_format": "IntelHex",
       "device_config": {
-        "word_addressing": false,
-        "endianness": "Little",
         "page_size": 1024
       }
     }
@@ -35,7 +32,6 @@ Typically you use your build tool to copy the config file to the build folder an
 - `"images[k].app_path": "path/to/app.hex"` - The path to the hex file of the application, relative to the location of the configuration file
 - `"images[k].btl_address": {"begin": 0, "end": 1024}` - The address range where the bootloader is located in flash. `end` points 1 past the last byte to be included. Addresses must be page aligned.
 - `"images[k].app_address": {"begin": 0, "end": 1024}` - The address range where the application is located in flash. `end` points 1 past the last byte to be included. Addresses must be page aligned.
-- `"images[k].hex_file_format": "IntelHex"` - Defines the hex file format of the bootloader and application hex file. Either "IntelHex" or "SRecord".
 - `"images[k].device_config.page_size": 1024` - Size of a flash page in the device.
 
 ## Additional Options
@@ -44,7 +40,7 @@ Typically you use your build tool to copy the config file to the build folder an
 - `"time_state_transition": 123` - The time in milliseconds to wait between changing between state in the bootloader state machine. Default to 0.
 - `"btl_version": 2` - Allows specifing the "bootloader version" field of the firmware validation data. Default to 1.
 - `"use_backdoor": true` - Creates a bootload script which skips the validity check. Default to false.
-- `"blocking": false` - In the script file, "query" commands are emitted for each flash write.
+- `"blocking": true` - In the script file, "query" commands are emitted for each flash write.
   Usually this means all sleep times are set to 0.
   However, this implies a handshake happening for each transaction.
   Depedning on the underlying communication protocol this may be slow.
@@ -57,9 +53,11 @@ Typically you use your build tool to copy the config file to the build folder an
 - `"include_in_script": false` - Allows creating a script file where this firmware image is not included. Default to `true`.
 - `"header_offset": 4` - Allows specifying the offset of the firmware header in the application image.
   By default the firmware is placed after the 32-bit image CRC, hence the default offset is `4`.
-- `"device_config.word_addressing` - Defines whether 16-bit words are used for addressing.
+- `"images[k].hex_file_format": "IntelHex"` - Defines the hex file format of the bootloader and application hex file. Either "IntelHex" or "SRecord". Defaults to "IntelHex".
+- `"images[k].device_config.word_addressing` - Defines whether 16-bit words are used for addressing.
   This is specific to TIs C2000 architecture. Default to `false`.
-- `"device_config.endianness` - Either "Big" or "Little". Default to "Little".
+- `"images[k].device_config.endianness` - Either "Big" or "Little". Default to "Little".
+- `"images[k].btl_trailer": false` - Insert a trailer for the bootloader. Refer to the [bootloader trailer documentation for details](./bootloader_trailer.md).
 - `"timings.data_send": 10` - Inserts a delay between each data package. In milliseconds.
 - `"timings.crc_check": 10` - Inserts a delay time after issuing the end of the data transmission. In milliseconds.
 - `"timings.data_send_done": 10` - Inserts a delay time after finishing data transmission. In milliseconds.
