@@ -3,6 +3,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use crate::app_package::{self, AppPackage};
+use crate::btl_trailer;
 use crate::config::{Config, FwConfig, HexFileFormat, SignatureType, DDP_CMD_CODE};
 use crate::crc::crc32;
 use crate::ddp::DdpProtocol;
@@ -45,6 +46,9 @@ pub fn generate(options: GenerateOptions) -> Result<(), Error> {
     // generate info.json
     let info = generate_info(&loaded, &options.output_dir)?;
     save_info(&info, &options.output_dir)?;
+
+    // dump individual hex files if requested
+    save_hex_images(&loaded, &options.output_dir)?;
 
     // generate app package
     let package = AppPackage::from_loaded_firmware_images(loaded.config.product_id, &loaded);
@@ -97,7 +101,11 @@ pub fn load_firmware_images(
     config.transform_to_byte_addrs();
     for idx in 0..config.images.len() {
         let app = load_app(&mut config, idx, config_dir)?;
-        let btl = load_btl(&mut config, idx, config_dir)?;
+        let mut btl = load_btl(&mut config, idx, config_dir)?;
+
+        if config.images[idx].btl_trailer {
+            btl_trailer::write_btl_trailer(&mut btl)?;
+        }
 
         if let Some(desc) = git_description.as_ref() {
             add_pre_release_info(
@@ -283,6 +291,19 @@ pub fn save_merged_firmware_images(
     Ok(())
 }
 
+pub fn save_hex_images(loaded: &LoadedFirmwareImages, output_dir: &Path) -> Result<(), Error> {
+    for fw in &loaded.images {
+        let node_id = fw.config.node_id;
+        let ext = fw.config.hex_file_format.file_extension();
+        let fmt = &fw.config.hex_file_format;
+        fw.app
+            .write_to_file(&output_dir.join(format!("app_f{}.{}", node_id, ext)), fmt)?;
+        fw.btl
+            .write_to_file(&output_dir.join(format!("btl_f{}.{}", node_id, ext)), fmt)?;
+    }
+    Ok(())
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Info {
     product_id: u16,
@@ -310,26 +331,27 @@ pub fn generate_info(fws: &LoadedFirmwareImages, output_dir: &Path) -> Result<In
     let mut fw_infos = Vec::new();
 
     for fw in &fws.images {
-        let btl_path = normalize_file_path(&fw.config.btl_path, output_dir);
-        let app_path = normalize_file_path(&fw.config.app_path, output_dir);
+        let ext = fw.config.hex_file_format.file_extension();
+        let node_id = fw.config.node_id;
+        let app_file_name = format!("app_f{}.{}", node_id, ext);
+        let btl_file_name = format!("btl_f{}.{}", node_id, ext);
 
         let fw_info = FwInfo {
-            fw_id: fw.config.node_id,
+            fw_id: node_id,
             version: fw.config.version.clone().unwrap(),
             crc: fw.app.read_u32(0),
             merged_file: fw.merged_hex_file_name.clone(),
-            app_file: app_path.clone(),
-            btl_file: btl_path.clone(),
+            app_file: app_file_name.clone(),
+            btl_file: btl_file_name.clone(),
             hex_file_format: fw.config.hex_file_format,
         };
 
         fw_infos.push(fw_info);
 
         // add generated files, for possible archival
-        let merged = fw.merged_hex_file_name.clone();
-        files.push(merged);
-        files.push(btl_path);
-        files.push(app_path);
+        files.push(fw.merged_hex_file_name.clone());
+        files.push(app_file_name);
+        files.push(btl_file_name);
     }
 
     files.push(fws.script_file_name.clone());
@@ -345,18 +367,6 @@ pub fn generate_info(fws: &LoadedFirmwareImages, output_dir: &Path) -> Result<In
     };
 
     Ok(info)
-}
-
-fn normalize_file_path(path: &str, output_dir: &Path) -> String {
-    let path = Path::new(path);
-    assert!(path.is_absolute());
-    assert!(output_dir.is_absolute());
-
-    if let Some(ret) = pathdiff::diff_paths(path, output_dir) {
-        ret.to_str().unwrap().to_string()
-    } else {
-        path.to_str().unwrap().to_string()
-    }
 }
 
 pub fn save_info(info: &Info, output_dir: &Path) -> Result<(), Error> {

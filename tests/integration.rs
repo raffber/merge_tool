@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use byteorder::{ByteOrder, LittleEndian};
 use chrono::{DateTime, Utc};
 use merge_tool::app_package::AppPackage;
+use merge_tool::btl_trailer;
 use merge_tool::config::{AddressRange, Config, DeviceConfig};
 use merge_tool::crc::crc32;
 use merge_tool::ed25519;
@@ -176,6 +177,8 @@ fn bundle() {
     let fws = process::merge_all(&loaded).unwrap();
     process::save_merged_firmware_images(&fws, &test.output_dir).unwrap();
 
+    process::save_hex_images(&loaded, &test.output_dir).unwrap();
+
     let info = process::generate_info(&loaded, &test.output_dir).unwrap();
     process::save_info(&info, &test.output_dir).unwrap();
 
@@ -285,4 +288,60 @@ fn ed25519_sign_and_verify() {
     // --- Any byte modification must invalidate the signature ---
     fw.data[150] ^= 0xFF;
     assert!(ed25519::verify(&fw, found_pub_key).is_err());
+}
+
+#[test]
+#[serial]
+fn btl_trailer_is_written_to_merged_image() {
+    let mut test = IntegrationTest::new();
+
+    // Enable the BTL trailer on the first firmware image only.
+    test.config.images[0].btl_trailer = true;
+
+    let loaded = process::load_firmware_images(&test.config, &test.config_dir, None).unwrap();
+    let merged = process::merge_all(&loaded).unwrap();
+
+    // The merged image spans both bootloader and application regions.
+    // The bootloader occupies the first 256 bytes of the merged image
+    // (btl_address = 0xAA00..0xAB00, app_address = 0xAB00..0xAC00).
+    let merged_fw = &merged.images[0].0;
+
+    // The last 24 bytes of the BTL region (bytes 232-255 of the merged data)
+    // must contain the trailer.
+    let btl_size = 256usize; // btl range is 256 bytes wide
+    let trailer_start = btl_size - btl_trailer::TRAILER_TOTAL_SIZE;
+
+    // Check magic.
+    assert_eq!(
+        &merged_fw.data[trailer_start..trailer_start + 4],
+        &btl_trailer::TRAILER_MAGIC,
+        "trailer magic not found in merged image"
+    );
+
+    // Check version.
+    assert_eq!(
+        merged_fw.data[trailer_start + 4],
+        btl_trailer::TRAILER_VERSION
+    );
+
+    // Verify the trailer checksum covers the content correctly.
+    let n = btl_size;
+    let content_crc = crc32(&merged_fw.data[trailer_start..trailer_start + 16]);
+    let b4: [u8; 4] = [
+        merged_fw.data[n - 4],
+        merged_fw.data[n - 3],
+        merged_fw.data[n - 2],
+        merged_fw.data[n - 1],
+    ];
+    let stored_crc = u32::from_le_bytes(b4);
+    assert_eq!(content_crc, stored_crc, "trailer checksum mismatch");
+
+    // Verify that the second firmware image (btl_trailer = false) has no trailer magic
+    // at the same position.
+    let merged_fw2 = &merged.images[1].0;
+    assert_ne!(
+        &merged_fw2.data[trailer_start..trailer_start + 4],
+        &btl_trailer::TRAILER_MAGIC,
+        "trailer should not be present when btl_trailer is false"
+    );
 }

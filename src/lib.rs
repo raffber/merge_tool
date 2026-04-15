@@ -9,6 +9,7 @@ use std::{fmt, io};
 
 pub mod app_package;
 pub mod blocking_ddp;
+pub mod btl_trailer;
 pub mod changelog;
 pub mod config;
 pub mod crc;
@@ -27,6 +28,7 @@ pub mod srecord;
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     AddressRangeNotAlignedToPage,
+    BtlTooSmallForTrailer,
     ImageTooShortForHeader,
     InvalidDataLength,
     InvalidAddress,
