@@ -44,7 +44,7 @@ The output directory may be defined with `-o <output-directory>`. If not otherwi
 
 The release process associates meta data to firmware images:
 
-* Version numbers: `<major>.<minor>.<patch>`
+* Version numbers: `<major>.<minor>.<build>`
 * A product ID: An arbitrary 16-bit number which is used to uniquely identify the product to which the firmware belongs to.
 * An 8-bit `node_id`: Allows specifying an MCU within a system containing multiple MCUs. For a system with a single node, this is set to 1.
 * An 8-bit `bootloader_version` tag. This additional tag may be considered as an arbitrary 16-bit meta data field without pre-defined meaning. But, as the name suggests, it could be used to version the bootloader protocol.
@@ -61,12 +61,7 @@ In multi-node system, the major version and the product ID is enforced to be the
 
 ## Things this tool does not do
 
-This tool is only inteded to be used where the distribution process of the firmware can be trusted or an external tool is used to establish trust into distribution process.
-
-* It does not provide a cyrptographic signature with the image. Just a CRC32.
-* It does not encrypt the software.
-
-Pull requests to implement above features are welcome.
+This tool does not encrypt the firmware image. Hence, the binary data is still available and the firmware may be reverse engineered.
 
 ## License
 
