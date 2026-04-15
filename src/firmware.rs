@@ -52,6 +52,15 @@ impl Firmware {
         }
     }
 
+    pub fn write_binary_to_file(&self, path: &Path) -> Result<(), Error> {
+        use std::fs::File;
+        use std::io::Write;
+        let mut file = File::create(path).map_err(Error::Io)?;
+        file.write_all(&self.data[..self.image_length()])
+            .map_err(Error::Io)?;
+        Ok(())
+    }
+
     pub fn page_count(&self) -> u64 {
         self.data.len() as u64 / self.config.page_size
     }

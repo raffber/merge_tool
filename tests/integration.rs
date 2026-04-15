@@ -141,7 +141,23 @@ fn merge() {
     let crc = fw.read_u32(256);
     assert_eq!(ref_crc, crc);
 
-    process::save_merged_firmware_images(&fws, &test.output_dir).unwrap()
+    process::save_merged_firmware_images(&fws, &test.output_dir).unwrap();
+
+    // verify binary files were created alongside hex files
+    assert!(
+        test.output_dir.join("merged_f1.bin").exists(),
+        "merged_f1.bin not found"
+    );
+    assert!(
+        test.output_dir.join("merged_f2.bin").exists(),
+        "merged_f2.bin not found"
+    );
+
+    // verify binary content matches the firmware data up to image_length
+    let merged_fw = &fws.images[0].0;
+    let bin_data = fs::read(test.output_dir.join("merged_f1.bin")).unwrap();
+    assert_eq!(bin_data.len(), merged_fw.image_length());
+    assert_eq!(bin_data, merged_fw.data[..merged_fw.image_length()]);
 }
 
 #[test]
@@ -151,6 +167,46 @@ fn script() {
     let loaded = process::load_firmware_images(&test.config, &test.config_dir, None).unwrap();
     let script = process::create_script(&loaded).unwrap();
     process::save_script(&script, &loaded, &test.output_dir).unwrap();
+}
+
+#[test]
+#[serial]
+fn hex_images() {
+    let test = IntegrationTest::new();
+    let loaded = process::load_firmware_images(&test.config, &test.config_dir, None).unwrap();
+    process::save_hex_and_bin_images(&loaded, &test.output_dir).unwrap();
+
+    for fw in &loaded.images {
+        let id = fw.config.node_id;
+        let ext = fw.config.hex_file_format.file_extension();
+        assert!(test
+            .output_dir
+            .join(format!("app_f{}.{}", id, ext))
+            .exists());
+        assert!(test
+            .output_dir
+            .join(format!("btl_f{}.{}", id, ext))
+            .exists());
+        assert!(
+            test.output_dir.join(format!("app_f{}.bin", id)).exists(),
+            "app_f{}.bin not found",
+            id
+        );
+        assert!(
+            test.output_dir.join(format!("btl_f{}.bin", id)).exists(),
+            "btl_f{}.bin not found",
+            id
+        );
+
+        // binary content matches firmware data up to image_length
+        let app_bin = fs::read(test.output_dir.join(format!("app_f{}.bin", id))).unwrap();
+        assert_eq!(app_bin.len(), fw.app.image_length());
+        assert_eq!(app_bin, fw.app.data[..fw.app.image_length()]);
+
+        let btl_bin = fs::read(test.output_dir.join(format!("btl_f{}.bin", id))).unwrap();
+        assert_eq!(btl_bin.len(), fw.btl.image_length());
+        assert_eq!(btl_bin, fw.btl.data[..fw.btl.image_length()]);
+    }
 }
 
 #[test]
@@ -177,7 +233,7 @@ fn bundle() {
     let fws = process::merge_all(&loaded).unwrap();
     process::save_merged_firmware_images(&fws, &test.output_dir).unwrap();
 
-    process::save_hex_images(&loaded, &test.output_dir).unwrap();
+    process::save_hex_and_bin_images(&loaded, &test.output_dir).unwrap();
 
     let info = process::generate_info(&loaded, &test.output_dir).unwrap();
     process::save_info(&info, &test.output_dir).unwrap();
@@ -187,6 +243,36 @@ fn bundle() {
 
     let bundle_output_dir = test.output_dir.join("bundle");
     process::bundle(&test.output_dir.join("info.json"), &bundle_output_dir, true).unwrap();
+
+    // verify bundled binary files are present (versioned names)
+    for fw in &loaded.images {
+        let id = fw.config.node_id;
+        let ver = fw.config.version.as_ref().unwrap();
+        assert!(
+            bundle_output_dir
+                .join(format!("app_f{}_{}.bin", id, ver))
+                .exists(),
+            "app_f{}_{}.bin not found in bundle",
+            id,
+            ver
+        );
+        assert!(
+            bundle_output_dir
+                .join(format!("btl_f{}_{}.bin", id, ver))
+                .exists(),
+            "btl_f{}_{}.bin not found in bundle",
+            id,
+            ver
+        );
+        assert!(
+            bundle_output_dir
+                .join(format!("merged_f{}_{}.bin", id, ver))
+                .exists(),
+            "merged_f{}_{}.bin not found in bundle",
+            id,
+            ver
+        );
+    }
 }
 
 /// Ed25519 image layout used in these tests:

@@ -1,6 +1,10 @@
 {
-    "editor.formatOnSave": true,
-    "[markdown]": {
-        "editor.wordWrap": "off"
-    }
+  "editor.formatOnSave": true,
+  "[markdown]": {
+    "editor.wordWrap": "off"
+  },
+  "chat.tools.terminal.autoApprove": {
+    "cargo build": true,
+    "cargo test": true
+  }
 }

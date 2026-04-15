@@ -48,7 +48,7 @@ pub fn generate(options: GenerateOptions) -> Result<(), Error> {
     save_info(&info, &options.output_dir)?;
 
     // dump individual hex files if requested
-    save_hex_images(&loaded, &options.output_dir)?;
+    save_hex_and_bin_images(&loaded, &options.output_dir)?;
 
     // generate app package
     let package = AppPackage::from_loaded_firmware_images(loaded.config.product_id, &loaded);
@@ -61,7 +61,6 @@ pub struct LoadedFirmware {
     pub btl: Firmware,
     pub app: Firmware,
     pub config: FwConfig,
-    pub merged_hex_file_name: String,
 }
 
 impl LoadedFirmware {
@@ -115,18 +114,10 @@ pub fn load_firmware_images(
             );
         }
 
-        let fw_config = &config.images[idx];
-        let merged_hex_file_name = format!(
-            "merged_f{}.{}",
-            fw_config.node_id,
-            fw_config.hex_file_format.file_extension(),
-        );
-
         let loaded = LoadedFirmware {
             btl,
             app,
             config: config.images[idx].clone(),
-            merged_hex_file_name,
         };
 
         ret.push(loaded);
@@ -284,14 +275,21 @@ pub fn save_merged_firmware_images(
     output_dir: &Path,
 ) -> Result<(), Error> {
     for fw in &merged.images {
-        let fpath = output_dir.join(&fw.1.merged_hex_file_name);
+        let node_id = fw.1.config.node_id;
+        let ext = fw.1.config.hex_file_format.file_extension();
+        let fpath = output_dir.join(format!("merged_f{}.{}", node_id, ext));
         fw.0.write_to_file(&fpath, &fw.1.config.hex_file_format)
             .unwrap();
+        let fpath_bin = output_dir.join(format!("merged_f{}.bin", node_id));
+        fw.0.write_binary_to_file(&fpath_bin)?;
     }
     Ok(())
 }
 
-pub fn save_hex_images(loaded: &LoadedFirmwareImages, output_dir: &Path) -> Result<(), Error> {
+pub fn save_hex_and_bin_images(
+    loaded: &LoadedFirmwareImages,
+    output_dir: &Path,
+) -> Result<(), Error> {
     for fw in &loaded.images {
         let node_id = fw.config.node_id;
         let ext = fw.config.hex_file_format.file_extension();
@@ -300,6 +298,10 @@ pub fn save_hex_images(loaded: &LoadedFirmwareImages, output_dir: &Path) -> Resu
             .write_to_file(&output_dir.join(format!("app_f{}.{}", node_id, ext)), fmt)?;
         fw.btl
             .write_to_file(&output_dir.join(format!("btl_f{}.{}", node_id, ext)), fmt)?;
+        fw.app
+            .write_binary_to_file(&output_dir.join(format!("app_f{}.bin", node_id)))?;
+        fw.btl
+            .write_binary_to_file(&output_dir.join(format!("btl_f{}.bin", node_id)))?;
     }
     Ok(())
 }
@@ -324,6 +326,9 @@ struct FwInfo {
     merged_file: String,
     app_file: String,
     btl_file: String,
+    merged_bin_file: String,
+    app_bin_file: String,
+    btl_bin_file: String,
 }
 
 pub fn generate_info(fws: &LoadedFirmwareImages, output_dir: &Path) -> Result<Info, Error> {
@@ -335,23 +340,34 @@ pub fn generate_info(fws: &LoadedFirmwareImages, output_dir: &Path) -> Result<In
         let node_id = fw.config.node_id;
         let app_file_name = format!("app_f{}.{}", node_id, ext);
         let btl_file_name = format!("btl_f{}.{}", node_id, ext);
+        let app_bin_file_name = format!("app_f{}.bin", node_id);
+        let btl_bin_file_name = format!("btl_f{}.bin", node_id);
+
+        let merged_hex_file_name = format!("merged_f{}.{}", node_id, ext);
+        let merged_bin_file_name = format!("merged_f{}.bin", node_id);
 
         let fw_info = FwInfo {
             fw_id: node_id,
             version: fw.config.version.clone().unwrap(),
             crc: fw.app.read_u32(0),
-            merged_file: fw.merged_hex_file_name.clone(),
+            merged_file: merged_hex_file_name.clone(),
             app_file: app_file_name.clone(),
             btl_file: btl_file_name.clone(),
+            merged_bin_file: merged_bin_file_name.clone(),
+            app_bin_file: app_bin_file_name.clone(),
+            btl_bin_file: btl_bin_file_name.clone(),
             hex_file_format: fw.config.hex_file_format,
         };
 
         fw_infos.push(fw_info);
 
         // add generated files, for possible archival
-        files.push(fw.merged_hex_file_name.clone());
+        files.push(merged_hex_file_name);
         files.push(app_file_name);
         files.push(btl_file_name);
+        files.push(merged_bin_file_name);
+        files.push(app_bin_file_name);
+        files.push(btl_bin_file_name);
     }
 
     files.push(fws.script_file_name.clone());
@@ -408,6 +424,9 @@ pub fn bundle(info: &Path, output_dir: &Path, versioned: bool) -> Result<(), cra
         fw_new.app_file = get_app_file_name(&fw, versioned);
         fw_new.btl_file = get_btl_file_name(&fw, versioned);
         fw_new.merged_file = get_merged_file_name(&fw, versioned);
+        fw_new.app_bin_file = get_app_bin_file_name(&fw, versioned);
+        fw_new.btl_bin_file = get_btl_bin_file_name(&fw, versioned);
+        fw_new.merged_bin_file = get_merged_bin_file_name(&fw, versioned);
         copy_and_rename(&info_dir.join(&fw.app_file), output_dir, &fw_new.app_file)?;
         copy_and_rename(&info_dir.join(&fw.btl_file), output_dir, &fw_new.btl_file)?;
         copy_and_rename(
@@ -415,9 +434,27 @@ pub fn bundle(info: &Path, output_dir: &Path, versioned: bool) -> Result<(), cra
             output_dir,
             &fw_new.merged_file,
         )?;
+        copy_and_rename(
+            &info_dir.join(&fw.app_bin_file),
+            output_dir,
+            &fw_new.app_bin_file,
+        )?;
+        copy_and_rename(
+            &info_dir.join(&fw.btl_bin_file),
+            output_dir,
+            &fw_new.btl_bin_file,
+        )?;
+        copy_and_rename(
+            &info_dir.join(&fw.merged_bin_file),
+            output_dir,
+            &fw_new.merged_bin_file,
+        )?;
         new_info.files.push(fw_new.app_file.clone());
         new_info.files.push(fw_new.btl_file.clone());
         new_info.files.push(fw_new.merged_file.clone());
+        new_info.files.push(fw_new.app_bin_file.clone());
+        new_info.files.push(fw_new.btl_bin_file.clone());
+        new_info.files.push(fw_new.merged_bin_file.clone());
     }
 
     new_info.script_file = get_script_file_name(&info, versioned);
@@ -475,6 +512,30 @@ pub fn save_app_package(
 
 fn copy_and_rename(src: &Path, dest_dir: &Path, new_name: &str) -> Result<(), crate::Error> {
     Ok(fs::copy(src, dest_dir.join(new_name)).map(|_| ())?)
+}
+
+fn get_app_bin_file_name(fw: &FwInfo, versioned: bool) -> String {
+    if versioned {
+        format!("app_f{}_{}.bin", fw.fw_id, fw.version)
+    } else {
+        format!("app_f{}.bin", fw.fw_id)
+    }
+}
+
+fn get_btl_bin_file_name(fw: &FwInfo, versioned: bool) -> String {
+    if versioned {
+        format!("btl_f{}_{}.bin", fw.fw_id, fw.version)
+    } else {
+        format!("btl_f{}.bin", fw.fw_id)
+    }
+}
+
+fn get_merged_bin_file_name(fw: &FwInfo, versioned: bool) -> String {
+    if versioned {
+        format!("merged_f{}_{}.bin", fw.fw_id, fw.version)
+    } else {
+        format!("merged_f{}.bin", fw.fw_id)
+    }
 }
 
 fn get_app_file_name(fw: &FwInfo, versioned: bool) -> String {
